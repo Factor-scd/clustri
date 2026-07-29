@@ -40,6 +40,7 @@ export const useWebSocket = (connectionId: string | null): UseWebSocketReturn =>
   useEffect(() => {
     if (!connectionId) return
 
+    let cancelled = false
     let unlistenFns: Array<() => void> = []
 
     const setupListeners = async () => {
@@ -51,7 +52,7 @@ export const useWebSocket = (connectionId: string | null): UseWebSocketReturn =>
           queryClient.invalidateQueries({ queryKey: queryKeys.vms(connectionId) })
         }
       })
-      unlistenFns.push(unlistenTask)
+      if (!cancelled) unlistenFns.push(unlistenTask)
 
       const unlistenNode = await listen('node-status-change', (event: { payload: { connection_id: string } }) => {
         if (event.payload.connection_id === connectionId) {
@@ -59,19 +60,22 @@ export const useWebSocket = (connectionId: string | null): UseWebSocketReturn =>
           queryClient.invalidateQueries({ queryKey: queryKeys.cluster(connectionId) })
         }
       })
-      unlistenFns.push(unlistenNode)
+      if (!cancelled) unlistenFns.push(unlistenNode)
 
       const unlistenVM = await listen('vm-status-change', (event: { payload: { connection_id: string } }) => {
         if (event.payload.connection_id === connectionId) {
           queryClient.invalidateQueries({ queryKey: queryKeys.vms(connectionId) })
         }
       })
-      unlistenFns.push(unlistenVM)
+      if (!cancelled) unlistenFns.push(unlistenVM)
     }
 
-    setupListeners()
+    setupListeners().catch((err) => {
+      console.error('[useWebSocket] Failed to setup listeners:', err)
+    })
 
     return () => {
+      cancelled = true
       unlistenFns.forEach((fn) => fn())
       unlistenFns = []
     }

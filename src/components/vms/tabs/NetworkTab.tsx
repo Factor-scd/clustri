@@ -14,18 +14,11 @@ import { useNetworkInterfaces, useRemoveNIC } from '@/hooks/useProxmox'
 import { AddNICDialog } from '@/components/vms/dialogs/AddNICDialog'
 import { EditNICDialog } from '@/components/vms/dialogs/EditNICDialog'
 import type { ProxmoxVM, ProxmoxNetwork } from '@/types/proxmox'
+import { formatNetworkRate } from '@/lib/format'
 
 interface NetworkTabProps {
   vm: ProxmoxVM
   connectionId: string
-}
-
-function formatNetworkRate(bytes: number): string {
-  if (bytes === 0) return '0 B/s'
-  const k = 1024
-  const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
 }
 
 export function NetworkTab({ vm, connectionId }: NetworkTabProps) {

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as api from '@/lib/tauri'
 import { useConnectionStore } from '@/stores/connectionStore'
+import { useToast } from '@/components/ui/toast'
 import type { AddDiskConfig, AddNICConfig, EditNICConfig, CreateSnapshotConfig, BackupJobConfig, RestoreConfig } from '@/types/proxmox'
 
 // Query keys
@@ -88,90 +89,126 @@ export const useClusterStatus = (connectionId: string | null) => {
 // Mutations for VM lifecycle
 export const useStartVM = () => {
   const queryClient = useQueryClient()
-  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
-  
+  const { addToast } = useToast()
+
   return useMutation({
-    mutationFn: ({ node, vmid }: { node: string; vmid: number }) =>
-      api.startVM(activeConnectionId!, node, vmid),
+    mutationFn: ({ node, vmid }: { node: string; vmid: number }) => {
+      const connId = useConnectionStore.getState().activeConnectionId!
+      return api.startVM(connId, node, vmid)
+    },
     onSuccess: () => {
-      if (activeConnectionId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.vms(activeConnectionId) })
+      const connId = useConnectionStore.getState().activeConnectionId
+      if (connId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.vms(connId) })
       }
+    },
+    onError: (error: Error) => {
+      addToast(error.message || 'Failed to start VM', 'error')
     },
   })
 }
 
 export const useStopVM = () => {
   const queryClient = useQueryClient()
-  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
-  
+  const { addToast } = useToast()
+
   return useMutation({
-    mutationFn: ({ node, vmid }: { node: string; vmid: number }) =>
-      api.stopVM(activeConnectionId!, node, vmid),
+    mutationFn: ({ node, vmid }: { node: string; vmid: number }) => {
+      const connId = useConnectionStore.getState().activeConnectionId!
+      return api.stopVM(connId, node, vmid)
+    },
     onSuccess: () => {
-      if (activeConnectionId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.vms(activeConnectionId) })
+      const connId = useConnectionStore.getState().activeConnectionId
+      if (connId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.vms(connId) })
       }
+    },
+    onError: (error: Error) => {
+      addToast(error.message || 'Failed to stop VM', 'error')
     },
   })
 }
 
 export const useShutdownVM = () => {
   const queryClient = useQueryClient()
-  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
-  
+  const { addToast } = useToast()
+
   return useMutation({
-    mutationFn: ({ node, vmid }: { node: string; vmid: number }) =>
-      api.shutdownVM(activeConnectionId!, node, vmid),
+    mutationFn: ({ node, vmid }: { node: string; vmid: number }) => {
+      const connId = useConnectionStore.getState().activeConnectionId!
+      return api.shutdownVM(connId, node, vmid)
+    },
     onSuccess: () => {
-      if (activeConnectionId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.vms(activeConnectionId) })
+      const connId = useConnectionStore.getState().activeConnectionId
+      if (connId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.vms(connId) })
       }
+    },
+    onError: (error: Error) => {
+      addToast(error.message || 'Failed to shutdown VM', 'error')
     },
   })
 }
 
 export const useRebootVM = () => {
   const queryClient = useQueryClient()
-  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
-  
+  const { addToast } = useToast()
+
   return useMutation({
-    mutationFn: ({ node, vmid }: { node: string; vmid: number }) =>
-      api.rebootVM(activeConnectionId!, node, vmid),
+    mutationFn: ({ node, vmid }: { node: string; vmid: number }) => {
+      const connId = useConnectionStore.getState().activeConnectionId!
+      return api.rebootVM(connId, node, vmid)
+    },
     onSuccess: () => {
-      if (activeConnectionId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.vms(activeConnectionId) })
+      const connId = useConnectionStore.getState().activeConnectionId
+      if (connId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.vms(connId) })
       }
+    },
+    onError: (error: Error) => {
+      addToast(error.message || 'Failed to reboot VM', 'error')
     },
   })
 }
 
 export const useSuspendVM = () => {
   const queryClient = useQueryClient()
-  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
-  
+  const { addToast } = useToast()
+
   return useMutation({
-    mutationFn: ({ node, vmid }: { node: string; vmid: number }) =>
-      api.suspendVM(activeConnectionId!, node, vmid),
+    mutationFn: ({ node, vmid }: { node: string; vmid: number }) => {
+      const connId = useConnectionStore.getState().activeConnectionId!
+      return api.suspendVM(connId, node, vmid)
+    },
     onSuccess: () => {
-      if (activeConnectionId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.vms(activeConnectionId) })
+      const connId = useConnectionStore.getState().activeConnectionId
+      if (connId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.vms(connId) })
       }
+    },
+    onError: (error: Error) => {
+      addToast(error.message || 'Failed to suspend VM', 'error')
     },
   })
 }
 
 export const useResumeVM = () => {
   const queryClient = useQueryClient()
-  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
-  
+  const { addToast } = useToast()
+
   return useMutation({
-    mutationFn: ({ node, vmid }: { node: string; vmid: number }) =>
-      api.resumeVM(activeConnectionId!, node, vmid),
+    mutationFn: ({ node, vmid }: { node: string; vmid: number }) => {
+      const connId = useConnectionStore.getState().activeConnectionId!
+      return api.resumeVM(connId, node, vmid)
+    },
     onSuccess: () => {
-      if (activeConnectionId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.vms(activeConnectionId) })
+      const connId = useConnectionStore.getState().activeConnectionId
+      if (connId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.vms(connId) })
       }
+    },
+    onError: (error: Error) => {
+      addToast(error.message || 'Failed to resume VM', 'error')
     },
   })
 }
@@ -187,7 +224,7 @@ export const useDisks = (connectionId: string, node: string, vmid: number) => {
 
 export const useAddDisk = () => {
   const queryClient = useQueryClient()
-  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
+  const { addToast } = useToast()
 
   return useMutation({
     mutationFn: ({
@@ -198,20 +235,27 @@ export const useAddDisk = () => {
       node: string
       vmid: number
       config: AddDiskConfig
-    }) => api.addDisk(activeConnectionId!, node, vmid, config),
+    }) => {
+      const connId = useConnectionStore.getState().activeConnectionId!
+      return api.addDisk(connId, node, vmid, config)
+    },
     onSuccess: (_data, variables) => {
-      if (activeConnectionId) {
+      const connId = useConnectionStore.getState().activeConnectionId
+      if (connId) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.disks(activeConnectionId, variables.node, variables.vmid),
+          queryKey: queryKeys.disks(connId, variables.node, variables.vmid),
         })
       }
+    },
+    onError: (error: Error) => {
+      addToast(error.message || 'Failed to add disk', 'error')
     },
   })
 }
 
 export const useResizeDisk = () => {
   const queryClient = useQueryClient()
-  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
+  const { addToast } = useToast()
 
   return useMutation({
     mutationFn: ({
@@ -224,20 +268,27 @@ export const useResizeDisk = () => {
       vmid: number
       disk: string
       size: number
-    }) => api.resizeDisk(activeConnectionId!, node, vmid, disk, size),
+    }) => {
+      const connId = useConnectionStore.getState().activeConnectionId!
+      return api.resizeDisk(connId, node, vmid, disk, size)
+    },
     onSuccess: (_data, variables) => {
-      if (activeConnectionId) {
+      const connId = useConnectionStore.getState().activeConnectionId
+      if (connId) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.disks(activeConnectionId, variables.node, variables.vmid),
+          queryKey: queryKeys.disks(connId, variables.node, variables.vmid),
         })
       }
+    },
+    onError: (error: Error) => {
+      addToast(error.message || 'Failed to resize disk', 'error')
     },
   })
 }
 
 export const useRemoveDisk = () => {
   const queryClient = useQueryClient()
-  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
+  const { addToast } = useToast()
 
   return useMutation({
     mutationFn: ({
@@ -248,20 +299,27 @@ export const useRemoveDisk = () => {
       node: string
       vmid: number
       disk: string
-    }) => api.removeDisk(activeConnectionId!, node, vmid, disk),
+    }) => {
+      const connId = useConnectionStore.getState().activeConnectionId!
+      return api.removeDisk(connId, node, vmid, disk)
+    },
     onSuccess: (_data, variables) => {
-      if (activeConnectionId) {
+      const connId = useConnectionStore.getState().activeConnectionId
+      if (connId) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.disks(activeConnectionId, variables.node, variables.vmid),
+          queryKey: queryKeys.disks(connId, variables.node, variables.vmid),
         })
       }
+    },
+    onError: (error: Error) => {
+      addToast(error.message || 'Failed to remove disk', 'error')
     },
   })
 }
 
 export const useMoveDisk = () => {
   const queryClient = useQueryClient()
-  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
+  const { addToast } = useToast()
 
   return useMutation({
     mutationFn: ({
@@ -274,13 +332,20 @@ export const useMoveDisk = () => {
       vmid: number
       disk: string
       storage: string
-    }) => api.moveDisk(activeConnectionId!, node, vmid, disk, storage),
+    }) => {
+      const connId = useConnectionStore.getState().activeConnectionId!
+      return api.moveDisk(connId, node, vmid, disk, storage)
+    },
     onSuccess: (_data, variables) => {
-      if (activeConnectionId) {
+      const connId = useConnectionStore.getState().activeConnectionId
+      if (connId) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.disks(activeConnectionId, variables.node, variables.vmid),
+          queryKey: queryKeys.disks(connId, variables.node, variables.vmid),
         })
       }
+    },
+    onError: (error: Error) => {
+      addToast(error.message || 'Failed to move disk', 'error')
     },
   })
 }
@@ -296,7 +361,7 @@ export const useNetworkInterfaces = (connectionId: string, node: string, vmid: n
 
 export const useAddNIC = () => {
   const queryClient = useQueryClient()
-  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
+  const { addToast } = useToast()
 
   return useMutation({
     mutationFn: ({
@@ -307,20 +372,27 @@ export const useAddNIC = () => {
       node: string
       vmid: number
       config: AddNICConfig
-    }) => api.addNIC(activeConnectionId!, node, vmid, config),
+    }) => {
+      const connId = useConnectionStore.getState().activeConnectionId!
+      return api.addNIC(connId, node, vmid, config)
+    },
     onSuccess: (_data, variables) => {
-      if (activeConnectionId) {
+      const connId = useConnectionStore.getState().activeConnectionId
+      if (connId) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.networks(activeConnectionId, variables.node, variables.vmid),
+          queryKey: queryKeys.networks(connId, variables.node, variables.vmid),
         })
       }
+    },
+    onError: (error: Error) => {
+      addToast(error.message || 'Failed to add NIC', 'error')
     },
   })
 }
 
 export const useEditNIC = () => {
   const queryClient = useQueryClient()
-  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
+  const { addToast } = useToast()
 
   return useMutation({
     mutationFn: ({
@@ -333,20 +405,27 @@ export const useEditNIC = () => {
       vmid: number
       nic: string
       config: EditNICConfig
-    }) => api.editNIC(activeConnectionId!, node, vmid, nic, config),
+    }) => {
+      const connId = useConnectionStore.getState().activeConnectionId!
+      return api.editNIC(connId, node, vmid, nic, config)
+    },
     onSuccess: (_data, variables) => {
-      if (activeConnectionId) {
+      const connId = useConnectionStore.getState().activeConnectionId
+      if (connId) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.networks(activeConnectionId, variables.node, variables.vmid),
+          queryKey: queryKeys.networks(connId, variables.node, variables.vmid),
         })
       }
+    },
+    onError: (error: Error) => {
+      addToast(error.message || 'Failed to edit NIC', 'error')
     },
   })
 }
 
 export const useRemoveNIC = () => {
   const queryClient = useQueryClient()
-  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
+  const { addToast } = useToast()
 
   return useMutation({
     mutationFn: ({
@@ -357,13 +436,20 @@ export const useRemoveNIC = () => {
       node: string
       vmid: number
       nic: string
-    }) => api.removeNIC(activeConnectionId!, node, vmid, nic),
+    }) => {
+      const connId = useConnectionStore.getState().activeConnectionId!
+      return api.removeNIC(connId, node, vmid, nic)
+    },
     onSuccess: (_data, variables) => {
-      if (activeConnectionId) {
+      const connId = useConnectionStore.getState().activeConnectionId
+      if (connId) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.networks(activeConnectionId, variables.node, variables.vmid),
+          queryKey: queryKeys.networks(connId, variables.node, variables.vmid),
         })
       }
+    },
+    onError: (error: Error) => {
+      addToast(error.message || 'Failed to remove NIC', 'error')
     },
   })
 }
@@ -379,7 +465,7 @@ export const useSnapshots = (connectionId: string, node: string, vmid: number) =
 
 export const useCreateSnapshot = () => {
   const queryClient = useQueryClient()
-  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
+  const { addToast } = useToast()
 
   return useMutation({
     mutationFn: ({
@@ -390,20 +476,27 @@ export const useCreateSnapshot = () => {
       node: string
       vmid: number
       config: CreateSnapshotConfig
-    }) => api.createSnapshot(activeConnectionId!, node, vmid, config),
+    }) => {
+      const connId = useConnectionStore.getState().activeConnectionId!
+      return api.createSnapshot(connId, node, vmid, config)
+    },
     onSuccess: (_data, variables) => {
-      if (activeConnectionId) {
+      const connId = useConnectionStore.getState().activeConnectionId
+      if (connId) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.snapshots(activeConnectionId, variables.node, variables.vmid),
+          queryKey: queryKeys.snapshots(connId, variables.node, variables.vmid),
         })
       }
+    },
+    onError: (error: Error) => {
+      addToast(error.message || 'Failed to create snapshot', 'error')
     },
   })
 }
 
 export const useDeleteSnapshot = () => {
   const queryClient = useQueryClient()
-  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
+  const { addToast } = useToast()
 
   return useMutation({
     mutationFn: ({
@@ -414,20 +507,27 @@ export const useDeleteSnapshot = () => {
       node: string
       vmid: number
       name: string
-    }) => api.deleteSnapshot(activeConnectionId!, node, vmid, name),
+    }) => {
+      const connId = useConnectionStore.getState().activeConnectionId!
+      return api.deleteSnapshot(connId, node, vmid, name)
+    },
     onSuccess: (_data, variables) => {
-      if (activeConnectionId) {
+      const connId = useConnectionStore.getState().activeConnectionId
+      if (connId) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.snapshots(activeConnectionId, variables.node, variables.vmid),
+          queryKey: queryKeys.snapshots(connId, variables.node, variables.vmid),
         })
       }
+    },
+    onError: (error: Error) => {
+      addToast(error.message || 'Failed to delete snapshot', 'error')
     },
   })
 }
 
 export const useRollbackSnapshot = () => {
   const queryClient = useQueryClient()
-  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
+  const { addToast } = useToast()
 
   return useMutation({
     mutationFn: ({
@@ -438,13 +538,20 @@ export const useRollbackSnapshot = () => {
       node: string
       vmid: number
       name: string
-    }) => api.rollbackSnapshot(activeConnectionId!, node, vmid, name),
+    }) => {
+      const connId = useConnectionStore.getState().activeConnectionId!
+      return api.rollbackSnapshot(connId, node, vmid, name)
+    },
     onSuccess: (_data, variables) => {
-      if (activeConnectionId) {
+      const connId = useConnectionStore.getState().activeConnectionId
+      if (connId) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.snapshots(activeConnectionId, variables.node, variables.vmid),
+          queryKey: queryKeys.snapshots(connId, variables.node, variables.vmid),
         })
       }
+    },
+    onError: (error: Error) => {
+      addToast(error.message || 'Failed to rollback snapshot', 'error')
     },
   })
 }
@@ -452,7 +559,7 @@ export const useRollbackSnapshot = () => {
 // VM migration hooks
 export const useMigrateVM = () => {
   const queryClient = useQueryClient()
-  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
+  const { addToast } = useToast()
 
   return useMutation({
     mutationFn: ({
@@ -465,11 +572,18 @@ export const useMigrateVM = () => {
       vmid: number
       targetNode: string
       online: boolean
-    }) => api.migrateVM(activeConnectionId!, node, vmid, targetNode, online),
+    }) => {
+      const connId = useConnectionStore.getState().activeConnectionId!
+      return api.migrateVM(connId, node, vmid, targetNode, online)
+    },
     onSuccess: () => {
-      if (activeConnectionId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.vms(activeConnectionId) })
+      const connId = useConnectionStore.getState().activeConnectionId
+      if (connId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.vms(connId) })
       }
+    },
+    onError: (error: Error) => {
+      addToast(error.message || 'Failed to migrate VM', 'error')
     },
   })
 }
@@ -512,91 +626,127 @@ export const useBackups = (connectionId: string | null, storage?: string) => {
 
 export const useCreateBackupJob = () => {
   const queryClient = useQueryClient()
-  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
+  const { addToast } = useToast()
 
   return useMutation({
-    mutationFn: ({ config }: { config: BackupJobConfig }) =>
-      api.createBackupJob(activeConnectionId!, config),
+    mutationFn: ({ config }: { config: BackupJobConfig }) => {
+      const connId = useConnectionStore.getState().activeConnectionId!
+      return api.createBackupJob(connId, config)
+    },
     onSuccess: () => {
-      if (activeConnectionId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.backupJobs(activeConnectionId) })
+      const connId = useConnectionStore.getState().activeConnectionId
+      if (connId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.backupJobs(connId) })
       }
+    },
+    onError: (error: Error) => {
+      addToast(error.message || 'Failed to create backup job', 'error')
     },
   })
 }
 
 export const useUpdateBackupJob = () => {
   const queryClient = useQueryClient()
-  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
+  const { addToast } = useToast()
 
   return useMutation({
-    mutationFn: ({ id, config }: { id: string; config: BackupJobConfig }) =>
-      api.updateBackupJob(activeConnectionId!, id, config),
+    mutationFn: ({ id, config }: { id: string; config: BackupJobConfig }) => {
+      const connId = useConnectionStore.getState().activeConnectionId!
+      return api.updateBackupJob(connId, id, config)
+    },
     onSuccess: () => {
-      if (activeConnectionId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.backupJobs(activeConnectionId) })
+      const connId = useConnectionStore.getState().activeConnectionId
+      if (connId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.backupJobs(connId) })
       }
+    },
+    onError: (error: Error) => {
+      addToast(error.message || 'Failed to update backup job', 'error')
     },
   })
 }
 
 export const useDeleteBackupJob = () => {
   const queryClient = useQueryClient()
-  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
+  const { addToast } = useToast()
 
   return useMutation({
-    mutationFn: ({ id }: { id: string }) =>
-      api.deleteBackupJob(activeConnectionId!, id),
+    mutationFn: ({ id }: { id: string }) => {
+      const connId = useConnectionStore.getState().activeConnectionId!
+      return api.deleteBackupJob(connId, id)
+    },
     onSuccess: () => {
-      if (activeConnectionId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.backupJobs(activeConnectionId) })
+      const connId = useConnectionStore.getState().activeConnectionId
+      if (connId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.backupJobs(connId) })
       }
+    },
+    onError: (error: Error) => {
+      addToast(error.message || 'Failed to delete backup job', 'error')
     },
   })
 }
 
 export const useRunBackup = () => {
   const queryClient = useQueryClient()
-  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
+  const { addToast } = useToast()
 
   return useMutation({
-    mutationFn: ({ config }: { config: BackupJobConfig }) =>
-      api.runBackup(activeConnectionId!, config),
+    mutationFn: ({ config }: { config: BackupJobConfig }) => {
+      const connId = useConnectionStore.getState().activeConnectionId!
+      return api.runBackup(connId, config)
+    },
     onSuccess: () => {
-      if (activeConnectionId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.tasks(activeConnectionId) })
+      const connId = useConnectionStore.getState().activeConnectionId
+      if (connId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.tasks(connId) })
       }
+    },
+    onError: (error: Error) => {
+      addToast(error.message || 'Failed to run backup', 'error')
     },
   })
 }
 
 export const useRestoreBackup = () => {
   const queryClient = useQueryClient()
-  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
+  const { addToast } = useToast()
 
   return useMutation({
-    mutationFn: ({ volid, config }: { volid: string; config: RestoreConfig }) =>
-      api.restoreBackup(activeConnectionId!, volid, config),
+    mutationFn: ({ volid, config }: { volid: string; config: RestoreConfig }) => {
+      const connId = useConnectionStore.getState().activeConnectionId!
+      return api.restoreBackup(connId, volid, config)
+    },
     onSuccess: () => {
-      if (activeConnectionId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.vms(activeConnectionId) })
-        queryClient.invalidateQueries({ queryKey: queryKeys.tasks(activeConnectionId) })
+      const connId = useConnectionStore.getState().activeConnectionId
+      if (connId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.vms(connId) })
+        queryClient.invalidateQueries({ queryKey: queryKeys.tasks(connId) })
       }
+    },
+    onError: (error: Error) => {
+      addToast(error.message || 'Failed to restore backup', 'error')
     },
   })
 }
 
 export const useDeleteBackup = () => {
   const queryClient = useQueryClient()
-  const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
+  const { addToast } = useToast()
 
   return useMutation({
-    mutationFn: ({ volid }: { volid: string }) =>
-      api.deleteBackup(activeConnectionId!, volid),
+    mutationFn: ({ volid }: { volid: string }) => {
+      const connId = useConnectionStore.getState().activeConnectionId!
+      return api.deleteBackup(connId, volid)
+    },
     onSuccess: () => {
-      if (activeConnectionId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.backups(activeConnectionId) })
+      const connId = useConnectionStore.getState().activeConnectionId
+      if (connId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.backups(connId) })
       }
+    },
+    onError: (error: Error) => {
+      addToast(error.message || 'Failed to delete backup', 'error')
     },
   })
 }

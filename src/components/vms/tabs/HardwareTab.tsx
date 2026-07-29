@@ -11,24 +11,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { useToast } from '@/components/ui/toast'
 import { Cpu, MemoryStick, Pencil, Save, X } from 'lucide-react'
 import type { ProxmoxVM } from '@/types/proxmox'
+import { formatBytes } from '@/lib/format'
 
 interface HardwareTabProps {
   vm: ProxmoxVM
   connectionId: string
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
-}
-
 export function HardwareTab({ vm }: HardwareTabProps) {
   const [editOpen, setEditOpen] = useState(false)
+  const { addToast } = useToast()
   const [formData, setFormData] = useState({
     name: vm.name,
     description: vm.tags ?? '',
@@ -37,7 +32,7 @@ export function HardwareTab({ vm }: HardwareTabProps) {
   })
 
   const handleSave = () => {
-    // TODO: Wire up to backend save mutation
+    addToast('VM configuration editing is not yet implemented', 'warning')
     setEditOpen(false)
   }
 

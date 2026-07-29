@@ -70,6 +70,8 @@ impl WebSocketManager {
         tokio::spawn(async move {
             let mut reconnect_delay = Duration::from_secs(1);
             const MAX_DELAY: Duration = Duration::from_secs(30);
+            const MAX_RETRIES: u32 = 10;
+            let mut retry_count: u32 = 0;
 
             loop {
                 tokio::select! {
@@ -79,11 +81,19 @@ impl WebSocketManager {
                     result = connect_and_run(&cid, &ws_url, &app_handle) => {
                         match result {
                             Ok(()) => {
-                                // Normal close or stream ended – attempt reconnect
                                 reconnect_delay = Duration::from_secs(1);
+                                retry_count = 0;
                             }
                             Err(e) => {
-                                eprintln!("[ws] connection error for {}: {e}", cid);
+                                retry_count += 1;
+                                if retry_count >= MAX_RETRIES {
+                                    let _ = app_handle.emit("ws-raw", serde_json::json!({
+                                        "connection_id": cid,
+                                        "data": { "type": "error", "message": format!("WebSocket reconnect failed after {} attempts: {}", MAX_RETRIES, e) },
+                                    }));
+                                    break;
+                                }
+                                eprintln!("[ws] connection error for {} (attempt {}/{}): {e}", cid, retry_count, MAX_RETRIES);
                             }
                         }
                     }

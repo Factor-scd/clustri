@@ -1,18 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { HardDrive, Database, Archive, Disc, Box } from 'lucide-react'
 import type { ProxmoxStorage } from '@/types/proxmox'
+import { formatBytes } from '@/lib/format'
 
 interface StorageCardProps {
   storage: ProxmoxStorage
   onClick: () => void
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
 }
 
 function getUsageColor(percent: number): string {

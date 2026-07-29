@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 
 interface StorageOverviewProps {
   connectionId: string
-  onStorageClick?: (storage: string) => void
+  onStorageClick?: (storage: string, node: string) => void
 }
 
 export function StorageOverview({ connectionId, onStorageClick }: StorageOverviewProps) {
@@ -79,7 +79,7 @@ export function StorageOverview({ connectionId, onStorageClick }: StorageOvervie
               <StorageCard
                 key={`${storage.node}-${storage.storage}`}
                 storage={storage}
-                onClick={() => onStorageClick?.(storage.storage)}
+                onClick={() => onStorageClick?.(storage.storage, storage.node)}
               />
             ))}
           </div>

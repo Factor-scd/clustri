@@ -3,30 +3,11 @@ import { StatusBadge } from '@/components/ui/status-badge'
 import { Server, Cpu, MemoryStick, HardDrive } from 'lucide-react'
 import { useVMs } from '@/hooks/useProxmox'
 import type { ProxmoxNode } from '@/types/proxmox'
+import { formatBytes, formatUptime } from '@/lib/format'
 
 interface NodeDetailProps {
   node: ProxmoxNode
   connectionId: string
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
-}
-
-function formatUptime(seconds: number): string {
-  if (seconds === 0) return 'N/A'
-  const days = Math.floor(seconds / 86400)
-  const hours = Math.floor((seconds % 86400) / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  const parts: string[] = []
-  if (days > 0) parts.push(`${days}d`)
-  if (hours > 0) parts.push(`${hours}h`)
-  if (minutes > 0) parts.push(`${minutes}m`)
-  return parts.join(' ') || '< 1m'
 }
 
 function ResourceBar({ label, used, total, icon: Icon }: {

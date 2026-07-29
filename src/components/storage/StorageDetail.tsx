@@ -3,19 +3,13 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft, HardDrive, Database, Archive, Disc, Box, Clock, File } from 'lucide-react'
 import { useStorageDetail, useStorageContent } from '@/hooks/useProxmox'
 import type { ProxmoxStorageContent } from '@/types/proxmox'
+import { formatBytes } from '@/lib/format'
 
 interface StorageDetailProps {
   connectionId: string
   storage: string
+  node: string
   onBack: () => void
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
 }
 
 function getUsageColor(percent: number): string {
@@ -68,10 +62,10 @@ function formatContentItem(item: ProxmoxStorageContent): string {
   return parts[parts.length - 1] || item.volid
 }
 
-export function StorageDetail({ connectionId, storage, onBack }: StorageDetailProps) {
+export function StorageDetail({ connectionId, storage, node, onBack }: StorageDetailProps) {
   const { data: detail, isLoading: detailLoading } = useStorageDetail(
     connectionId,
-    null,
+    node,
     storage
   )
   const { data: contentList, isLoading: contentLoading } = useStorageContent(

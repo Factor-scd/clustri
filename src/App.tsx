@@ -34,7 +34,7 @@ type View =
   | { type: 'tasks' }
   | { type: 'backups' }
   | { type: 'storage' }
-  | { type: 'storage-detail'; storage: string }
+  | { type: 'storage-detail'; storage: string; node: string }
   | { type: 'settings' }
 
 function AppContent() {
@@ -90,7 +90,16 @@ function AppContent() {
 
     switch (view.type) {
       case 'dashboard':
-        return <Dashboard connectionId={activeConnectionId} />
+        return <Dashboard connectionId={activeConnectionId} onNavigate={(viewName) => {
+          switch (viewName) {
+            case 'dashboard': handleNavigate({ type: 'dashboard' }); break
+            case 'vms': handleNavigate({ type: 'vms' }); break
+            case 'tasks': handleNavigate({ type: 'tasks' }); break
+            case 'backups': handleNavigate({ type: 'backups' }); break
+            case 'storage': handleNavigate({ type: 'storage' }); break
+            default: break
+          }
+        }} />
       case 'vms':
         return (
           <VMList
@@ -114,8 +123,8 @@ function AppContent() {
         return (
           <StorageOverview
             connectionId={activeConnectionId}
-            onStorageClick={(storage) =>
-              handleNavigate({ type: 'storage-detail', storage })
+            onStorageClick={(storage, node) =>
+              handleNavigate({ type: 'storage-detail', storage, node })
             }
           />
         )
@@ -124,8 +133,15 @@ function AppContent() {
           <StorageDetail
             connectionId={activeConnectionId}
             storage={view.storage}
+            node={view.node}
             onBack={() => handleNavigate({ type: 'storage' })}
           />
+        )
+      default:
+        return (
+          <div className="flex h-full items-center justify-center">
+            <p className="text-muted-foreground">Unknown view: {(view as { type: string }).type}</p>
+          </div>
         )
     }
   }
