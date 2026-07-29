@@ -1,0 +1,184 @@
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Cpu, MemoryStick, HardDrive, Clock, Server, Globe, Tag } from 'lucide-react'
+import type { ProxmoxVM } from '@/types/proxmox'
+
+interface OverviewTabProps {
+  vm: ProxmoxVM
+  connectionId: string
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
+}
+
+function formatUptime(seconds: number): string {
+  if (seconds === 0) return 'N/A'
+  const days = Math.floor(seconds / 86400)
+  const hours = Math.floor((seconds % 86400) / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  const parts: string[] = []
+  if (days > 0) parts.push(`${days}d`)
+  if (hours > 0) parts.push(`${hours}h`)
+  if (minutes > 0) parts.push(`${minutes}m`)
+  return parts.join(' ') || '< 1m'
+}
+
+function formatNetworkRate(bytes: number): string {
+  if (bytes === 0) return '0 B/s'
+  const k = 1024
+  const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
+}
+
+function ResourceBar({ label, used, total, icon: Icon }: {
+  label: string
+  used: number
+  total: number
+  icon: React.ComponentType<{ className?: string }>
+}) {
+  const percent = total > 0 ? (used / total) * 100 : 0
+  const displayUsed = label === 'CPU' ? used.toFixed(1) : formatBytes(used)
+  const displayTotal = label === 'CPU' ? `${total} cores` : formatBytes(total)
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Icon className="h-4 w-4 text-muted-foreground" />
+          {label}
+        </div>
+        <span className="text-sm text-muted-foreground">
+          {displayUsed} / {displayTotal}
+        </span>
+      </div>
+      <div className="h-2 rounded-full bg-muted overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{
+            width: `${Math.min(percent, 100)}%`,
+            backgroundColor:
+              percent > 90
+                ? 'hsl(var(--destructive))'
+                : percent > 70
+                  ? 'hsl(38, 92%, 50%)'
+                  : 'hsl(142, 71%, 45%)',
+          }}
+        />
+      </div>
+      <p className="text-xs text-muted-foreground text-right">
+        {percent.toFixed(1)}%
+      </p>
+    </div>
+  )
+}
+
+export function OverviewTab({ vm }: OverviewTabProps) {
+  return (
+    <div className="space-y-6">
+      {/* Resource Usage */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Resource Usage</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ResourceBar
+            label="CPU"
+            used={vm.cpu * vm.cpus}
+            total={vm.cpus}
+            icon={Cpu}
+          />
+          <ResourceBar
+            label="Memory"
+            used={vm.mem}
+            total={vm.maxmem}
+            icon={MemoryStick}
+          />
+          <ResourceBar
+            label="Disk"
+            used={vm.disk}
+            total={vm.maxdisk}
+            icon={HardDrive}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">VMID</CardTitle>
+            <Tag className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold font-mono">{vm.vmid}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Type</CardTitle>
+            <Server className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold uppercase">{vm.type}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Uptime</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatUptime(vm.uptime)}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Node</CardTitle>
+            <Server className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{vm.node}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">IP Address</CardTitle>
+            <Globe className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">192.168.1.{100 + (vm.vmid % 100)}</div>
+            <p className="text-xs text-muted-foreground">Mock data</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Network I/O</CardTitle>
+            <Globe className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">In:</span>
+                <span className="font-mono">{formatNetworkRate(vm.netin)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Out:</span>
+                <span className="font-mono">{formatNetworkRate(vm.netout)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}
