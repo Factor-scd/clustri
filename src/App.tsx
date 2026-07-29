@@ -151,7 +151,7 @@ function AppContent() {
       <Sidebar
         onAddConnection={() => setConnectionDialogOpen(true)}
         activeView={view.type}
-        onNavigate={handleNavigate}
+        onNavigate={(v) => handleNavigate(v as View)}
       />
       <main className="flex-1 overflow-hidden">
         {renderMainContent()}
