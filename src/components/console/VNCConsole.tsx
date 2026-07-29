@@ -57,7 +57,7 @@ export function VNCConsole({ connectionId, node, vmid, onError }: VNCConsoleProp
         if (cancelled) return
 
         // Dynamically import noVNC RFB class
-        const { default: RFB } = await import('@novnc/novnc/core/rfb.js')
+        const { default: RFB } = await import('@novnc/novnc')
 
         if (cancelled || !containerRef.current) return
 
