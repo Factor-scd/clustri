@@ -5,28 +5,31 @@ use thiserror::Error;
 pub enum Error {
     #[error("Connection not found: {0}")]
     ConnectionNotFound(String),
-    
+
     #[error("Not connected to server")]
     NotConnected,
-    
+
     #[error("HTTP request failed: {0}")]
     HttpError(#[from] reqwest::Error),
-    
+
     #[error("Certificate error: {0}")]
     CertificateError(String),
-    
+
+    #[error("Invalid credentials: {0}")]
+    InvalidCredentials(String),
+
     #[error("Authentication failed: {0}")]
     AuthError(String),
-    
+
     #[error("Keyring error: {0}")]
     KeyringError(String),
-    
+
     #[error("Serialization error: {0}")]
     SerializationError(String),
-    
+
     #[error("Invalid URL: {0}")]
     InvalidUrl(String),
-    
+
     #[error("API error: {0}")]
     ApiError(String),
 

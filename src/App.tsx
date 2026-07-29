@@ -44,6 +44,13 @@ function AppContent() {
   const commandPaletteOpen = useUIStore((s) => s.commandPaletteOpen)
   const setCommandPaletteOpen = useUIStore((s) => s.setCommandPaletteOpen)
 
+  // Auto-open login dialog when no active connection
+  useEffect(() => {
+    if (!activeConnectionId && !connectionDialogOpen) {
+      setConnectionDialogOpen(true)
+    }
+  }, [activeConnectionId, connectionDialogOpen])
+
   // WebSocket integration – connects when a connection is active
   useWebSocket(activeConnectionId)
 
@@ -72,16 +79,10 @@ function AppContent() {
       return (
         <div className="flex h-full items-center justify-center">
           <div className="text-center space-y-4">
-            <h2 className="text-2xl font-semibold">Welcome to ProxmoxDesktop</h2>
+            <h2 className="text-2xl font-semibold">ProxmoxDesktop</h2>
             <p className="text-muted-foreground">
-              Add a Proxmox server to get started
+              Connect to a Proxmox server to get started
             </p>
-            <button
-              onClick={() => setConnectionDialogOpen(true)}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-            >
-              Add Connection
-            </button>
           </div>
         </div>
       )

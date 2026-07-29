@@ -10,8 +10,10 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useConnectionStore } from '@/stores/connectionStore'
-import type { ConnectionConfig } from '@/types/connection'
+import { loginWithPassword, loginWithToken, addConnection } from '@/lib/tauri'
+import type { ConnectionConfig, AuthMode } from '@/types/connection'
 
 interface ConnectionDialogProps {
   open: boolean
@@ -19,12 +21,27 @@ interface ConnectionDialogProps {
 }
 
 export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps) {
-  const addConnection = useConnectionStore((s) => s.addConnection)
+  const addConnectionToStore = useConnectionStore((s) => s.addConnection)
+  const setAuthStatus = useConnectionStore((s) => s.setAuthStatus)
+  const setActiveConnection = useConnectionStore((s) => s.setActiveConnection)
+
+  const [authMode, setAuthMode] = useState<AuthMode>('password')
   const [name, setName] = useState('')
   const [url, setUrl] = useState('')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
   const [apiToken, setApiToken] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const resetForm = () => {
+    setName('')
+    setUrl('')
+    setUsername('')
+    setPassword('')
+    setApiToken('')
+    setError(null)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,35 +49,51 @@ export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps) 
     setError(null)
 
     try {
-      // Validate URL
       if (!url.startsWith('https://')) {
         throw new Error('URL must start with https://')
       }
 
-      // Create connection config
+      const cleanUrl = url.replace(/\/$/, '')
+
+      let result
+      if (authMode === 'password') {
+        if (!username || !password) {
+          throw new Error('Username and password are required')
+        }
+        result = await loginWithPassword(cleanUrl, username, password)
+      } else {
+        if (!apiToken) {
+          throw new Error('API token is required')
+        }
+        result = await loginWithToken(cleanUrl, apiToken)
+      }
+
+      const connectionId = result.connectionId || crypto.randomUUID()
+
       const config: ConnectionConfig = {
-        id: crypto.randomUUID(),
-        name: name || 'New Connection',
+        id: connectionId,
+        name: name || (authMode === 'password' ? username : 'API Token Connection'),
         primary: {
-          url: url.replace(/\/$/, ''), // Remove trailing slash
-          token: apiToken,
+          url: cleanUrl,
+          token: authMode === 'token' ? apiToken : undefined,
         },
         fallbacks: [],
         trusted: false,
-        status: 'disconnected',
+        status: 'connected',
         isCluster: false,
+        authMode,
+        username: authMode === 'password' ? username : undefined,
       }
 
-      // Add connection to store
-      addConnection(config)
-      
-      // Reset form and close dialog
-      setName('')
-      setUrl('')
-      setApiToken('')
+      await addConnection(config)
+      addConnectionToStore(config)
+      setActiveConnection(connectionId)
+      setAuthStatus('authenticated')
+
+      resetForm()
       onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add connection')
+      setError(err instanceof Error ? err.message : 'Failed to connect')
     } finally {
       setIsLoading(false)
     }
@@ -70,62 +103,103 @@ export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Proxmox Connection</DialogTitle>
+          <DialogTitle>Connect to Proxmox</DialogTitle>
           <DialogDescription>
-            Connect to a Proxmox VE server or cluster
+            Sign in with your Proxmox credentials or API token
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Connection Name</Label>
-            <Input
-              id="name"
-              placeholder="Home Lab"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="url">Server URL</Label>
-            <Input
-              id="url"
-              placeholder="https://192.168.1.10:8006"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              required
-            />
-            <p className="text-xs text-muted-foreground">
-              The URL of your Proxmox server (must use HTTPS)
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="token">API Token</Label>
-            <Input
-              id="token"
-              type="password"
-              placeholder="user@realm!tokenid=secret"
-              value={apiToken}
-              onChange={(e) => setApiToken(e.target.value)}
-              required
-            />
-            <p className="text-xs text-muted-foreground">
-              Format: user@realm!tokenid=secret
-            </p>
-          </div>
-          {error && (
-            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-              <p className="text-sm text-destructive">{error}</p>
+
+        <Tabs value={authMode} onValueChange={(v) => { setAuthMode(v as AuthMode); setError(null) }}>
+          <TabsList className="w-full">
+            <TabsTrigger value="password" className="flex-1">Username & Password</TabsTrigger>
+            <TabsTrigger value="token" className="flex-1">API Token</TabsTrigger>
+          </TabsList>
+
+          <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="url">Server URL</Label>
+              <Input
+                id="url"
+                placeholder="https://192.168.1.10:8006"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                The URL of your Proxmox server (must use HTTPS)
+              </p>
             </div>
-          )}
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Connecting...' : 'Add Connection'}
-            </Button>
-          </DialogFooter>
-        </form>
+
+            <TabsContent value="password" className="space-y-4 mt-0">
+              <div className="space-y-2">
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  placeholder="root@pam"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Format: user@realm (e.g. root@pam)
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="token" className="space-y-4 mt-0">
+              <div className="space-y-2">
+                <Label htmlFor="token">API Token</Label>
+                <Input
+                  id="token"
+                  type="password"
+                  placeholder="user@realm!tokenid=secret"
+                  value={apiToken}
+                  onChange={(e) => setApiToken(e.target.value)}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Format: user@realm!tokenid=secret
+                </p>
+              </div>
+            </TabsContent>
+
+            <div className="space-y-2">
+              <Label htmlFor="name">Connection Name (optional)</Label>
+              <Input
+                id="name"
+                placeholder="Home Lab"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+
+            {error && (
+              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                <p className="text-sm text-destructive">{error}</p>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? 'Connecting...' : 'Connect'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Tabs>
       </DialogContent>
     </Dialog>
   )

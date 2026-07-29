@@ -1,7 +1,7 @@
 // Tauri IPC commands interface
 // These functions call into the Rust backend via Tauri's invoke mechanism
 
-import type { ConnectionConfig, CertificateInfo } from '@/types/connection'
+import type { ConnectionConfig, CertificateInfo, LoginResult } from '@/types/connection'
 import type {
   ProxmoxNode,
   ProxmoxVM,
@@ -58,6 +58,52 @@ export const disconnectFromServer = async (id: string): Promise<void> => {
   if (!isTauri()) return mockResponse(undefined)
   const { invoke } = await import('@tauri-apps/api/core')
   return invoke('disconnect_from_server', { id })
+}
+
+// Authentication
+export const loginWithPassword = async (
+  url: string,
+  username: string,
+  password: string,
+): Promise<LoginResult> => {
+  if (!isTauri()) {
+    return mockResponse({
+      connectionId: crypto.randomUUID(),
+      ticket: 'mock-ticket-' + Date.now(),
+      csrfToken: 'mock-csrf-' + Date.now(),
+    })
+  }
+  const { invoke } = await import('@tauri-apps/api/core')
+  return invoke('login_with_password', { url, username, password })
+}
+
+export const loginWithToken = async (
+  url: string,
+  token: string,
+): Promise<LoginResult> => {
+  if (!isTauri()) {
+    return mockResponse({
+      connectionId: crypto.randomUUID(),
+      ticket: token,
+      csrfToken: '',
+    })
+  }
+  const { invoke } = await import('@tauri-apps/api/core')
+  return invoke('login_with_token', { url, token })
+}
+
+export const logout = async (connectionId: string): Promise<void> => {
+  if (!isTauri()) return mockResponse(undefined)
+  const { invoke } = await import('@tauri-apps/api/core')
+  return invoke('logout', { connectionId })
+}
+
+export const getStoredCredentials = async (
+  connectionId: string,
+): Promise<string | null> => {
+  if (!isTauri()) return mockResponse(null)
+  const { invoke } = await import('@tauri-apps/api/core')
+  return invoke('get_stored_credentials', { connectionId })
 }
 
 export const getCertificateInfo = async (url: string): Promise<CertificateInfo> => {

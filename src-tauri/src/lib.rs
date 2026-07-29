@@ -27,6 +27,8 @@ pub struct ConnectionConfig {
     pub status: String,
     pub cluster_name: Option<String>,
     pub is_cluster: bool,
+    pub auth_mode: String,
+    pub username: Option<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -34,6 +36,13 @@ pub struct EndpointConfig {
     pub url: String,
     pub node: Option<String>,
     pub token: Option<String>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LoginResult {
+    pub connection_id: String,
+    pub ticket: String,
+    pub csrf_token: String,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -407,6 +416,46 @@ async fn migrate_vm(
     manager.migrate_vm(&connection_id, &node, vmid, &target_node, online).await
 }
 
+// Authentication commands
+#[tauri::command]
+async fn login_with_password(
+    state: tauri::State<'_, AppState>,
+    url: String,
+    username: String,
+    password: String,
+) -> Result<LoginResult> {
+    let manager = state.connection_manager.read().await;
+    manager.login_with_password(&url, &username, &password).await
+}
+
+#[tauri::command]
+async fn login_with_token(
+    state: tauri::State<'_, AppState>,
+    url: String,
+    token: String,
+) -> Result<LoginResult> {
+    let manager = state.connection_manager.read().await;
+    manager.login_with_token(&url, &token).await
+}
+
+#[tauri::command]
+async fn logout(
+    state: tauri::State<'_, AppState>,
+    connection_id: String,
+) -> Result<()> {
+    let manager = state.connection_manager.read().await;
+    manager.logout(&connection_id).await
+}
+
+#[tauri::command]
+async fn get_stored_credentials(
+    state: tauri::State<'_, AppState>,
+    connection_id: String,
+) -> Result<Option<String>> {
+    let manager = state.connection_manager.read().await;
+    manager.get_stored_credentials(&connection_id).await
+}
+
 // Console proxy types
 #[derive(Clone, Serialize, Deserialize)]
 pub struct VNCProxyResponse {
@@ -637,6 +686,10 @@ pub fn run() {
             remove_connection,
             connect_to_server,
             disconnect_from_server,
+            login_with_password,
+            login_with_token,
+            logout,
+            get_stored_credentials,
             get_certificate_info,
             trust_certificate,
             get_nodes,
