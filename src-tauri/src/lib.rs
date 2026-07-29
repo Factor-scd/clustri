@@ -16,8 +16,8 @@ use websocket::WebSocketManager;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-#[serde(rename_all = "camelCase")]
 #[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ConnectionConfig {
     pub id: String,
     pub name: String,
@@ -32,24 +32,24 @@ pub struct ConnectionConfig {
     pub username: Option<String>,
 }
 
-#[serde(rename_all = "camelCase")]
 #[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct EndpointConfig {
     pub url: String,
     pub node: Option<String>,
     pub token: Option<String>,
 }
 
-#[serde(rename_all = "camelCase")]
 #[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LoginResult {
     pub connection_id: String,
     pub ticket: String,
     pub csrf_token: String,
 }
 
-#[serde(rename_all = "camelCase")]
 #[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CertificateInfo {
     pub fingerprint: String,
     pub issuer: String,
@@ -461,16 +461,16 @@ async fn get_stored_credentials(
 }
 
 // Console proxy types
-#[serde(rename_all = "camelCase")]
 #[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct VNCProxyResponse {
     pub ticket: String,
     pub port: u32,
     pub cert: String,
 }
 
-#[serde(rename_all = "camelCase")]
 #[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TermProxyResponse {
     pub ticket: String,
     pub port: u32,
@@ -619,8 +619,8 @@ async fn delete_backup(
     manager.delete_backup(&connection_id, &volid).await
 }
 
-#[serde(rename_all = "camelCase")]
 #[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TrayConnectionInfo {
     pub id: String,
     pub name: String,
