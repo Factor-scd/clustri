@@ -32,6 +32,9 @@ pub enum Error {
 
     #[error("WebSocket error: {0}")]
     WebSocketError(String),
+
+    #[error("Tauri error: {0}")]
+    TauriError(#[from] tauri::Error),
 }
 
 impl Serialize for Error {

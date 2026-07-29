@@ -1,7 +1,7 @@
 // Custom type declarations for @novnc/novnc v1.7.0
 // The @types/novnc package is outdated and doesn't match the modern API
 
-declare module '@novnc/novnc/core/rfb.js' {
+declare module '@novnc/novnc' {
   export default class RFB extends EventTarget {
     constructor(target: HTMLElement, url: string, options?: RFBOptions);
     disconnect(): void;

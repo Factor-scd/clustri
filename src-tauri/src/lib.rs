@@ -603,7 +603,7 @@ async fn update_tray_menu(
     if connections.is_empty() {
         let no_conn = MenuItemBuilder::new("No connections")
             .id("no_connections")
-            .disabled(true)
+            .enabled(false)
             .build(&app)?;
         menu_builder = menu_builder.item(&no_conn);
     }
@@ -695,8 +695,7 @@ pub fn run() {
                 .item(&quit)
                 .build()?;
 
-            let _tray = TrayIconBuilder::new()
-                .id("main-tray")
+            let _tray = TrayIconBuilder::with_id("main-tray")
                 .tooltip("ProxmoxDesktop")
                 .icon(app.default_window_icon().cloned().expect("no default icon"))
                 .menu(&menu)
