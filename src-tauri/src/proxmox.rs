@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+#[serde(rename_all = "camelCase")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Disk {
     pub device: String,
@@ -9,6 +10,7 @@ pub struct Disk {
     pub usage: Option<String>,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddDiskConfig {
     pub storage: String,
@@ -16,6 +18,7 @@ pub struct AddDiskConfig {
     pub bus_type: String,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Node {
     pub node: String,
@@ -32,6 +35,7 @@ pub struct Node {
     pub r#type: String,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VM {
     pub vmid: u32,
@@ -56,6 +60,7 @@ pub struct VM {
     pub tags: Option<String>,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Storage {
     pub storage: String,
@@ -70,6 +75,7 @@ pub struct Storage {
     pub node: String,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
     pub upid: String,
@@ -85,6 +91,7 @@ pub struct Task {
     pub exitstatus: Option<String>,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClusterStatus {
     pub r#type: String,
@@ -93,6 +100,7 @@ pub struct ClusterStatus {
     pub nodes: Option<Vec<ClusterNode>>,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClusterNode {
     pub name: String,
@@ -102,6 +110,7 @@ pub struct ClusterNode {
     pub ip: Option<String>,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Snapshot {
     pub name: String,
@@ -111,6 +120,7 @@ pub struct Snapshot {
     pub parent: Option<String>,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateSnapshotConfig {
     pub name: String,
@@ -118,11 +128,13 @@ pub struct CreateSnapshotConfig {
     pub vmstate: Option<bool>,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApiResponse<T> {
     pub data: T,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetworkInterface {
     pub name: String,
@@ -134,6 +146,7 @@ pub struct NetworkInterface {
     pub link_down: Option<u32>,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddNICConfig {
     pub bridge: String,
@@ -143,6 +156,7 @@ pub struct AddNICConfig {
     pub firewall: Option<bool>,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditNICConfig {
     pub bridge: Option<String>,
@@ -151,6 +165,7 @@ pub struct EditNICConfig {
     pub firewall: Option<bool>,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Backup {
     pub volid: String,
@@ -166,6 +181,7 @@ pub struct Backup {
     pub ctime: u64,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BackupJob {
     pub id: String,
@@ -180,6 +196,7 @@ pub struct BackupJob {
     pub quiet: Option<u32>,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BackupJobConfig {
     pub id: Option<String>,
@@ -193,6 +210,7 @@ pub struct BackupJobConfig {
     pub node: Option<String>,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RestoreConfig {
     pub volid: String,
@@ -201,6 +219,7 @@ pub struct RestoreConfig {
     pub vmid: Option<u32>,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StorageContent {
     pub content: String,
@@ -211,6 +230,7 @@ pub struct StorageContent {
     pub volid: String,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StorageDetail {
     pub storage: String,

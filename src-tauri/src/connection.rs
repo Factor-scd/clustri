@@ -1,14 +1,12 @@
 use crate::error::Error;
 use crate::proxmox::{
-    AddDiskConfig, AddNICConfig, ApiResponse, Backup, BackupJob, BackupJobConfig, ClusterStatus,
+    AddDiskConfig, AddNICConfig, Backup, BackupJob, BackupJobConfig, ClusterStatus,
     CreateSnapshotConfig, Disk, EditNICConfig, NetworkInterface, Node, RestoreConfig, Snapshot,
     Storage, StorageContent, StorageDetail, Task, VM,
 };
-use crate::{CertificateInfo, ConnectionConfig, EndpointConfig, LoginResult, TermProxyResponse, VNCProxyResponse};
+use crate::{CertificateInfo, ConnectionConfig, LoginResult, TermProxyResponse, VNCProxyResponse};
 use reqwest::Client;
 use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::RwLock;
 
 struct Connection {
     config: ConnectionConfig,
@@ -22,10 +20,10 @@ fn keyring_service() -> &'static str {
     "proxmox-desktop"
 }
 
-fn keyring_entry(connection_id: &str, field: &str) -> keyring::Entry {
+fn keyring_entry(connection_id: &str, field: &str) -> crate::Result<keyring::Entry> {
     let key = format!("{}:{}", connection_id, field);
     keyring::Entry::new(keyring_service(), &key)
-        .expect("failed to create keyring entry")
+        .map_err(|e| Error::KeyringError(e.to_string()))
 }
 
 pub struct ConnectionManager {
@@ -39,27 +37,58 @@ impl ConnectionManager {
         }
     }
 
-    pub async fn add_connection(&self, config: ConnectionConfig) -> crate::Result<()> {
+    pub async fn add_connection(&mut self, config: ConnectionConfig) -> crate::Result<()> {
         if config.primary.url.is_empty() {
             return Err(Error::InvalidUrl("URL cannot be empty".to_string()));
+        }
+        let id = config.id.clone();
+        let connection = Connection {
+            config,
+            client: Client::builder()
+                .danger_accept_invalid_certs(true)
+                .build()
+                .map_err(Error::HttpError)?,
+            ticket: None,
+            csrf_token: None,
+            current_endpoint_index: 0,
+        };
+        self.connections.insert(id, connection);
+        Ok(())
+    }
+
+    pub async fn remove_connection(&mut self, id: &str) -> crate::Result<()> {
+        self.connections.remove(id);
+        // Clear stored credentials from keyring
+        let _ = keyring_entry(id, "ticket").and_then(|e| {
+            e.delete_credential()
+                .map_err(|e| Error::KeyringError(e.to_string()))
+        });
+        let _ = keyring_entry(id, "csrf_token").and_then(|e| {
+            e.delete_credential()
+                .map_err(|e| Error::KeyringError(e.to_string()))
+        });
+        let _ = keyring_entry(id, "password").and_then(|e| {
+            e.delete_credential()
+                .map_err(|e| Error::KeyringError(e.to_string()))
+        });
+        let _ = keyring_entry(id, "token").and_then(|e| {
+            e.delete_credential()
+                .map_err(|e| Error::KeyringError(e.to_string()))
+        });
+        Ok(())
+    }
+
+    pub async fn connect(&mut self, id: &str) -> crate::Result<()> {
+        if let Some(conn) = self.connections.get_mut(id) {
+            conn.config.status = "connected".to_string();
         }
         Ok(())
     }
 
-    pub async fn remove_connection(&self, id: &str) -> crate::Result<()> {
-        // Clear stored credentials from keyring
-        let _ = keyring_entry(id, "ticket").delete_credential();
-        let _ = keyring_entry(id, "csrf_token").delete_credential();
-        let _ = keyring_entry(id, "password").delete_credential();
-        let _ = keyring_entry(id, "token").delete_credential();
-        Ok(())
-    }
-
-    pub async fn connect(&self, id: &str) -> crate::Result<()> {
-        Ok(())
-    }
-
-    pub async fn disconnect(&self, id: &str) -> crate::Result<()> {
+    pub async fn disconnect(&mut self, id: &str) -> crate::Result<()> {
+        if let Some(conn) = self.connections.get_mut(id) {
+            conn.config.status = "disconnected".to_string();
+        }
         Ok(())
     }
 
@@ -119,8 +148,27 @@ impl ConnectionManager {
             .unwrap_or("")
             .to_string();
 
+        // Generate a stable connection ID from the URL
+        let connection_id = {
+            use sha2::{Sha256, Digest};
+            let mut hasher = Sha256::new();
+            hasher.update(url.as_bytes());
+            let hash = hasher.finalize();
+            format!("{:x}", hash)[..16].to_string()
+        };
+
+        // Store credentials in keyring for later use
+        keyring_entry(&connection_id, "ticket")
+            .and_then(|e| e.set_password(&ticket).map_err(|e| Error::KeyringError(e.to_string())))?;
+        keyring_entry(&connection_id, "csrf_token")
+            .and_then(|e| e.set_password(&csrf_token).map_err(|e| Error::KeyringError(e.to_string())))?;
+        keyring_entry(&connection_id, "username")
+            .and_then(|e| e.set_password(username).map_err(|e| Error::KeyringError(e.to_string())))?;
+        keyring_entry(&connection_id, "password")
+            .and_then(|e| e.set_password(password).map_err(|e| Error::KeyringError(e.to_string())))?;
+
         Ok(LoginResult {
-            connection_id: String::new(),
+            connection_id,
             ticket,
             csrf_token,
         })
@@ -164,23 +212,56 @@ impl ConnectionManager {
             return Err(Error::InvalidCredentials("Invalid API token".to_string()));
         }
 
+        // Generate a stable connection ID from the URL
+        let connection_id = {
+            use sha2::{Sha256, Digest};
+            let mut hasher = Sha256::new();
+            hasher.update(url.as_bytes());
+            let hash = hasher.finalize();
+            format!("{:x}", hash)[..16].to_string()
+        };
+
+        // Store token in keyring for later use
+        keyring_entry(&connection_id, "token")
+            .and_then(|e| e.set_password(token).map_err(|e| Error::KeyringError(e.to_string())))?;
+
         Ok(LoginResult {
-            connection_id: String::new(),
+            connection_id,
             ticket: token.to_string(),
             csrf_token: String::new(),
         })
     }
 
     pub async fn logout(&self, connection_id: &str) -> crate::Result<()> {
-        let _ = keyring_entry(connection_id, "ticket").delete_credential();
-        let _ = keyring_entry(connection_id, "csrf_token").delete_credential();
-        let _ = keyring_entry(connection_id, "password").delete_credential();
-        let _ = keyring_entry(connection_id, "token").delete_credential();
+        let _ = keyring_entry(connection_id, "ticket").and_then(|e| {
+            e.delete_credential()
+                .map_err(|e| Error::KeyringError(e.to_string()))
+        });
+        let _ = keyring_entry(connection_id, "csrf_token").and_then(|e| {
+            e.delete_credential()
+                .map_err(|e| Error::KeyringError(e.to_string()))
+        });
+        let _ = keyring_entry(connection_id, "password").and_then(|e| {
+            e.delete_credential()
+                .map_err(|e| Error::KeyringError(e.to_string()))
+        });
+        let _ = keyring_entry(connection_id, "token").and_then(|e| {
+            e.delete_credential()
+                .map_err(|e| Error::KeyringError(e.to_string()))
+        });
+        let _ = keyring_entry(connection_id, "username").and_then(|e| {
+            e.delete_credential()
+                .map_err(|e| Error::KeyringError(e.to_string()))
+        });
         Ok(())
     }
 
     pub async fn get_stored_credentials(&self, connection_id: &str) -> crate::Result<Option<String>> {
-        match keyring_entry(connection_id, "ticket").get_password() {
+        let entry = match keyring_entry(connection_id, "ticket") {
+            Ok(e) => e,
+            Err(_) => return Ok(None),
+        };
+        match entry.get_password() {
             Ok(ticket) => Ok(Some(ticket)),
             Err(keyring::Error::NoEntry) => Ok(None),
             Err(e) => Err(Error::KeyringError(e.to_string())),
@@ -196,20 +277,16 @@ impl ConnectionManager {
         api_token: Option<&str>,
     ) -> crate::Result<()> {
         keyring_entry(connection_id, "ticket")
-            .set_password(ticket)
-            .map_err(|e| Error::KeyringError(e.to_string()))?;
+            .and_then(|e| e.set_password(ticket).map_err(|e| Error::KeyringError(e.to_string())))?;
         keyring_entry(connection_id, "csrf_token")
-            .set_password(csrf_token)
-            .map_err(|e| Error::KeyringError(e.to_string()))?;
+            .and_then(|e| e.set_password(csrf_token).map_err(|e| Error::KeyringError(e.to_string())))?;
         if let Some(pw) = password {
             keyring_entry(connection_id, "password")
-                .set_password(pw)
-                .map_err(|e| Error::KeyringError(e.to_string()))?;
+                .and_then(|e| e.set_password(pw).map_err(|e| Error::KeyringError(e.to_string())))?;
         }
         if let Some(tok) = api_token {
             keyring_entry(connection_id, "token")
-                .set_password(tok)
-                .map_err(|e| Error::KeyringError(e.to_string()))?;
+                .and_then(|e| e.set_password(tok).map_err(|e| Error::KeyringError(e.to_string())))?;
         }
         Ok(())
     }
@@ -221,12 +298,11 @@ impl ConnectionManager {
     ) -> crate::Result<LoginResult> {
         // Try to get stored password for re-authentication
         let password = keyring_entry(connection_id, "password")
-            .get_password()
-            .map_err(|e| Error::KeyringError(e.to_string()))?;
+            .and_then(|e| e.get_password().map_err(|e| Error::KeyringError(e.to_string())))?;
 
-        // Extract username from stored ticket or use default
-        let username = keyring_entry(connection_id, "csrf_token")
-            .get_password()
+        // Get stored username for re-authentication
+        let username = keyring_entry(connection_id, "username")
+            .and_then(|e| e.get_password().map_err(|e| Error::KeyringError(e.to_string())))
             .unwrap_or_default();
 
         self.login_with_password(url, &username, &password).await

@@ -39,6 +39,10 @@ export function ConsoleTab({ vm, connectionId }: ConsoleTabProps) {
     setErrorMessage(message)
   }, [])
 
+  const handleConnected = useCallback(() => {
+    setStatus('connected')
+  }, [])
+
   const handleDisconnect = useCallback(() => {
     setStatus('idle')
     setErrorMessage(null)
@@ -226,6 +230,7 @@ export function ConsoleTab({ vm, connectionId }: ConsoleTabProps) {
                 node={vm.node}
                 vmid={vm.vmid}
                 onError={handleError}
+                onConnected={handleConnected}
               />
             ) : (
               <TerminalConsole
@@ -233,6 +238,7 @@ export function ConsoleTab({ vm, connectionId }: ConsoleTabProps) {
                 node={vm.node}
                 vmid={vm.vmid}
                 onError={handleError}
+                onConnected={handleConnected}
               />
             )}
           </>

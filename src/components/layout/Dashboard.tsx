@@ -7,16 +7,18 @@ import { ResourceGauge } from '@/components/dashboard/ResourceGauge'
 import { NodeHealthGrid } from '@/components/dashboard/NodeHealthGrid'
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
 import { QuickActions } from '@/components/dashboard/QuickActions'
+import { formatBytes } from '@/lib/format'
 
 interface DashboardProps {
   connectionId: string
+  onNavigate?: (view: string) => void
 }
 
-export function Dashboard({ connectionId }: DashboardProps) {
+export function Dashboard({ connectionId, onNavigate }: DashboardProps) {
   const queryClient = useQueryClient()
-  const { data: nodes, isLoading: nodesLoading } = useNodes(connectionId)
-  const { data: vms, isLoading: vmsLoading } = useVMs(connectionId)
-  const { data: tasks, isLoading: tasksLoading } = useTasks(connectionId)
+  const { data: nodes, isLoading: nodesLoading, error: nodesError } = useNodes(connectionId)
+  const { data: vms, isLoading: vmsLoading, error: vmsError } = useVMs(connectionId)
+  const { data: tasks, isLoading: tasksLoading, error: tasksError } = useTasks(connectionId)
 
   const totalCPU = nodes?.reduce((acc, n) => acc + n.maxcpu, 0) ?? 0
   const usedCPU = nodes?.reduce((acc, n) => acc + n.cpu * n.maxcpu, 0) ?? 0
@@ -24,14 +26,6 @@ export function Dashboard({ connectionId }: DashboardProps) {
   const usedMem = nodes?.reduce((acc, n) => acc + n.mem, 0) ?? 0
   const totalDisk = nodes?.reduce((acc, n) => acc + n.maxdisk, 0) ?? 0
   const usedDisk = nodes?.reduce((acc, n) => acc + n.disk, 0) ?? 0
-
-  const formatBytes = (bytes: number) => {
-    if (bytes === 0) return '0 B'
-    const k = 1024
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
-  }
 
   const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`
 
@@ -45,6 +39,26 @@ export function Dashboard({ connectionId }: DashboardProps) {
     return (
       <div className="flex h-full items-center justify-center">
         <p className="text-muted-foreground">Loading...</p>
+      </div>
+    )
+  }
+
+  const hasError = nodesError || vmsError || tasksError
+  if (hasError) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-center space-y-4">
+          <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
+          <div>
+            <h3 className="text-lg font-semibold">Failed to Load Dashboard</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              {nodesError?.message || vmsError?.message || tasksError?.message || 'An error occurred while loading data'}
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </div>
       </div>
     )
   }
@@ -152,7 +166,7 @@ export function Dashboard({ connectionId }: DashboardProps) {
             <ActivityFeed tasks={tasks} isLoading={tasksLoading} />
           </div>
           <div>
-            <QuickActions onRefresh={handleRefresh} isRefreshing={tasksLoading} />
+            <QuickActions onRefresh={handleRefresh} isRefreshing={tasksLoading} onNavigate={onNavigate} />
           </div>
         </div>
       </div>

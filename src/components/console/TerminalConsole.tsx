@@ -8,9 +8,10 @@ interface TerminalConsoleProps {
   node: string
   vmid: number
   onError?: (message: string) => void
+  onConnected?: () => void
 }
 
-export function TerminalConsole({ connectionId, node, vmid, onError }: TerminalConsoleProps) {
+export function TerminalConsole({ connectionId, node, vmid, onError, onConnected }: TerminalConsoleProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -157,6 +158,8 @@ export function TerminalConsole({ connectionId, node, vmid, onError }: TerminalC
           })
           resizeObserver.observe(containerRef.current!)
 
+          onConnected?.()
+
           return () => {
             resizeObserver.disconnect()
           }
@@ -172,6 +175,7 @@ export function TerminalConsole({ connectionId, node, vmid, onError }: TerminalC
         ws.onopen = () => {
           if (!cancelled) {
             terminal.writeln(`\x1b[32mConnected to LXC container ${vmid} on ${node}\x1b[0m`)
+            onConnected?.()
           }
         }
 
@@ -242,7 +246,7 @@ export function TerminalConsole({ connectionId, node, vmid, onError }: TerminalC
       cleanupResize?.()
       cleanup()
     }
-  }, [connectionId, node, vmid, onError, cleanup])
+  }, [connectionId, node, vmid, onError, onConnected, cleanup])
 
   return (
     <div

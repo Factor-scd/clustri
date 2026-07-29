@@ -12,20 +12,13 @@ import {
 } from '@/components/ui/dialog'
 import { useResizeDisk } from '@/hooks/useProxmox'
 import type { ProxmoxVM, ProxmoxDisk } from '@/types/proxmox'
+import { formatBytes } from '@/lib/format'
 
 interface ResizeDiskDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   vm: ProxmoxVM
   disk: ProxmoxDisk
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
 }
 
 export function ResizeDiskDialog({ open, onOpenChange, vm, disk }: ResizeDiskDialogProps) {

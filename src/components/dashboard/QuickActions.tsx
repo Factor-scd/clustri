@@ -5,9 +5,10 @@ import { RefreshCw, Server, Box, HardDrive, ListTodo, Shield } from 'lucide-reac
 interface QuickActionsProps {
   onRefresh: () => void
   isRefreshing: boolean
+  onNavigate?: (view: string) => void
 }
 
-export function QuickActions({ onRefresh, isRefreshing }: QuickActionsProps) {
+export function QuickActions({ onRefresh, isRefreshing, onNavigate }: QuickActionsProps) {
   return (
     <Card>
       <CardHeader>
@@ -27,6 +28,7 @@ export function QuickActions({ onRefresh, isRefreshing }: QuickActionsProps) {
           <Button
             variant="outline"
             className="flex flex-col items-center gap-1.5 h-auto py-3"
+            onClick={() => onNavigate?.('dashboard')}
           >
             <Server className="h-4 w-4" />
             <span className="text-xs">Nodes</span>
@@ -34,6 +36,7 @@ export function QuickActions({ onRefresh, isRefreshing }: QuickActionsProps) {
           <Button
             variant="outline"
             className="flex flex-col items-center gap-1.5 h-auto py-3"
+            onClick={() => onNavigate?.('vms')}
           >
             <Box className="h-4 w-4" />
             <span className="text-xs">VMs</span>
@@ -41,6 +44,7 @@ export function QuickActions({ onRefresh, isRefreshing }: QuickActionsProps) {
           <Button
             variant="outline"
             className="flex flex-col items-center gap-1.5 h-auto py-3"
+            onClick={() => onNavigate?.('storage')}
           >
             <HardDrive className="h-4 w-4" />
             <span className="text-xs">Storage</span>
@@ -48,6 +52,7 @@ export function QuickActions({ onRefresh, isRefreshing }: QuickActionsProps) {
           <Button
             variant="outline"
             className="flex flex-col items-center gap-1.5 h-auto py-3"
+            onClick={() => onNavigate?.('tasks')}
           >
             <ListTodo className="h-4 w-4" />
             <span className="text-xs">Tasks</span>
@@ -55,6 +60,7 @@ export function QuickActions({ onRefresh, isRefreshing }: QuickActionsProps) {
           <Button
             variant="outline"
             className="flex flex-col items-center gap-1.5 h-auto py-3"
+            onClick={() => onNavigate?.('backups')}
           >
             <Shield className="h-4 w-4" />
             <span className="text-xs">Backups</span>

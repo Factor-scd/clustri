@@ -16,6 +16,7 @@ use websocket::WebSocketManager;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ConnectionConfig {
     pub id: String,
@@ -31,6 +32,7 @@ pub struct ConnectionConfig {
     pub username: Option<String>,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Serialize, Deserialize)]
 pub struct EndpointConfig {
     pub url: String,
@@ -38,6 +40,7 @@ pub struct EndpointConfig {
     pub token: Option<String>,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Serialize, Deserialize)]
 pub struct LoginResult {
     pub connection_id: String,
@@ -45,6 +48,7 @@ pub struct LoginResult {
     pub csrf_token: String,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Serialize, Deserialize)]
 pub struct CertificateInfo {
     pub fingerprint: String,
@@ -65,7 +69,7 @@ async fn add_connection(
     state: tauri::State<'_, AppState>,
     config: ConnectionConfig,
 ) -> Result<()> {
-    let manager = state.connection_manager.read().await;
+    let mut manager = state.connection_manager.write().await;
     manager.add_connection(config).await
 }
 
@@ -74,7 +78,7 @@ async fn remove_connection(
     state: tauri::State<'_, AppState>,
     id: String,
 ) -> Result<()> {
-    let manager = state.connection_manager.read().await;
+    let mut manager = state.connection_manager.write().await;
     manager.remove_connection(&id).await
 }
 
@@ -83,7 +87,7 @@ async fn connect_to_server(
     state: tauri::State<'_, AppState>,
     id: String,
 ) -> Result<()> {
-    let manager = state.connection_manager.read().await;
+    let mut manager = state.connection_manager.write().await;
     manager.connect(&id).await
 }
 
@@ -92,7 +96,7 @@ async fn disconnect_from_server(
     state: tauri::State<'_, AppState>,
     id: String,
 ) -> Result<()> {
-    let manager = state.connection_manager.read().await;
+    let mut manager = state.connection_manager.write().await;
     manager.disconnect(&id).await
 }
 
@@ -457,6 +461,7 @@ async fn get_stored_credentials(
 }
 
 // Console proxy types
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Serialize, Deserialize)]
 pub struct VNCProxyResponse {
     pub ticket: String,
@@ -464,6 +469,7 @@ pub struct VNCProxyResponse {
     pub cert: String,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Serialize, Deserialize)]
 pub struct TermProxyResponse {
     pub ticket: String,
@@ -613,6 +619,7 @@ async fn delete_backup(
     manager.delete_backup(&connection_id, &volid).await
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Clone, Serialize, Deserialize)]
 pub struct TrayConnectionInfo {
     pub id: String,

@@ -20,6 +20,7 @@ import {
   ListTodo,
   Shield,
   HardDrive,
+  Settings,
   Plus,
   X,
   Search,
@@ -38,7 +39,8 @@ type View =
   | { type: 'tasks' }
   | { type: 'backups' }
   | { type: 'storage' }
-  | { type: 'storage-detail'; storage: string }
+  | { type: 'storage-detail'; storage: string; node: string }
+  | { type: 'settings' }
 
 type CommandCategory = 'recent' | 'vms' | 'actions' | 'navigation' | 'connections'
 
@@ -253,6 +255,15 @@ export function CommandPalette({
         shortcut: '⌘5',
         keywords: ['storage', 'disks', 'volumes'],
         onExecute: () => onNavigate({ type: 'storage' }),
+      },
+      {
+        id: 'nav-settings',
+        label: 'Go to Settings',
+        icon: Settings,
+        category: 'navigation',
+        shortcut: '⌘6',
+        keywords: ['settings', 'preferences', 'configuration'],
+        onExecute: () => onNavigate({ type: 'settings' }),
       },
       {
         id: 'nav-add-connection',

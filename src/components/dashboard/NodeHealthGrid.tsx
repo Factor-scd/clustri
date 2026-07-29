@@ -3,25 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Cpu, MemoryStick, HardDrive, Clock, Server, Box } from 'lucide-react'
 import { AreaChart, Area, ResponsiveContainer } from 'recharts'
 import type { ProxmoxNode, ProxmoxVM } from '@/types/proxmox'
+import { formatBytes, formatUptime } from '@/lib/format'
 
 interface NodeHealthGridProps {
   nodes: ProxmoxNode[] | undefined
   vms: ProxmoxVM[] | undefined
-}
-
-function formatUptime(seconds: number): string {
-  const days = Math.floor(seconds / 86400)
-  const hours = Math.floor((seconds % 86400) / 3600)
-  if (days > 0) return `${days}d ${hours}h`
-  return `${hours}h`
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
 }
 
 function getStatusColor(status: 'online' | 'offline'): string {

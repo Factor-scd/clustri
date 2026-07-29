@@ -5,11 +5,12 @@ interface VNCConsoleProps {
   node: string
   vmid: number
   onError?: (message: string) => void
+  onConnected?: () => void
 }
 
 type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'error'
 
-export function VNCConsole({ connectionId, node, vmid, onError }: VNCConsoleProps) {
+export function VNCConsole({ connectionId, node, vmid, onError, onConnected }: VNCConsoleProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const rfbRef = useRef<unknown>(null)
   const stateRef = useRef<ConnectionState>('connecting')
@@ -72,6 +73,7 @@ export function VNCConsole({ connectionId, node, vmid, onError }: VNCConsoleProp
         rfb.addEventListener('connect', () => {
           if (!cancelled) {
             stateRef.current = 'connected'
+            onConnected?.()
           }
         })
 
@@ -90,6 +92,15 @@ export function VNCConsole({ connectionId, node, vmid, onError }: VNCConsoleProp
             onError?.('VNC credentials required')
           }
         })
+
+        // Listen for Ctrl+Alt+Del command from parent
+        const onCtrlAltDel = () => {
+          const current = rfbRef.current as { sendCtrlAltDel?: () => void } | null
+          if (current?.sendCtrlAltDel) {
+            current.sendCtrlAltDel()
+          }
+        }
+        containerRef.current.addEventListener('vnc-ctrl-alt-del', onCtrlAltDel)
       } catch (err) {
         if (!cancelled) {
           stateRef.current = 'error'
@@ -102,13 +113,17 @@ export function VNCConsole({ connectionId, node, vmid, onError }: VNCConsoleProp
 
     return () => {
       cancelled = true
+      if (containerRef.current) {
+        containerRef.current.removeAttribute('data-vnc')
+      }
       cleanup()
     }
-  }, [connectionId, node, vmid, onError, cleanup])
+  }, [connectionId, node, vmid, onError, onConnected, cleanup])
 
   return (
     <div
       ref={containerRef}
+      data-vnc
       className="h-full w-full bg-[#404040] overflow-hidden"
     />
   )

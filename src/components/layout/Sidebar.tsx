@@ -60,14 +60,14 @@ export function Sidebar({ onAddConnection, activeView, onNavigate }: SidebarProp
                     active={activeView === 'dashboard'}
                     onClick={() => onNavigate?.({ type: 'dashboard' })}
                   />
-                  <SidebarItem icon={Server} label="Nodes" />
+                  <SidebarItem icon={Server} label="Nodes" disabled />
                   <SidebarItem
                     icon={Box}
                     label="VMs"
                     active={activeView === 'vms' || activeView === 'vm-detail'}
                     onClick={() => onNavigate?.({ type: 'vms' })}
                   />
-                  <SidebarItem icon={Box} label="Containers" />
+                  <SidebarItem icon={Box} label="Containers" disabled />
                   <SidebarItem icon={HardDrive} label="Storage" active={activeView === 'storage' || activeView === 'storage-detail'} onClick={() => onNavigate?.({ type: 'storage' })} />
                   <SidebarItem icon={ListTodo} label="Tasks" active={activeView === 'tasks'} onClick={() => onNavigate?.({ type: 'tasks' })} />
                   <SidebarItem icon={Shield} label="Backups" active={activeView === 'backups'} onClick={() => onNavigate?.({ type: 'backups' })} />
@@ -101,21 +101,26 @@ function SidebarItem({
   icon: Icon,
   label,
   active,
+  disabled,
   onClick,
 }: {
   icon: React.ComponentType<{ className?: string }>
   label: string
   active?: boolean
+  disabled?: boolean
   onClick?: () => void
 }) {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       className={cn(
         'w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors',
-        active
-          ? 'bg-accent text-accent-foreground'
-          : 'text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground'
+        disabled
+          ? 'opacity-50 cursor-not-allowed pointer-events-none'
+          : active
+            ? 'bg-accent text-accent-foreground'
+            : 'text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground'
       )}
     >
       <Icon className="h-4 w-4" />
