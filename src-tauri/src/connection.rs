@@ -25,7 +25,7 @@ fn keyring_service() -> &'static str {
 fn keyring_entry(connection_id: &str, field: &str) -> keyring::Entry {
     let key = format!("{}:{}", connection_id, field);
     keyring::Entry::new(keyring_service(), &key)
-        .unwrap_or_else(|_| keyring::Entry::new_with_target(&key, keyring_service(), "", "").expect("failed to create keyring entry"))
+        .expect("failed to create keyring entry")
 }
 
 pub struct ConnectionManager {
