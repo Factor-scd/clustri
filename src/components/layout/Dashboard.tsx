@@ -2,12 +2,13 @@ import { useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNodes, useVMs, useTasks, queryKeys } from '@/hooks/useProxmox'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Server, Cpu, HardDrive, MemoryStick } from 'lucide-react'
+import { Server, Cpu, HardDrive, MemoryStick, AlertCircle } from 'lucide-react'
 import { ResourceGauge } from '@/components/dashboard/ResourceGauge'
 import { NodeHealthGrid } from '@/components/dashboard/NodeHealthGrid'
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
 import { QuickActions } from '@/components/dashboard/QuickActions'
 import { formatBytes } from '@/lib/format'
+import { Button } from '@/components/ui/button'
 
 interface DashboardProps {
   connectionId: string
