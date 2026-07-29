@@ -1,20 +1,19 @@
 // Connection configuration types
 
+export type AuthMode = 'password' | 'token'
+
 export interface ConnectionConfig {
   id: string
   name: string
-  // Primary endpoint
   primary: EndpointConfig
-  // Fallback endpoints for cluster failover
   fallbacks: EndpointConfig[]
-  // Certificate trust
   certFingerprint?: string
   trusted: boolean
-  // Connection state
   status: ConnectionStatus
-  // Cluster info (populated after connection)
   clusterName?: string
   isCluster: boolean
+  authMode: AuthMode
+  username?: string
 }
 
 export interface EndpointConfig {
@@ -23,7 +22,7 @@ export interface EndpointConfig {
   token?: string // API token (stored in keyring, not in config)
 }
 
-export type ConnectionStatus = 
+export type ConnectionStatus =
   | 'disconnected'
   | 'connecting'
   | 'connected'
@@ -42,4 +41,10 @@ export interface CertificateInfo {
 export interface ConnectionCredentials {
   connectionId: string
   apiToken: string
+}
+
+export interface LoginResult {
+  connectionId: string
+  ticket: string
+  csrfToken: string
 }

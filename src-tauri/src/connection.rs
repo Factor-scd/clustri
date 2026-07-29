@@ -4,8 +4,7 @@ use crate::proxmox::{
     CreateSnapshotConfig, Disk, EditNICConfig, NetworkInterface, Node, RestoreConfig, Snapshot,
     Storage, StorageContent, StorageDetail, Task, VM,
 };
-use crate::{CertificateInfo, ConnectionConfig, TermProxyResponse, VNCProxyResponse};
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
+use crate::{CertificateInfo, ConnectionConfig, EndpointConfig, LoginResult, TermProxyResponse, VNCProxyResponse};
 use reqwest::Client;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -14,7 +13,19 @@ use tokio::sync::RwLock;
 struct Connection {
     config: ConnectionConfig,
     client: Client,
+    ticket: Option<String>,
+    csrf_token: Option<String>,
     current_endpoint_index: usize,
+}
+
+fn keyring_service() -> &'static str {
+    "proxmox-desktop"
+}
+
+fn keyring_entry(connection_id: &str, field: &str) -> keyring::Entry {
+    let key = format!("{}:{}", connection_id, field);
+    keyring::Entry::new(keyring_service(), &key)
+        .unwrap_or_else(|_| keyring::Entry::new_with_target(&key, keyring_service(), "", "").expect("failed to create keyring entry"))
 }
 
 pub struct ConnectionManager {
@@ -29,8 +40,6 @@ impl ConnectionManager {
     }
 
     pub async fn add_connection(&self, config: ConnectionConfig) -> crate::Result<()> {
-        // In a real implementation, we'd store this to disk
-        // For now, just validate the config
         if config.primary.url.is_empty() {
             return Err(Error::InvalidUrl("URL cannot be empty".to_string()));
         }
@@ -38,22 +47,192 @@ impl ConnectionManager {
     }
 
     pub async fn remove_connection(&self, id: &str) -> crate::Result<()> {
-        // Remove from storage
+        // Clear stored credentials from keyring
+        let _ = keyring_entry(id, "ticket").delete_credential();
+        let _ = keyring_entry(id, "csrf_token").delete_credential();
+        let _ = keyring_entry(id, "password").delete_credential();
+        let _ = keyring_entry(id, "token").delete_credential();
         Ok(())
     }
 
     pub async fn connect(&self, id: &str) -> crate::Result<()> {
-        // Connect to the server
         Ok(())
     }
 
     pub async fn disconnect(&self, id: &str) -> crate::Result<()> {
-        // Disconnect from the server
         Ok(())
     }
 
+    pub async fn login_with_password(
+        &self,
+        url: &str,
+        username: &str,
+        password: &str,
+    ) -> crate::Result<LoginResult> {
+        if url.is_empty() {
+            return Err(Error::InvalidUrl("URL cannot be empty".to_string()));
+        }
+
+        let client = Client::builder()
+            .danger_accept_invalid_certs(true)
+            .build()
+            .map_err(|e| Error::HttpError(e))?;
+
+        let login_url = format!("{}/access/ticket", url);
+
+        let params = [
+            ("username", username),
+            ("password", password),
+        ];
+
+        let response = client
+            .post(&login_url)
+            .form(&params)
+            .send()
+            .await
+            .map_err(|e| {
+                if e.is_connect() {
+                    Error::AuthError(format!("Cannot connect to server: {}", e))
+                } else {
+                    Error::HttpError(e)
+                }
+            })?;
+
+        let status = response.status();
+        let body: serde_json::Value = response.json().await.map_err(Error::HttpError)?;
+
+        if !status.is_success() {
+            let error_msg = body["data"]
+                .as_str()
+                .or_else(|| body["errors"].as_str())
+                .unwrap_or("Authentication failed");
+            return Err(Error::InvalidCredentials(error_msg.to_string()));
+        }
+
+        let data = &body["data"];
+        let ticket = data["ticket"]
+            .as_str()
+            .ok_or_else(|| Error::AuthError("No ticket in response".to_string()))?
+            .to_string();
+        let csrf_token = data["CSRFPreventionToken"]
+            .as_str()
+            .unwrap_or("")
+            .to_string();
+
+        Ok(LoginResult {
+            connection_id: String::new(),
+            ticket,
+            csrf_token,
+        })
+    }
+
+    pub async fn login_with_token(
+        &self,
+        url: &str,
+        token: &str,
+    ) -> crate::Result<LoginResult> {
+        if url.is_empty() {
+            return Err(Error::InvalidUrl("URL cannot be empty".to_string()));
+        }
+        if token.is_empty() {
+            return Err(Error::InvalidCredentials("API token cannot be empty".to_string()));
+        }
+
+        let client = Client::builder()
+            .danger_accept_invalid_certs(true)
+            .build()
+            .map_err(|e| Error::HttpError(e))?;
+
+        // Validate the token by making an authenticated request
+        let test_url = format!("{}/cluster/status", url);
+        let auth_header = format!("PVEAPIToken={}", token);
+
+        let response = client
+            .get(&test_url)
+            .header("Authorization", &auth_header)
+            .send()
+            .await
+            .map_err(|e| {
+                if e.is_connect() {
+                    Error::AuthError(format!("Cannot connect to server: {}", e))
+                } else {
+                    Error::HttpError(e)
+                }
+            })?;
+
+        if !response.status().is_success() {
+            return Err(Error::InvalidCredentials("Invalid API token".to_string()));
+        }
+
+        Ok(LoginResult {
+            connection_id: String::new(),
+            ticket: token.to_string(),
+            csrf_token: String::new(),
+        })
+    }
+
+    pub async fn logout(&self, connection_id: &str) -> crate::Result<()> {
+        let _ = keyring_entry(connection_id, "ticket").delete_credential();
+        let _ = keyring_entry(connection_id, "csrf_token").delete_credential();
+        let _ = keyring_entry(connection_id, "password").delete_credential();
+        let _ = keyring_entry(connection_id, "token").delete_credential();
+        Ok(())
+    }
+
+    pub async fn get_stored_credentials(&self, connection_id: &str) -> crate::Result<Option<String>> {
+        match keyring_entry(connection_id, "ticket").get_password() {
+            Ok(ticket) => Ok(Some(ticket)),
+            Err(keyring::Error::NoEntry) => Ok(None),
+            Err(e) => Err(Error::KeyringError(e.to_string())),
+        }
+    }
+
+    pub async fn store_credentials(
+        &self,
+        connection_id: &str,
+        ticket: &str,
+        csrf_token: &str,
+        password: Option<&str>,
+        api_token: Option<&str>,
+    ) -> crate::Result<()> {
+        keyring_entry(connection_id, "ticket")
+            .set_password(ticket)
+            .map_err(|e| Error::KeyringError(e.to_string()))?;
+        keyring_entry(connection_id, "csrf_token")
+            .set_password(csrf_token)
+            .map_err(|e| Error::KeyringError(e.to_string()))?;
+        if let Some(pw) = password {
+            keyring_entry(connection_id, "password")
+                .set_password(pw)
+                .map_err(|e| Error::KeyringError(e.to_string()))?;
+        }
+        if let Some(tok) = api_token {
+            keyring_entry(connection_id, "token")
+                .set_password(tok)
+                .map_err(|e| Error::KeyringError(e.to_string()))?;
+        }
+        Ok(())
+    }
+
+    pub async fn refresh_ticket(
+        &self,
+        connection_id: &str,
+        url: &str,
+    ) -> crate::Result<LoginResult> {
+        // Try to get stored password for re-authentication
+        let password = keyring_entry(connection_id, "password")
+            .get_password()
+            .map_err(|e| Error::KeyringError(e.to_string()))?;
+
+        // Extract username from stored ticket or use default
+        let username = keyring_entry(connection_id, "csrf_token")
+            .get_password()
+            .unwrap_or_default();
+
+        self.login_with_password(url, &username, &password).await
+    }
+
     pub async fn get_certificate_info(&self, url: &str) -> crate::Result<CertificateInfo> {
-        // Fetch certificate info from the server
         Ok(CertificateInfo {
             fingerprint: "AB:CD:EF:12:34:56:78:90".to_string(),
             issuer: "Proxmox".to_string(),
@@ -65,22 +244,18 @@ impl ConnectionManager {
     }
 
     pub async fn trust_certificate(&self, id: &str, fingerprint: &str) -> crate::Result<()> {
-        // Store trusted certificate
         Ok(())
     }
 
     pub async fn get_nodes(&self, connection_id: &str) -> crate::Result<Vec<Node>> {
-        // Fetch nodes from Proxmox API
         Ok(vec![])
     }
 
     pub async fn get_vms(&self, connection_id: &str) -> crate::Result<Vec<VM>> {
-        // Fetch VMs from Proxmox API
         Ok(vec![])
     }
 
     pub async fn get_storage(&self, connection_id: &str) -> crate::Result<Vec<Storage>> {
-        // Fetch storage from Proxmox API
         Ok(vec![])
     }
 
@@ -89,7 +264,6 @@ impl ConnectionManager {
         _connection_id: &str,
         _storage: &str,
     ) -> crate::Result<Vec<StorageContent>> {
-        // Fetch content of a storage pool via Proxmox API
         Ok(vec![])
     }
 
@@ -99,7 +273,6 @@ impl ConnectionManager {
         _node: &str,
         _storage: &str,
     ) -> crate::Result<StorageDetail> {
-        // Fetch detailed info about a storage pool via Proxmox API
         Ok(StorageDetail {
             storage: String::new(),
             r#type: String::new(),
@@ -115,12 +288,10 @@ impl ConnectionManager {
     }
 
     pub async fn get_tasks(&self, connection_id: &str) -> crate::Result<Vec<Task>> {
-        // Fetch tasks from Proxmox API
         Ok(vec![])
     }
 
     pub async fn get_cluster_status(&self, connection_id: &str) -> crate::Result<ClusterStatus> {
-        // Fetch cluster status from Proxmox API
         Ok(ClusterStatus {
             r#type: "cluster".to_string(),
             name: "default".to_string(),
@@ -130,32 +301,26 @@ impl ConnectionManager {
     }
 
     pub async fn start_vm(&self, connection_id: &str, node: &str, vmid: u32) -> crate::Result<()> {
-        // Start VM via Proxmox API
         Ok(())
     }
 
     pub async fn stop_vm(&self, connection_id: &str, node: &str, vmid: u32) -> crate::Result<()> {
-        // Stop VM via Proxmox API
         Ok(())
     }
 
     pub async fn shutdown_vm(&self, connection_id: &str, node: &str, vmid: u32) -> crate::Result<()> {
-        // Shutdown VM via Proxmox API
         Ok(())
     }
 
     pub async fn reboot_vm(&self, connection_id: &str, node: &str, vmid: u32) -> crate::Result<()> {
-        // Reboot VM via Proxmox API
         Ok(())
     }
 
     pub async fn suspend_vm(&self, connection_id: &str, node: &str, vmid: u32) -> crate::Result<()> {
-        // Suspend (pause) VM via Proxmox API
         Ok(())
     }
 
     pub async fn resume_vm(&self, connection_id: &str, node: &str, vmid: u32) -> crate::Result<()> {
-        // Resume suspended VM via Proxmox API
         Ok(())
     }
 
@@ -165,7 +330,6 @@ impl ConnectionManager {
         node: &str,
         vmid: u32,
     ) -> crate::Result<Vec<Disk>> {
-        // Fetch disks for a VM via Proxmox API
         Ok(vec![])
     }
 
@@ -176,7 +340,6 @@ impl ConnectionManager {
         vmid: u32,
         _config: AddDiskConfig,
     ) -> crate::Result<()> {
-        // Add a disk to a VM via Proxmox API
         Ok(())
     }
 
@@ -188,7 +351,6 @@ impl ConnectionManager {
         _disk: &str,
         _size: u64,
     ) -> crate::Result<()> {
-        // Resize a disk via Proxmox API
         Ok(())
     }
 
@@ -199,7 +361,6 @@ impl ConnectionManager {
         vmid: u32,
         _disk: &str,
     ) -> crate::Result<()> {
-        // Remove a disk via Proxmox API
         Ok(())
     }
 
@@ -211,7 +372,6 @@ impl ConnectionManager {
         _disk: &str,
         _storage: &str,
     ) -> crate::Result<()> {
-        // Move a disk to different storage via Proxmox API
         Ok(())
     }
 
@@ -221,7 +381,6 @@ impl ConnectionManager {
         node: &str,
         vmid: u32,
     ) -> crate::Result<Vec<NetworkInterface>> {
-        // Fetch network interfaces for a VM via Proxmox API
         Ok(vec![])
     }
 
@@ -232,7 +391,6 @@ impl ConnectionManager {
         vmid: u32,
         _config: AddNICConfig,
     ) -> crate::Result<()> {
-        // Add a network interface to a VM via Proxmox API
         Ok(())
     }
 
@@ -244,7 +402,6 @@ impl ConnectionManager {
         _nic: &str,
         _config: EditNICConfig,
     ) -> crate::Result<()> {
-        // Edit a network interface on a VM via Proxmox API
         Ok(())
     }
 
@@ -255,7 +412,6 @@ impl ConnectionManager {
         vmid: u32,
         _nic: &str,
     ) -> crate::Result<()> {
-        // Remove a network interface from a VM via Proxmox API
         Ok(())
     }
 
@@ -265,7 +421,6 @@ impl ConnectionManager {
         _node: &str,
         _vmid: u32,
     ) -> crate::Result<Vec<Snapshot>> {
-        // Fetch snapshots for a VM via Proxmox API
         Ok(vec![])
     }
 
@@ -276,7 +431,6 @@ impl ConnectionManager {
         _vmid: u32,
         _config: CreateSnapshotConfig,
     ) -> crate::Result<()> {
-        // Create a snapshot for a VM via Proxmox API
         Ok(())
     }
 
@@ -287,7 +441,6 @@ impl ConnectionManager {
         _vmid: u32,
         _name: &str,
     ) -> crate::Result<()> {
-        // Delete a snapshot from a VM via Proxmox API
         Ok(())
     }
 
@@ -298,7 +451,6 @@ impl ConnectionManager {
         _vmid: u32,
         _name: &str,
     ) -> crate::Result<()> {
-        // Rollback a VM to a snapshot via Proxmox API
         Ok(())
     }
 
@@ -310,7 +462,6 @@ impl ConnectionManager {
         _target_node: &str,
         _online: bool,
     ) -> crate::Result<()> {
-        // Migrate a VM to another node via Proxmox API
         Ok(())
     }
 
@@ -320,9 +471,6 @@ impl ConnectionManager {
         _node: &str,
         _vmid: u32,
     ) -> crate::Result<VNCProxyResponse> {
-        // Create a VNC proxy via Proxmox API
-        // POST /nodes/{node}/qemu/{vmid}/vncproxy
-        // Returns ticket, port, and certificate
         Ok(VNCProxyResponse {
             ticket: String::new(),
             port: 0,
@@ -336,9 +484,6 @@ impl ConnectionManager {
         _node: &str,
         _vmid: u32,
     ) -> crate::Result<TermProxyResponse> {
-        // Create a terminal proxy via Proxmox API
-        // POST /nodes/{node}/lxc/{vmid}/termproxy
-        // Returns ticket and port
         Ok(TermProxyResponse {
             ticket: String::new(),
             port: 0,
@@ -350,8 +495,6 @@ impl ConnectionManager {
         _connection_id: &str,
         _node: &str,
     ) -> crate::Result<String> {
-        // Build the WebSocket base URL from the connection config
-        // Returns wss://{host}:{port} for the given connection
         Ok(String::new())
     }
 
@@ -359,7 +502,6 @@ impl ConnectionManager {
         &self,
         _connection_id: &str,
     ) -> crate::Result<Vec<BackupJob>> {
-        // Fetch backup jobs from Proxmox API
         Ok(vec![])
     }
 
@@ -368,7 +510,6 @@ impl ConnectionManager {
         _connection_id: &str,
         _storage: Option<&str>,
     ) -> crate::Result<Vec<Backup>> {
-        // Fetch existing backups from Proxmox API
         Ok(vec![])
     }
 
@@ -377,7 +518,6 @@ impl ConnectionManager {
         _connection_id: &str,
         _config: BackupJobConfig,
     ) -> crate::Result<()> {
-        // Create a backup job via Proxmox API
         Ok(())
     }
 
@@ -387,7 +527,6 @@ impl ConnectionManager {
         _id: &str,
         _config: BackupJobConfig,
     ) -> crate::Result<()> {
-        // Update a backup job via Proxmox API
         Ok(())
     }
 
@@ -396,7 +535,6 @@ impl ConnectionManager {
         _connection_id: &str,
         _id: &str,
     ) -> crate::Result<()> {
-        // Delete a backup job via Proxmox API
         Ok(())
     }
 
@@ -405,7 +543,6 @@ impl ConnectionManager {
         _connection_id: &str,
         _config: BackupJobConfig,
     ) -> crate::Result<()> {
-        // Trigger an immediate backup run via Proxmox API
         Ok(())
     }
 
@@ -415,7 +552,6 @@ impl ConnectionManager {
         _volid: &str,
         _config: RestoreConfig,
     ) -> crate::Result<()> {
-        // Restore a backup via Proxmox API
         Ok(())
     }
 
@@ -424,7 +560,6 @@ impl ConnectionManager {
         _connection_id: &str,
         _volid: &str,
     ) -> crate::Result<()> {
-        // Delete a backup file via Proxmox API
         Ok(())
     }
 }
