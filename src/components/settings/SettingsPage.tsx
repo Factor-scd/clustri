@@ -53,11 +53,11 @@ export function SettingsPage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Version</span>
-                <span className="text-sm font-medium">0.1.0</span>
+                <span className="font-mono text-sm font-medium tabular-nums">0.1.0</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Platform</span>
-                <span className="text-sm font-medium">Tauri + React</span>
+                <span className="font-mono text-sm font-medium">Tauri + React</span>
               </div>
               <div className="pt-2 border-t">
                 <a

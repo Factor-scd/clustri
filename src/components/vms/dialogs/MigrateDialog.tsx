@@ -37,6 +37,7 @@ export function MigrateDialog({ vm, connectionId, open, onOpenChange }: MigrateD
       {
         node: vm.node,
         vmid: vm.vmid,
+        vmType: vm.type,
         targetNode,
         online,
       },
@@ -60,10 +61,10 @@ export function MigrateDialog({ vm, connectionId, open, onOpenChange }: MigrateD
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="rounded-md bg-muted p-3 flex gap-2">
-            <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 shrink-0" />
+          <div className="flex gap-2 rounded-md border border-warning/25 bg-warning/10 p-3">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
             <div className="text-sm">
-              <p className="font-medium text-yellow-600">Warning</p>
+              <p className="font-medium text-warning">Warning</p>
               <p className="text-muted-foreground">
                 Migration may cause temporary downtime. Online migration keeps the VM running but
                 requires shared storage. Offline migration requires the VM to be stopped.
@@ -103,7 +104,7 @@ export function MigrateDialog({ vm, connectionId, open, onOpenChange }: MigrateD
               id="online"
               checked={online}
               onChange={(e) => setOnline(e.target.checked)}
-              className="h-4 w-4 rounded border-input"
+              className="h-4 w-4 rounded border-input accent-primary"
             />
             <Label htmlFor="online" className="text-sm font-normal cursor-pointer">
               Online migration (VM stays running)

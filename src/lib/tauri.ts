@@ -1,7 +1,14 @@
 // Tauri IPC commands interface
 // These functions call into the Rust backend via Tauri's invoke mechanism
 
-import type { ConnectionConfig, CertificateInfo, LoginResult } from '@/types/connection'
+import type {
+  ConnectionConfig,
+  CertificateInfo,
+  LoginResult,
+  LoadConnectionsResult,
+  ConnectResult,
+  ConnectionStatusInfo,
+} from '@/types/connection'
 import type {
   ProxmoxNode,
   ProxmoxVM,
@@ -36,6 +43,14 @@ const mockResponse = <T>(data: T): Promise<T> => {
 }
 
 // Connection management
+export const loadConnections = async (): Promise<LoadConnectionsResult> => {
+  if (!isTauri()) {
+    return mockResponse({ activeConnectionId: null, connections: [] })
+  }
+  const { invoke } = await import('@tauri-apps/api/core')
+  return invoke('load_connections')
+}
+
 export const addConnection = async (config: ConnectionConfig): Promise<void> => {
   if (!isTauri()) return mockResponse(undefined)
   const { invoke } = await import('@tauri-apps/api/core')
@@ -48,16 +63,46 @@ export const removeConnection = async (id: string): Promise<void> => {
   return invoke('remove_connection', { id })
 }
 
-export const connectToServer = async (id: string): Promise<void> => {
+export const updateConnection = async (config: ConnectionConfig): Promise<void> => {
   if (!isTauri()) return mockResponse(undefined)
   const { invoke } = await import('@tauri-apps/api/core')
+  return invoke('update_connection', { config })
+}
+
+export const connectToServer = async (id: string): Promise<ConnectResult> => {
+  if (!isTauri()) {
+    return mockResponse({ connectionId: id, mergedInto: null, status: 'connected' })
+  }
+  const { invoke } = await import('@tauri-apps/api/core')
   return invoke('connect_to_server', { id })
+}
+
+export const getConnectionStatus = async (
+  connectionId: string,
+): Promise<ConnectionStatusInfo> => {
+  if (!isTauri()) {
+    return mockResponse({
+      connectionId,
+      status: 'connected',
+      primaryUrl: '',
+      currentEndpointUrl: '',
+      nodes: [],
+    })
+  }
+  const { invoke } = await import('@tauri-apps/api/core')
+  return invoke('get_connection_status', { connectionId })
 }
 
 export const disconnectFromServer = async (id: string): Promise<void> => {
   if (!isTauri()) return mockResponse(undefined)
   const { invoke } = await import('@tauri-apps/api/core')
   return invoke('disconnect_from_server', { id })
+}
+
+export const setActiveConnection = async (id: string): Promise<void> => {
+  if (!isTauri()) return mockResponse(undefined)
+  const { invoke } = await import('@tauri-apps/api/core')
+  return invoke('set_active_connection', { id })
 }
 
 // Authentication
@@ -222,40 +267,40 @@ export const getClusterStatus = async (connectionId: string): Promise<ProxmoxClu
 }
 
 // VM lifecycle
-export const startVM = async (connectionId: string, node: string, vmid: number): Promise<void> => {
+export const startVM = async (connectionId: string, node: string, vmid: number, vmType: string): Promise<void> => {
   if (!isTauri()) return mockResponse(undefined)
   const { invoke } = await import('@tauri-apps/api/core')
-  return invoke('start_vm', { connectionId, node, vmid })
+  return invoke('start_vm', { connectionId, node, vmid, vmType })
 }
 
-export const stopVM = async (connectionId: string, node: string, vmid: number): Promise<void> => {
+export const stopVM = async (connectionId: string, node: string, vmid: number, vmType: string): Promise<void> => {
   if (!isTauri()) return mockResponse(undefined)
   const { invoke } = await import('@tauri-apps/api/core')
-  return invoke('stop_vm', { connectionId, node, vmid })
+  return invoke('stop_vm', { connectionId, node, vmid, vmType })
 }
 
-export const shutdownVM = async (connectionId: string, node: string, vmid: number): Promise<void> => {
+export const shutdownVM = async (connectionId: string, node: string, vmid: number, vmType: string): Promise<void> => {
   if (!isTauri()) return mockResponse(undefined)
   const { invoke } = await import('@tauri-apps/api/core')
-  return invoke('shutdown_vm', { connectionId, node, vmid })
+  return invoke('shutdown_vm', { connectionId, node, vmid, vmType })
 }
 
-export const rebootVM = async (connectionId: string, node: string, vmid: number): Promise<void> => {
+export const rebootVM = async (connectionId: string, node: string, vmid: number, vmType: string): Promise<void> => {
   if (!isTauri()) return mockResponse(undefined)
   const { invoke } = await import('@tauri-apps/api/core')
-  return invoke('reboot_vm', { connectionId, node, vmid })
+  return invoke('reboot_vm', { connectionId, node, vmid, vmType })
 }
 
-export const suspendVM = async (connectionId: string, node: string, vmid: number): Promise<void> => {
+export const suspendVM = async (connectionId: string, node: string, vmid: number, vmType: string): Promise<void> => {
   if (!isTauri()) return mockResponse(undefined)
   const { invoke } = await import('@tauri-apps/api/core')
-  return invoke('suspend_vm', { connectionId, node, vmid })
+  return invoke('suspend_vm', { connectionId, node, vmid, vmType })
 }
 
-export const resumeVM = async (connectionId: string, node: string, vmid: number): Promise<void> => {
+export const resumeVM = async (connectionId: string, node: string, vmid: number, vmType: string): Promise<void> => {
   if (!isTauri()) return mockResponse(undefined)
   const { invoke } = await import('@tauri-apps/api/core')
-  return invoke('resume_vm', { connectionId, node, vmid })
+  return invoke('resume_vm', { connectionId, node, vmid, vmType })
 }
 
 // Disk management
@@ -263,6 +308,7 @@ export const getDisks = async (
   connectionId: string,
   node: string,
   vmid: number,
+  vmType: string,
 ): Promise<ProxmoxDisk[]> => {
   if (!isTauri()) {
     return mockResponse([
@@ -271,53 +317,57 @@ export const getDisks = async (
     ])
   }
   const { invoke } = await import('@tauri-apps/api/core')
-  return invoke('get_disks', { connectionId, node, vmid })
+  return invoke('get_disks', { connectionId, node, vmid, vmType })
 }
 
 export const addDisk = async (
   connectionId: string,
   node: string,
   vmid: number,
+  vmType: string,
   config: AddDiskConfig,
 ): Promise<void> => {
   if (!isTauri()) return mockResponse(undefined)
   const { invoke } = await import('@tauri-apps/api/core')
-  return invoke('add_disk', { connectionId, node, vmid, config })
+  return invoke('add_disk', { connectionId, node, vmid, vmType, config })
 }
 
 export const resizeDisk = async (
   connectionId: string,
   node: string,
   vmid: number,
+  vmType: string,
   disk: string,
   size: number,
 ): Promise<void> => {
   if (!isTauri()) return mockResponse(undefined)
   const { invoke } = await import('@tauri-apps/api/core')
-  return invoke('resize_disk', { connectionId, node, vmid, disk, size })
+  return invoke('resize_disk', { connectionId, node, vmid, vmType, disk, size })
 }
 
 export const removeDisk = async (
   connectionId: string,
   node: string,
   vmid: number,
+  vmType: string,
   disk: string,
 ): Promise<void> => {
   if (!isTauri()) return mockResponse(undefined)
   const { invoke } = await import('@tauri-apps/api/core')
-  return invoke('remove_disk', { connectionId, node, vmid, disk })
+  return invoke('remove_disk', { connectionId, node, vmid, vmType, disk })
 }
 
 export const moveDisk = async (
   connectionId: string,
   node: string,
   vmid: number,
+  vmType: string,
   disk: string,
   storage: string,
 ): Promise<void> => {
   if (!isTauri()) return mockResponse(undefined)
   const { invoke } = await import('@tauri-apps/api/core')
-  return invoke('move_disk', { connectionId, node, vmid, disk, storage })
+  return invoke('move_disk', { connectionId, node, vmid, vmType, disk, storage })
 }
 
 // Network management
@@ -325,6 +375,7 @@ export const getNetworkInterfaces = async (
   connectionId: string,
   node: string,
   vmid: number,
+  vmType: string,
 ): Promise<ProxmoxNetwork[]> => {
   if (!isTauri()) {
     return mockResponse([
@@ -332,41 +383,44 @@ export const getNetworkInterfaces = async (
     ])
   }
   const { invoke } = await import('@tauri-apps/api/core')
-  return invoke('get_network_interfaces', { connectionId, node, vmid })
+  return invoke('get_network_interfaces', { connectionId, node, vmid, vmType })
 }
 
 export const addNIC = async (
   connectionId: string,
   node: string,
   vmid: number,
+  vmType: string,
   config: AddNICConfig,
 ): Promise<void> => {
   if (!isTauri()) return mockResponse(undefined)
   const { invoke } = await import('@tauri-apps/api/core')
-  return invoke('add_nic', { connectionId, node, vmid, config })
+  return invoke('add_nic', { connectionId, node, vmid, vmType, config })
 }
 
 export const editNIC = async (
   connectionId: string,
   node: string,
   vmid: number,
+  vmType: string,
   nic: string,
   config: EditNICConfig,
 ): Promise<void> => {
   if (!isTauri()) return mockResponse(undefined)
   const { invoke } = await import('@tauri-apps/api/core')
-  return invoke('edit_nic', { connectionId, node, vmid, nic, config })
+  return invoke('edit_nic', { connectionId, node, vmid, vmType, nic, config })
 }
 
 export const removeNIC = async (
   connectionId: string,
   node: string,
   vmid: number,
+  vmType: string,
   nic: string,
 ): Promise<void> => {
   if (!isTauri()) return mockResponse(undefined)
   const { invoke } = await import('@tauri-apps/api/core')
-  return invoke('remove_nic', { connectionId, node, vmid, nic })
+  return invoke('remove_nic', { connectionId, node, vmid, vmType, nic })
 }
 
 // Snapshot management
@@ -374,43 +428,47 @@ export const getSnapshots = async (
   connectionId: string,
   node: string,
   vmid: number,
+  vmType: string,
 ): Promise<ProxmoxSnapshot[]> => {
   if (!isTauri()) return mockResponse([])
   const { invoke } = await import('@tauri-apps/api/core')
-  return invoke('get_snapshots', { connectionId, node, vmid })
+  return invoke('get_snapshots', { connectionId, node, vmid, vmType })
 }
 
 export const createSnapshot = async (
   connectionId: string,
   node: string,
   vmid: number,
+  vmType: string,
   config: CreateSnapshotConfig,
 ): Promise<void> => {
   if (!isTauri()) return mockResponse(undefined)
   const { invoke } = await import('@tauri-apps/api/core')
-  return invoke('create_snapshot', { connectionId, node, vmid, config })
+  return invoke('create_snapshot', { connectionId, node, vmid, vmType, config })
 }
 
 export const deleteSnapshot = async (
   connectionId: string,
   node: string,
   vmid: number,
+  vmType: string,
   name: string,
 ): Promise<void> => {
   if (!isTauri()) return mockResponse(undefined)
   const { invoke } = await import('@tauri-apps/api/core')
-  return invoke('delete_snapshot', { connectionId, node, vmid, name })
+  return invoke('delete_snapshot', { connectionId, node, vmid, vmType, name })
 }
 
 export const rollbackSnapshot = async (
   connectionId: string,
   node: string,
   vmid: number,
+  vmType: string,
   name: string,
 ): Promise<void> => {
   if (!isTauri()) return mockResponse(undefined)
   const { invoke } = await import('@tauri-apps/api/core')
-  return invoke('rollback_snapshot', { connectionId, node, vmid, name })
+  return invoke('rollback_snapshot', { connectionId, node, vmid, vmType, name })
 }
 
 // VM migration
@@ -418,12 +476,13 @@ export const migrateVM = async (
   connectionId: string,
   node: string,
   vmid: number,
+  vmType: string,
   targetNode: string,
   online: boolean,
 ): Promise<void> => {
   if (!isTauri()) return mockResponse(undefined)
   const { invoke } = await import('@tauri-apps/api/core')
-  return invoke('migrate_vm', { connectionId, node, vmid, targetNode, online })
+  return invoke('migrate_vm', { connectionId, node, vmid, vmType, targetNode, online })
 }
 
 // Console proxy
@@ -564,4 +623,13 @@ export const deleteBackup = async (connectionId: string, volid: string): Promise
   if (!isTauri()) return mockResponse(undefined)
   const { invoke } = await import('@tauri-apps/api/core')
   return invoke('delete_backup', { connectionId, volid })
+}
+
+// Tray menu
+export const updateTrayMenu = async (
+  connections: { id: string; name: string; status: string }[],
+): Promise<void> => {
+  if (!isTauri()) return
+  const { invoke } = await import('@tauri-apps/api/core')
+  return invoke('update_tray_menu', { connections })
 }

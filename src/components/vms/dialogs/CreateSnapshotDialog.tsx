@@ -31,6 +31,7 @@ export function CreateSnapshotDialog({ open, onOpenChange, vm }: CreateSnapshotD
       {
         node: vm.node,
         vmid: vm.vmid,
+        vmType: vm.type,
         config: {
           name,
           description: description || undefined,
@@ -83,7 +84,7 @@ export function CreateSnapshotDialog({ open, onOpenChange, vm }: CreateSnapshotD
               id="vmstate"
               checked={vmstate}
               onChange={(e) => setVmstate(e.target.checked)}
-              className="h-4 w-4 rounded border-input"
+              className="h-4 w-4 rounded border-input accent-primary"
             />
             <Label htmlFor="vmstate" className="text-sm font-normal cursor-pointer">
               Include VM state (memory)

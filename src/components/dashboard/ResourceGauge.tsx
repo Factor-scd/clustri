@@ -20,10 +20,23 @@ function formatCores(cores: number): string {
   return `${cores.toFixed(1)} cores`
 }
 
-function getGaugeColor(percent: number): string {
-  if (percent >= 0.9) return 'stroke-destructive'
-  if (percent >= 0.7) return 'stroke-yellow-500'
-  return 'stroke-primary'
+function getGaugeStyle(percent: number): { className: string; glow: string } {
+  if (percent >= 0.9) {
+    return {
+      className: 'stroke-destructive',
+      glow: 'drop-shadow(0 0 3px color-mix(in oklab, var(--color-destructive) 50%, transparent))',
+    }
+  }
+  if (percent >= 0.7) {
+    return {
+      className: 'stroke-warning',
+      glow: 'drop-shadow(0 0 3px color-mix(in oklab, var(--color-warning) 50%, transparent))',
+    }
+  }
+  return {
+    className: 'stroke-primary',
+    glow: 'drop-shadow(0 0 3px color-mix(in oklab, var(--color-primary) 45%, transparent))',
+  }
 }
 
 function getTrackColor(): string {
@@ -49,16 +62,19 @@ export function ResourceGauge({ label, used, total, icon, formatValue }: Resourc
       : formatBytes
 
   const formatter = formatValue ?? defaultFormat
+  const gaugeStyle = getGaugeStyle(clampedPercent)
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{label}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
+        <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-muted/40">
+          <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+        </div>
       </CardHeader>
       <CardContent className="flex flex-col items-center gap-3">
         <div className="relative">
-          <svg width="100" height="100" viewBox="0 0 100 100">
+          <svg width="108" height="108" viewBox="0 0 100 100">
             {/* Background track */}
             <circle
               cx="50"
@@ -78,19 +94,22 @@ export function ResourceGauge({ label, used, total, icon, formatValue }: Resourc
               strokeLinecap="round"
               strokeDasharray={circumference}
               strokeDashoffset={strokeDashoffset}
-              className={getGaugeColor(clampedPercent)}
+              className={gaugeStyle.className}
               style={{
                 transform: 'rotate(-90deg)',
                 transformOrigin: '50% 50%',
                 transition: 'stroke-dashoffset 0.6s ease-in-out',
+                filter: gaugeStyle.glow,
               }}
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-lg font-bold">{displayPercent}%</span>
+            <span className="font-mono text-xl font-semibold leading-none tracking-tight tabular-nums">
+              {displayPercent}%
+            </span>
           </div>
         </div>
-        <div className="text-center text-xs text-muted-foreground">
+        <div className="text-center font-mono text-xs tabular-nums text-muted-foreground">
           {formatter(used)} / {formatter(total)}
         </div>
       </CardContent>

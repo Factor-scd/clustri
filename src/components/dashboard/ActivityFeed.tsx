@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Activity, Clock } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Activity, Clock, Loader2 } from 'lucide-react'
 import type { ProxmoxTask } from '@/types/proxmox'
 
 interface ActivityFeedProps {
@@ -8,17 +9,21 @@ interface ActivityFeedProps {
   isLoading: boolean
 }
 
+function isRunningTask(status?: string): boolean {
+  return !status || status === 'Running'
+}
+
 function getStatusBadgeClass(status?: string): string {
   switch (status) {
     case 'OK':
-      return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+      return 'border-success/25 bg-success/10 text-success'
     case 'unknown':
-      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+      return 'border-warning/25 bg-warning/10 text-warning'
     default:
       if (!status || status === 'Running') {
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+        return 'border-info/25 bg-info/10 text-info'
       }
-      return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+      return 'border-destructive/25 bg-destructive/10 text-destructive'
   }
 }
 
@@ -65,13 +70,19 @@ export function ActivityFeed({ tasks, isLoading }: ActivityFeedProps) {
     return (
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <Activity className="h-4 w-4 text-muted-foreground" />
-            <CardTitle>Recent Activity</CardTitle>
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-muted/40">
+              <Activity className="h-3.5 w-3.5 text-muted-foreground" />
+            </div>
+            <CardTitle className="text-sm font-semibold">Recent Activity</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground text-center py-4">Loading tasks...</p>
+          <div className="space-y-2">
+            {Array.from({ length: 5 }, (_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
         </CardContent>
       </Card>
     )
@@ -82,38 +93,43 @@ export function ActivityFeed({ tasks, isLoading }: ActivityFeedProps) {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center gap-2">
-          <Activity className="h-4 w-4 text-muted-foreground" />
-          <CardTitle>Recent Activity</CardTitle>
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-muted/40">
+            <Activity className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+          <CardTitle className="text-sm font-semibold">Recent Activity</CardTitle>
         </div>
       </CardHeader>
       <CardContent>
         {recentTasks.length > 0 ? (
           <ScrollArea className="h-[300px]">
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {recentTasks.map((task) => (
                 <div
                   key={task.upid}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
+                  className="flex items-center justify-between rounded-md border border-border/70 bg-background/30 px-3 py-2.5 transition-colors duration-150 hover:border-border hover:bg-accent/40"
                 >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium truncate">
-                          {getTaskTypeLabel(task.type)}
-                        </p>
+                        <p className="truncate text-[13px] font-medium">{getTaskTypeLabel(task.type)}</p>
                         <span
-                          className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${getStatusBadgeClass(task.status)}`}
+                          className={`inline-flex shrink-0 items-center gap-1 rounded-sm border px-1.5 py-0.5 text-[11px] font-medium ${getStatusBadgeClass(task.status)}`}
                         >
+                          {isRunningTask(task.status) && (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          )}
                           {getStatusLabel(task.status)}
                         </span>
                       </div>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {task.node} &middot; {task.user}
+                      <p className="truncate text-xs text-muted-foreground">
+                        <span className="font-mono tabular-nums">{task.node}</span>
+                        <span> · </span>
+                        {task.user}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground shrink-0 ml-3">
+                  <div className="ml-3 flex shrink-0 items-center gap-3 font-mono text-xs tabular-nums text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
                       <span>{formatDuration(task.starttime, task.endtime)}</span>
@@ -125,7 +141,7 @@ export function ActivityFeed({ tasks, isLoading }: ActivityFeedProps) {
             </div>
           </ScrollArea>
         ) : (
-          <p className="text-sm text-muted-foreground text-center py-4">No recent activity</p>
+          <p className="py-4 text-center text-sm text-muted-foreground">No recent activity</p>
         )}
       </CardContent>
     </Card>

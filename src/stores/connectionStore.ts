@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { ConnectionConfig, ConnectionStatus } from '@/types/connection'
+import type { ConnectionConfig, ConnectionStatus, DiscoveredNode } from '@/types/connection'
 
 export type AuthStatus = 'authenticated' | 'expired' | 'unauthenticated'
 
@@ -14,8 +14,10 @@ interface ConnectionState {
   addConnection: (config: ConnectionConfig) => void
   removeConnection: (id: string) => void
   updateConnection: (id: string, updates: Partial<ConnectionConfig>) => void
+  hydrate: (connections: ConnectionConfig[], activeConnectionId: string | null) => void
   setActiveConnection: (id: string | null) => void
   setConnectionStatus: (id: string, status: ConnectionStatus) => void
+  setConnectionNodes: (id: string, nodes: DiscoveredNode[]) => void
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
   setAuthStatus: (status: AuthStatus) => void
@@ -47,6 +49,9 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
       ),
     })),
 
+  hydrate: (connections, activeConnectionId) =>
+    set({ connections, activeConnectionId }),
+
   setActiveConnection: (id) =>
     set({ activeConnectionId: id }),
 
@@ -54,6 +59,13 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
     set((state) => ({
       connections: state.connections.map((c) =>
         c.id === id ? { ...c, status } : c
+      ),
+    })),
+
+  setConnectionNodes: (id, nodes) =>
+    set((state) => ({
+      connections: state.connections.map((c) =>
+        c.id === id ? { ...c, nodes } : c
       ),
     })),
 

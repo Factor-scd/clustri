@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react'
 import { useStorage } from '@/hooks/useProxmox'
 import { StorageCard } from './StorageCard'
+import { EmptyState } from '@/components/ui/empty-state'
+import { PageSkeleton, Skeleton } from '@/components/ui/skeleton'
 import { Search, HardDrive } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 
@@ -27,9 +29,13 @@ export function StorageOverview({ connectionId, onStorageClick }: StorageOvervie
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground">Loading storage pools...</p>
-      </div>
+      <PageSkeleton filter>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }, (_, i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
+        </div>
+      </PageSkeleton>
     )
   }
 
@@ -46,7 +52,7 @@ export function StorageOverview({ connectionId, onStorageClick }: StorageOvervie
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h2 className="text-2xl font-semibold">Storage Pools</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">Storage Pools</h2>
           <p className="text-muted-foreground">
             {storageList?.length ?? 0} storage pools across the cluster
           </p>
@@ -65,14 +71,11 @@ export function StorageOverview({ connectionId, onStorageClick }: StorageOvervie
 
         {/* Storage Grid */}
         {filteredStorage.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <HardDrive className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
-            <p>
-              {storageList?.length === 0
-                ? 'No storage pools found'
-                : 'No storage pools match your search'}
-            </p>
-          </div>
+          storageList?.length === 0 ? (
+            <EmptyState icon={HardDrive} title="No storage pools found" />
+          ) : (
+            <EmptyState icon={Search} title="No storage pools match your search" />
+          )
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredStorage.map((storage) => (

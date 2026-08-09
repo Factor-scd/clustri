@@ -142,7 +142,7 @@ export function CreateBackupJobDialog({
               id="all"
               checked={all}
               onChange={(e) => setAll(e.target.checked)}
-              className="h-4 w-4 rounded border-input"
+              className="h-4 w-4 rounded border-input accent-primary"
             />
             <Label htmlFor="all" className="text-sm font-normal cursor-pointer">
               Backup all VMs and containers
@@ -167,7 +167,7 @@ export function CreateBackupJobDialog({
               id="enabled"
               checked={enabled}
               onChange={(e) => setEnabled(e.target.checked)}
-              className="h-4 w-4 rounded border-input"
+              className="h-4 w-4 rounded border-input accent-primary"
             />
             <Label htmlFor="enabled" className="text-sm font-normal cursor-pointer">
               Enabled

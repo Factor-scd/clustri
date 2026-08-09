@@ -61,7 +61,7 @@ export function VMDetail({ vm, connectionId, onBack }: VMDetailProps) {
   const isCluster = clusterStatus.data?.type === 'cluster' && (clusterStatus.data?.nodes?.length ?? 0) > 1
 
   const handleStart = () => {
-    startVM.mutate({ node: vm.node, vmid: vm.vmid })
+    startVM.mutate({ node: vm.node, vmid: vm.vmid, vmType: vm.type })
   }
 
   const handleStop = () => {
@@ -89,11 +89,11 @@ export function VMDetail({ vm, connectionId, onBack }: VMDetailProps) {
   }
 
   const handleSuspend = () => {
-    suspendVM.mutate({ node: vm.node, vmid: vm.vmid })
+    suspendVM.mutate({ node: vm.node, vmid: vm.vmid, vmType: vm.type })
   }
 
   const handleResume = () => {
-    resumeVM.mutate({ node: vm.node, vmid: vm.vmid })
+    resumeVM.mutate({ node: vm.node, vmid: vm.vmid, vmType: vm.type })
   }
 
   const executeConfirmAction = () => {
@@ -101,13 +101,13 @@ export function VMDetail({ vm, connectionId, onBack }: VMDetailProps) {
 
     switch (confirmAction.type) {
       case 'stop':
-        stopVM.mutate({ node: vm.node, vmid: vm.vmid })
+        stopVM.mutate({ node: vm.node, vmid: vm.vmid, vmType: vm.type })
         break
       case 'shutdown':
-        shutdownVM.mutate({ node: vm.node, vmid: vm.vmid })
+        shutdownVM.mutate({ node: vm.node, vmid: vm.vmid, vmType: vm.type })
         break
       case 'reboot':
-        rebootVM.mutate({ node: vm.node, vmid: vm.vmid })
+        rebootVM.mutate({ node: vm.node, vmid: vm.vmid, vmType: vm.type })
         break
     }
 
@@ -125,11 +125,13 @@ export function VMDetail({ vm, connectionId, onBack }: VMDetailProps) {
             </Button>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-2xl font-semibold">{vm.name}</h2>
+                <h2 className="text-2xl font-semibold tracking-tight">{vm.name}</h2>
                 <StatusBadge status={vm.status} />
               </div>
-              <p className="text-sm text-muted-foreground">
-                VMID {vm.vmid} &middot; {vm.type.toUpperCase()} &middot; {vm.node}
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                VMID <span className="font-mono tabular-nums">{vm.vmid}</span> &middot;{' '}
+                <span className="font-mono">{vm.type.toUpperCase()}</span> &middot;{' '}
+                <span className="font-mono">{vm.node}</span>
               </p>
             </div>
           </div>
@@ -142,7 +144,7 @@ export function VMDetail({ vm, connectionId, onBack }: VMDetailProps) {
                 onClick={handleStart}
                 disabled={isBusy}
               >
-                <Play className="h-4 w-4 mr-1" />
+                <Play />
                 Start
               </Button>
             ) : null}
@@ -155,7 +157,7 @@ export function VMDetail({ vm, connectionId, onBack }: VMDetailProps) {
                   onClick={handleShutdown}
                   disabled={isBusy}
                 >
-                  <Power className="h-4 w-4 mr-1" />
+                  <Power />
                   Shutdown
                 </Button>
                 <Button
@@ -164,7 +166,7 @@ export function VMDetail({ vm, connectionId, onBack }: VMDetailProps) {
                   onClick={handleStop}
                   disabled={isBusy}
                 >
-                  <Square className="h-4 w-4 mr-1" />
+                  <Square />
                   Stop
                 </Button>
                 <Button
@@ -173,7 +175,7 @@ export function VMDetail({ vm, connectionId, onBack }: VMDetailProps) {
                   onClick={handleReboot}
                   disabled={isBusy}
                 >
-                  <RotateCw className="h-4 w-4 mr-1" />
+                  <RotateCw />
                   Reboot
                 </Button>
               </>
@@ -186,7 +188,7 @@ export function VMDetail({ vm, connectionId, onBack }: VMDetailProps) {
                 onClick={handleSuspend}
                 disabled={isBusy}
               >
-                <Pause className="h-4 w-4 mr-1" />
+                <Pause />
                 Suspend
               </Button>
             )}
@@ -198,7 +200,7 @@ export function VMDetail({ vm, connectionId, onBack }: VMDetailProps) {
                 onClick={handleResume}
                 disabled={isBusy}
               >
-                <PlayCircle className="h-4 w-4 mr-1" />
+                <PlayCircle />
                 Resume
               </Button>
             )}
@@ -210,7 +212,7 @@ export function VMDetail({ vm, connectionId, onBack }: VMDetailProps) {
                 onClick={() => setMigrateDialogOpen(true)}
                 disabled={isBusy}
               >
-                <ArrowRightLeft className="h-4 w-4 mr-1" />
+                <ArrowRightLeft />
                 Migrate
               </Button>
             )}

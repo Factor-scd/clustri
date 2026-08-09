@@ -18,6 +18,11 @@ function ResourceBar({ label, used, total, icon: Icon }: {
   const displayUsed = label === 'CPU' ? used.toFixed(1) : formatBytes(used)
   const displayTotal = label === 'CPU' ? `${total} cores` : formatBytes(total)
 
+  const barColor =
+    percent > 90 ? 'bg-destructive' :
+    percent > 70 ? 'bg-warning' :
+    'bg-success'
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -25,25 +30,17 @@ function ResourceBar({ label, used, total, icon: Icon }: {
           <Icon className="h-4 w-4 text-muted-foreground" />
           {label}
         </div>
-        <span className="text-sm text-muted-foreground">
+        <span className="font-mono text-sm tabular-nums text-muted-foreground">
           {displayUsed} / {displayTotal}
         </span>
       </div>
       <div className="h-2 rounded-full bg-muted overflow-hidden">
         <div
-          className="h-full rounded-full transition-all duration-500"
-          style={{
-            width: `${Math.min(percent, 100)}%`,
-            backgroundColor:
-              percent > 90
-                ? 'hsl(var(--destructive))'
-                : percent > 70
-                  ? 'hsl(38, 92%, 50%)'
-                  : 'hsl(142, 71%, 45%)',
-          }}
+          className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+          style={{ width: `${Math.min(percent, 100)}%` }}
         />
       </div>
-      <p className="text-xs text-muted-foreground text-right">
+      <p className="text-right font-mono text-xs tabular-nums text-muted-foreground">
         {percent.toFixed(1)}%
       </p>
     </div>
@@ -88,7 +85,9 @@ export function OverviewTab({ vm }: OverviewTabProps) {
             <Tag className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold font-mono">{vm.vmid}</div>
+            <div className="font-mono text-2xl font-semibold leading-none tracking-tight tabular-nums">
+              {vm.vmid}
+            </div>
           </CardContent>
         </Card>
 
@@ -98,7 +97,9 @@ export function OverviewTab({ vm }: OverviewTabProps) {
             <Server className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold uppercase">{vm.type}</div>
+            <div className="font-mono text-2xl font-semibold leading-none tracking-tight uppercase">
+              {vm.type}
+            </div>
           </CardContent>
         </Card>
 
@@ -108,7 +109,9 @@ export function OverviewTab({ vm }: OverviewTabProps) {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatUptime(vm.uptime)}</div>
+            <div className="font-mono text-2xl font-semibold leading-none tracking-tight tabular-nums">
+              {formatUptime(vm.uptime)}
+            </div>
           </CardContent>
         </Card>
 
@@ -118,7 +121,9 @@ export function OverviewTab({ vm }: OverviewTabProps) {
             <Server className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{vm.node}</div>
+            <div className="font-mono text-2xl font-semibold leading-none tracking-tight">
+              {vm.node}
+            </div>
           </CardContent>
         </Card>
 
@@ -128,8 +133,10 @@ export function OverviewTab({ vm }: OverviewTabProps) {
             <Globe className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">192.168.1.{100 + (vm.vmid % 100)}</div>
-            <p className="text-xs text-muted-foreground">Mock data</p>
+            <div className="font-mono text-2xl font-semibold leading-none tracking-tight tabular-nums">
+              192.168.1.{100 + (vm.vmid % 100)}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">Mock data</p>
           </CardContent>
         </Card>
 
@@ -142,11 +149,11 @@ export function OverviewTab({ vm }: OverviewTabProps) {
             <div className="space-y-1">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">In:</span>
-                <span className="font-mono">{formatNetworkRate(vm.netin)}</span>
+                <span className="font-mono tabular-nums">{formatNetworkRate(vm.netin)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Out:</span>
-                <span className="font-mono">{formatNetworkRate(vm.netout)}</span>
+                <span className="font-mono tabular-nums">{formatNetworkRate(vm.netout)}</span>
               </div>
             </div>
           </CardContent>

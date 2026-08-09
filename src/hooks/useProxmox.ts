@@ -92,11 +92,12 @@ export const useStartVM = () => {
   const { addToast } = useToast()
 
   return useMutation({
-    mutationFn: ({ node, vmid }: { node: string; vmid: number }) => {
+    mutationFn: ({ node, vmid, vmType }: { node: string; vmid: number; vmType: string }) => {
       const connId = useConnectionStore.getState().activeConnectionId!
-      return api.startVM(connId, node, vmid)
+      return api.startVM(connId, node, vmid, vmType)
     },
     onSuccess: () => {
+      addToast('VM started', 'success')
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.vms(connId) })
@@ -113,11 +114,12 @@ export const useStopVM = () => {
   const { addToast } = useToast()
 
   return useMutation({
-    mutationFn: ({ node, vmid }: { node: string; vmid: number }) => {
+    mutationFn: ({ node, vmid, vmType }: { node: string; vmid: number; vmType: string }) => {
       const connId = useConnectionStore.getState().activeConnectionId!
-      return api.stopVM(connId, node, vmid)
+      return api.stopVM(connId, node, vmid, vmType)
     },
     onSuccess: () => {
+      addToast('VM stopped', 'success')
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.vms(connId) })
@@ -134,11 +136,12 @@ export const useShutdownVM = () => {
   const { addToast } = useToast()
 
   return useMutation({
-    mutationFn: ({ node, vmid }: { node: string; vmid: number }) => {
+    mutationFn: ({ node, vmid, vmType }: { node: string; vmid: number; vmType: string }) => {
       const connId = useConnectionStore.getState().activeConnectionId!
-      return api.shutdownVM(connId, node, vmid)
+      return api.shutdownVM(connId, node, vmid, vmType)
     },
     onSuccess: () => {
+      addToast('VM shut down', 'success')
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.vms(connId) })
@@ -155,11 +158,12 @@ export const useRebootVM = () => {
   const { addToast } = useToast()
 
   return useMutation({
-    mutationFn: ({ node, vmid }: { node: string; vmid: number }) => {
+    mutationFn: ({ node, vmid, vmType }: { node: string; vmid: number; vmType: string }) => {
       const connId = useConnectionStore.getState().activeConnectionId!
-      return api.rebootVM(connId, node, vmid)
+      return api.rebootVM(connId, node, vmid, vmType)
     },
     onSuccess: () => {
+      addToast('VM rebooting', 'success')
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.vms(connId) })
@@ -176,11 +180,12 @@ export const useSuspendVM = () => {
   const { addToast } = useToast()
 
   return useMutation({
-    mutationFn: ({ node, vmid }: { node: string; vmid: number }) => {
+    mutationFn: ({ node, vmid, vmType }: { node: string; vmid: number; vmType: string }) => {
       const connId = useConnectionStore.getState().activeConnectionId!
-      return api.suspendVM(connId, node, vmid)
+      return api.suspendVM(connId, node, vmid, vmType)
     },
     onSuccess: () => {
+      addToast('VM suspended', 'success')
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.vms(connId) })
@@ -197,11 +202,12 @@ export const useResumeVM = () => {
   const { addToast } = useToast()
 
   return useMutation({
-    mutationFn: ({ node, vmid }: { node: string; vmid: number }) => {
+    mutationFn: ({ node, vmid, vmType }: { node: string; vmid: number; vmType: string }) => {
       const connId = useConnectionStore.getState().activeConnectionId!
-      return api.resumeVM(connId, node, vmid)
+      return api.resumeVM(connId, node, vmid, vmType)
     },
     onSuccess: () => {
+      addToast('VM resumed', 'success')
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.vms(connId) })
@@ -214,10 +220,10 @@ export const useResumeVM = () => {
 }
 
 // Disk management hooks
-export const useDisks = (connectionId: string, node: string, vmid: number) => {
+export const useDisks = (connectionId: string, node: string, vmid: number, vmType: string) => {
   return useQuery({
     queryKey: queryKeys.disks(connectionId, node, vmid),
-    queryFn: () => api.getDisks(connectionId, node, vmid),
+    queryFn: () => api.getDisks(connectionId, node, vmid, vmType),
     enabled: !!connectionId && !!node && vmid > 0,
   })
 }
@@ -230,16 +236,19 @@ export const useAddDisk = () => {
     mutationFn: ({
       node,
       vmid,
+      vmType,
       config,
     }: {
       node: string
       vmid: number
+      vmType: string
       config: AddDiskConfig
     }) => {
       const connId = useConnectionStore.getState().activeConnectionId!
-      return api.addDisk(connId, node, vmid, config)
+      return api.addDisk(connId, node, vmid, vmType, config)
     },
     onSuccess: (_data, variables) => {
+      addToast('Disk added', 'success')
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({
@@ -261,18 +270,21 @@ export const useResizeDisk = () => {
     mutationFn: ({
       node,
       vmid,
+      vmType,
       disk,
       size,
     }: {
       node: string
       vmid: number
+      vmType: string
       disk: string
       size: number
     }) => {
       const connId = useConnectionStore.getState().activeConnectionId!
-      return api.resizeDisk(connId, node, vmid, disk, size)
+      return api.resizeDisk(connId, node, vmid, vmType, disk, size)
     },
     onSuccess: (_data, variables) => {
+      addToast('Disk resized', 'success')
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({
@@ -294,16 +306,19 @@ export const useRemoveDisk = () => {
     mutationFn: ({
       node,
       vmid,
+      vmType,
       disk,
     }: {
       node: string
       vmid: number
+      vmType: string
       disk: string
     }) => {
       const connId = useConnectionStore.getState().activeConnectionId!
-      return api.removeDisk(connId, node, vmid, disk)
+      return api.removeDisk(connId, node, vmid, vmType, disk)
     },
     onSuccess: (_data, variables) => {
+      addToast('Disk removed', 'success')
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({
@@ -325,18 +340,21 @@ export const useMoveDisk = () => {
     mutationFn: ({
       node,
       vmid,
+      vmType,
       disk,
       storage,
     }: {
       node: string
       vmid: number
+      vmType: string
       disk: string
       storage: string
     }) => {
       const connId = useConnectionStore.getState().activeConnectionId!
-      return api.moveDisk(connId, node, vmid, disk, storage)
+      return api.moveDisk(connId, node, vmid, vmType, disk, storage)
     },
     onSuccess: (_data, variables) => {
+      addToast('Disk moved', 'success')
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({
@@ -351,10 +369,10 @@ export const useMoveDisk = () => {
 }
 
 // Network management hooks
-export const useNetworkInterfaces = (connectionId: string, node: string, vmid: number) => {
+export const useNetworkInterfaces = (connectionId: string, node: string, vmid: number, vmType: string) => {
   return useQuery({
     queryKey: queryKeys.networks(connectionId, node, vmid),
-    queryFn: () => api.getNetworkInterfaces(connectionId, node, vmid),
+    queryFn: () => api.getNetworkInterfaces(connectionId, node, vmid, vmType),
     enabled: !!connectionId && !!node && vmid > 0,
   })
 }
@@ -367,16 +385,19 @@ export const useAddNIC = () => {
     mutationFn: ({
       node,
       vmid,
+      vmType,
       config,
     }: {
       node: string
       vmid: number
+      vmType: string
       config: AddNICConfig
     }) => {
       const connId = useConnectionStore.getState().activeConnectionId!
-      return api.addNIC(connId, node, vmid, config)
+      return api.addNIC(connId, node, vmid, vmType, config)
     },
     onSuccess: (_data, variables) => {
+      addToast('Network interface added', 'success')
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({
@@ -398,18 +419,21 @@ export const useEditNIC = () => {
     mutationFn: ({
       node,
       vmid,
+      vmType,
       nic,
       config,
     }: {
       node: string
       vmid: number
+      vmType: string
       nic: string
       config: EditNICConfig
     }) => {
       const connId = useConnectionStore.getState().activeConnectionId!
-      return api.editNIC(connId, node, vmid, nic, config)
+      return api.editNIC(connId, node, vmid, vmType, nic, config)
     },
     onSuccess: (_data, variables) => {
+      addToast('Network interface updated', 'success')
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({
@@ -431,16 +455,19 @@ export const useRemoveNIC = () => {
     mutationFn: ({
       node,
       vmid,
+      vmType,
       nic,
     }: {
       node: string
       vmid: number
+      vmType: string
       nic: string
     }) => {
       const connId = useConnectionStore.getState().activeConnectionId!
-      return api.removeNIC(connId, node, vmid, nic)
+      return api.removeNIC(connId, node, vmid, vmType, nic)
     },
     onSuccess: (_data, variables) => {
+      addToast('Network interface removed', 'success')
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({
@@ -455,10 +482,10 @@ export const useRemoveNIC = () => {
 }
 
 // Snapshot management hooks
-export const useSnapshots = (connectionId: string, node: string, vmid: number) => {
+export const useSnapshots = (connectionId: string, node: string, vmid: number, vmType: string) => {
   return useQuery({
     queryKey: queryKeys.snapshots(connectionId, node, vmid),
-    queryFn: () => api.getSnapshots(connectionId, node, vmid),
+    queryFn: () => api.getSnapshots(connectionId, node, vmid, vmType),
     enabled: !!connectionId && !!node && vmid > 0,
   })
 }
@@ -471,16 +498,19 @@ export const useCreateSnapshot = () => {
     mutationFn: ({
       node,
       vmid,
+      vmType,
       config,
     }: {
       node: string
       vmid: number
+      vmType: string
       config: CreateSnapshotConfig
     }) => {
       const connId = useConnectionStore.getState().activeConnectionId!
-      return api.createSnapshot(connId, node, vmid, config)
+      return api.createSnapshot(connId, node, vmid, vmType, config)
     },
     onSuccess: (_data, variables) => {
+      addToast('Snapshot created', 'success')
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({
@@ -502,16 +532,19 @@ export const useDeleteSnapshot = () => {
     mutationFn: ({
       node,
       vmid,
+      vmType,
       name,
     }: {
       node: string
       vmid: number
+      vmType: string
       name: string
     }) => {
       const connId = useConnectionStore.getState().activeConnectionId!
-      return api.deleteSnapshot(connId, node, vmid, name)
+      return api.deleteSnapshot(connId, node, vmid, vmType, name)
     },
     onSuccess: (_data, variables) => {
+      addToast('Snapshot deleted', 'success')
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({
@@ -533,16 +566,19 @@ export const useRollbackSnapshot = () => {
     mutationFn: ({
       node,
       vmid,
+      vmType,
       name,
     }: {
       node: string
       vmid: number
+      vmType: string
       name: string
     }) => {
       const connId = useConnectionStore.getState().activeConnectionId!
-      return api.rollbackSnapshot(connId, node, vmid, name)
+      return api.rollbackSnapshot(connId, node, vmid, vmType, name)
     },
     onSuccess: (_data, variables) => {
+      addToast('Snapshot restored', 'success')
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({
@@ -565,18 +601,21 @@ export const useMigrateVM = () => {
     mutationFn: ({
       node,
       vmid,
+      vmType,
       targetNode,
       online,
     }: {
       node: string
       vmid: number
+      vmType: string
       targetNode: string
       online: boolean
     }) => {
       const connId = useConnectionStore.getState().activeConnectionId!
-      return api.migrateVM(connId, node, vmid, targetNode, online)
+      return api.migrateVM(connId, node, vmid, vmType, targetNode, online)
     },
     onSuccess: () => {
+      addToast('Migration started', 'success')
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.vms(connId) })
@@ -634,6 +673,7 @@ export const useCreateBackupJob = () => {
       return api.createBackupJob(connId, config)
     },
     onSuccess: () => {
+      addToast('Backup job created', 'success')
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.backupJobs(connId) })
@@ -655,6 +695,7 @@ export const useUpdateBackupJob = () => {
       return api.updateBackupJob(connId, id, config)
     },
     onSuccess: () => {
+      addToast('Backup job updated', 'success')
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.backupJobs(connId) })
@@ -676,6 +717,7 @@ export const useDeleteBackupJob = () => {
       return api.deleteBackupJob(connId, id)
     },
     onSuccess: () => {
+      addToast('Backup job deleted', 'success')
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.backupJobs(connId) })
@@ -697,6 +739,7 @@ export const useRunBackup = () => {
       return api.runBackup(connId, config)
     },
     onSuccess: () => {
+      addToast('Backup started', 'success')
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.tasks(connId) })
@@ -718,6 +761,7 @@ export const useRestoreBackup = () => {
       return api.restoreBackup(connId, volid, config)
     },
     onSuccess: () => {
+      addToast('Restore started', 'success')
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.vms(connId) })
@@ -740,6 +784,7 @@ export const useDeleteBackup = () => {
       return api.deleteBackup(connId, volid)
     },
     onSuccess: () => {
+      addToast('Backup deleted', 'success')
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.backups(connId) })

@@ -4,8 +4,8 @@ use std::collections::HashMap;
 use tauri::Emitter;
 use tokio::sync::mpsc;
 use tokio::time::{sleep, Duration};
-use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::connect_async;
+use tokio_tungstenite::tungstenite::Message;
 
 use crate::error::Error;
 
@@ -236,10 +236,7 @@ fn handle_ws_message(connection_id: &str, text: &str, app_handle: &tauri::AppHan
                             .and_then(|v| v.as_str())
                             .unwrap_or_default()
                             .to_string(),
-                        vmid: data
-                            .get("vmid")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0) as u32,
+                        vmid: data.get("vmid").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
                         status: data
                             .get("status")
                             .and_then(|v| v.as_str())

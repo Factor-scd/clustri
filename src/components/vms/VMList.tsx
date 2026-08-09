@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { StatusBadge } from '@/components/ui/status-badge'
+import { EmptyState } from '@/components/ui/empty-state'
+import { PageSkeleton, Skeleton } from '@/components/ui/skeleton'
 import { Search, Server, Box } from 'lucide-react'
 import { useVMs } from '@/hooks/useProxmox'
 import type { ProxmoxVM } from '@/types/proxmox'
@@ -50,9 +52,9 @@ export function VMList({ connectionId, onVMClick }: VMListProps) {
 
   if (vmsLoading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground">Loading VMs...</p>
-      </div>
+      <PageSkeleton filter>
+        <Skeleton className="h-96 w-full" />
+      </PageSkeleton>
     )
   }
 
@@ -69,7 +71,7 @@ export function VMList({ connectionId, onVMClick }: VMListProps) {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h2 className="text-2xl font-semibold">Virtual Machines</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">Virtual Machines</h2>
           <p className="text-muted-foreground">
             {vms?.length ?? 0} total VMs across the cluster
           </p>
@@ -127,45 +129,37 @@ export function VMList({ connectionId, onVMClick }: VMListProps) {
         <Card>
           <CardContent className="p-0">
             {filteredVMs.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                {vms?.length === 0 ? (
-                  <div className="space-y-2">
-                    <Box className="h-8 w-8 mx-auto text-muted-foreground/50" />
-                    <p>No VMs found</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Search className="h-8 w-8 mx-auto text-muted-foreground/50" />
-                    <p>No VMs match your filters</p>
-                  </div>
-                )}
-              </div>
+              vms?.length === 0 ? (
+                <EmptyState icon={Box} title="No VMs found" />
+              ) : (
+                <EmptyState icon={Search} title="No VMs match your filters" />
+              )
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="h-10 px-4 text-left font-medium text-muted-foreground">VMID</th>
-                      <th className="h-10 px-4 text-left font-medium text-muted-foreground">Name</th>
-                      <th className="h-10 px-4 text-left font-medium text-muted-foreground">Status</th>
-                      <th className="h-10 px-4 text-left font-medium text-muted-foreground">Node</th>
-                      <th className="h-10 px-4 text-left font-medium text-muted-foreground">Type</th>
-                      <th className="h-10 px-4 text-right font-medium text-muted-foreground">CPU</th>
-                      <th className="h-10 px-4 text-right font-medium text-muted-foreground">Memory</th>
-                      <th className="h-10 px-4 text-right font-medium text-muted-foreground">Disk</th>
-                      <th className="h-10 px-4 text-right font-medium text-muted-foreground">Uptime</th>
+                    <tr className="border-b">
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">VMID</th>
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Name</th>
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</th>
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Node</th>
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Type</th>
+                      <th className="h-10 px-4 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">CPU</th>
+                      <th className="h-10 px-4 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Memory</th>
+                      <th className="h-10 px-4 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Disk</th>
+                      <th className="h-10 px-4 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Uptime</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredVMs.map((vm) => (
                       <tr
                         key={`${vm.type}-${vm.vmid}`}
-                        className={`border-b last:border-b-0 hover:bg-muted/50 transition-colors ${
+                        className={`border-b last:border-b-0 hover:bg-accent/50 transition-colors duration-150 ${
                           onVMClick ? 'cursor-pointer' : ''
                         }`}
                         onClick={() => onVMClick?.(vm)}
                       >
-                        <td className="px-4 py-3 font-mono text-muted-foreground">{vm.vmid}</td>
+                        <td className="px-4 py-3 font-mono tabular-nums text-muted-foreground">{vm.vmid}</td>
                         <td className="px-4 py-3 font-medium">{vm.name}</td>
                         <td className="px-4 py-3">
                           <StatusBadge status={vm.status} />
@@ -173,7 +167,7 @@ export function VMList({ connectionId, onVMClick }: VMListProps) {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1.5">
                             <Server className="h-3.5 w-3.5 text-muted-foreground" />
-                            {vm.node}
+                            <span className="font-mono">{vm.node}</span>
                           </div>
                         </td>
                         <td className="px-4 py-3">
@@ -181,18 +175,18 @@ export function VMList({ connectionId, onVMClick }: VMListProps) {
                             {vm.type}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right font-mono">
+                        <td className="px-4 py-3 text-right font-mono tabular-nums">
                           {vm.cpus} cores
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 text-right font-mono tabular-nums">
                           {vm.maxmem > 0 ? formatBytes(vm.mem) : 'N/A'}
                           <span className="text-muted-foreground"> / {formatBytes(vm.maxmem)}</span>
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 text-right font-mono tabular-nums">
                           {vm.maxdisk > 0 ? formatBytes(vm.disk) : 'N/A'}
                           <span className="text-muted-foreground"> / {formatBytes(vm.maxdisk)}</span>
                         </td>
-                        <td className="px-4 py-3 text-right text-muted-foreground">
+                        <td className="px-4 py-3 text-right font-mono tabular-nums text-muted-foreground">
                           {formatUptime(vm.uptime)}
                         </td>
                       </tr>

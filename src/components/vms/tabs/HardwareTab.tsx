@@ -42,7 +42,7 @@ export function HardwareTab({ vm }: HardwareTabProps) {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base">Basic Configuration</CardTitle>
           <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-            <Pencil className="h-4 w-4 mr-1" />
+            <Pencil />
             Edit
           </Button>
         </CardHeader>
@@ -54,11 +54,11 @@ export function HardwareTab({ vm }: HardwareTabProps) {
             </div>
             <div className="space-y-1">
               <p className="text-sm font-medium text-muted-foreground">VMID</p>
-              <p className="text-sm font-mono">{vm.vmid}</p>
+              <p className="font-mono text-sm tabular-nums">{vm.vmid}</p>
             </div>
             <div className="space-y-1">
               <p className="text-sm font-medium text-muted-foreground">Type</p>
-              <p className="text-sm uppercase">{vm.type}</p>
+              <p className="font-mono text-sm uppercase">{vm.type}</p>
             </div>
             <div className="space-y-1">
               <p className="text-sm font-medium text-muted-foreground">Tags</p>
@@ -74,18 +74,18 @@ export function HardwareTab({ vm }: HardwareTabProps) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="flex items-center gap-3 p-3 rounded-lg border">
+            <div className="flex items-center gap-3 rounded-md border border-border/70 bg-muted/30 px-3 py-2.5">
               <Cpu className="h-5 w-5 text-muted-foreground" />
               <div>
                 <p className="text-sm font-medium">CPU Cores</p>
-                <p className="text-sm text-muted-foreground">{vm.cpus} cores</p>
+                <p className="font-mono text-sm tabular-nums text-muted-foreground">{vm.cpus} cores</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 p-3 rounded-lg border">
+            <div className="flex items-center gap-3 rounded-md border border-border/70 bg-muted/30 px-3 py-2.5">
               <MemoryStick className="h-5 w-5 text-muted-foreground" />
               <div>
                 <p className="text-sm font-medium">Memory</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="font-mono text-sm tabular-nums text-muted-foreground">
                   {formatBytes(vm.maxmem)}
                 </p>
               </div>
@@ -102,7 +102,7 @@ export function HardwareTab({ vm }: HardwareTabProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <p className="text-sm font-medium text-muted-foreground">Boot Order</p>
-              <p className="text-sm">scsi0, net0</p>
+              <p className="font-mono text-sm">scsi0, net0</p>
             </div>
             <div className="space-y-1">
               <p className="text-sm font-medium text-muted-foreground">BIOS</p>
@@ -166,11 +166,11 @@ export function HardwareTab({ vm }: HardwareTabProps) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>
-              <X className="h-4 w-4 mr-1" />
+              <X />
               Cancel
             </Button>
             <Button onClick={handleSave}>
-              <Save className="h-4 w-4 mr-1" />
+              <Save />
               Save Changes
             </Button>
           </DialogFooter>

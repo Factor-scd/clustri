@@ -7,6 +7,7 @@ pub struct Disk {
     pub size: u64,
     pub storage: String,
     pub format: String,
+    #[serde(default)]
     pub usage: Option<String>,
 }
 
@@ -21,7 +22,9 @@ pub struct AddDiskConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Node {
+    #[serde(default)]
     pub node: String,
+    #[serde(default)]
     pub status: String,
     pub cpu: f64,
     pub maxcpu: u32,
@@ -38,25 +41,44 @@ pub struct Node {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VM {
+    #[serde(default)]
     pub vmid: u32,
+    #[serde(default)]
     pub name: Option<String>,
+    #[serde(default)]
     pub status: String,
     pub r#type: String,
+    #[serde(default)]
     pub node: String,
+    #[serde(default)]
     pub cpu: f64,
+    #[serde(default)]
     pub cpus: u32,
+    #[serde(default)]
     pub mem: u64,
+    #[serde(default)]
     pub maxmem: u64,
+    #[serde(default)]
     pub disk: u64,
+    #[serde(default)]
     pub maxdisk: u64,
+    #[serde(default)]
     pub uptime: u64,
+    #[serde(default)]
     pub netin: u64,
+    #[serde(default)]
     pub netout: u64,
+    #[serde(default)]
     pub diskread: u64,
+    #[serde(default)]
     pub diskwrite: u64,
+    #[serde(default)]
     pub pid: Option<u32>,
+    #[serde(default)]
     pub template: Option<u32>,
+    #[serde(default)]
     pub lock: Option<String>,
+    #[serde(default)]
     pub tags: Option<String>,
 }
 
@@ -66,12 +88,19 @@ pub struct Storage {
     pub storage: String,
     pub r#type: String,
     pub content: String,
+    #[serde(default)]
     pub active: u32,
+    #[serde(default)]
     pub enabled: u32,
+    #[serde(default)]
     pub shared: u32,
+    #[serde(default)]
     pub used: u64,
+    #[serde(default)]
     pub total: u64,
+    #[serde(default)]
     pub avail: u64,
+    #[serde(default)]
     pub node: String,
 }
 
@@ -79,15 +108,19 @@ pub struct Storage {
 #[serde(rename_all = "camelCase")]
 pub struct Task {
     pub upid: String,
+    #[serde(default)]
     pub node: String,
     pub pid: u32,
     pub pstart: u64,
     pub starttime: u64,
+    #[serde(default)]
     pub endtime: Option<u64>,
     pub r#type: String,
     pub id: String,
     pub user: String,
+    #[serde(default)]
     pub status: Option<String>,
+    #[serde(default)]
     pub exitstatus: Option<String>,
 }
 
@@ -114,9 +147,11 @@ pub struct ClusterNode {
 #[serde(rename_all = "camelCase")]
 pub struct Snapshot {
     pub name: String,
+    #[serde(default)]
     pub description: String,
     pub snaptime: u64,
     pub vmstate: u32,
+    #[serde(default)]
     pub parent: Option<String>,
 }
 
@@ -140,9 +175,13 @@ pub struct NetworkInterface {
     pub name: String,
     pub model: String,
     pub macaddr: String,
+    #[serde(default)]
     pub bridge: Option<String>,
+    #[serde(default)]
     pub tag: Option<u32>,
+    #[serde(default)]
     pub firewall: Option<u32>,
+    #[serde(default)]
     pub link_down: Option<u32>,
 }
 
@@ -189,10 +228,15 @@ pub struct BackupJob {
     pub schedule: String,
     pub all: u32,
     pub enabled: u32,
+    #[serde(default)]
     pub node: Option<String>,
+    #[serde(default)]
     pub vmid: Option<String>,
+    #[serde(default)]
     pub compress: Option<String>,
+    #[serde(default)]
     pub mode: Option<String>,
+    #[serde(default)]
     pub quiet: Option<u32>,
 }
 
@@ -224,8 +268,11 @@ pub struct RestoreConfig {
 pub struct StorageContent {
     pub content: String,
     pub ctime: u64,
+    #[serde(default)]
     pub format: Option<String>,
+    #[serde(default)]
     pub size: Option<u64>,
+    #[serde(default)]
     pub subtype: Option<String>,
     pub volid: String,
 }
@@ -236,11 +283,18 @@ pub struct StorageDetail {
     pub storage: String,
     pub r#type: String,
     pub content: String,
+    #[serde(default)]
     pub active: u32,
+    #[serde(default)]
     pub enabled: u32,
+    #[serde(default)]
     pub shared: u32,
+    #[serde(default)]
     pub used: u64,
+    #[serde(default)]
     pub total: u64,
+    #[serde(default)]
     pub avail: u64,
+    #[serde(default)]
     pub node: String,
 }

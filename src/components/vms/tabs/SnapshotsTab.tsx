@@ -9,6 +9,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Camera, Plus, Trash, RotateCcw } from 'lucide-react'
 import { useSnapshots, useDeleteSnapshot, useRollbackSnapshot } from '@/hooks/useProxmox'
 import { CreateSnapshotDialog } from '@/components/vms/dialogs/CreateSnapshotDialog'
@@ -24,7 +27,7 @@ function formatDate(timestamp: number): string {
 }
 
 export function SnapshotsTab({ vm, connectionId }: SnapshotsTabProps) {
-  const { data: snapshots, isLoading, error } = useSnapshots(connectionId, vm.node, vm.vmid)
+  const { data: snapshots, isLoading, error } = useSnapshots(connectionId, vm.node, vm.vmid, vm.type)
   const deleteSnapshot = useDeleteSnapshot()
   const rollbackSnapshot = useRollbackSnapshot()
 
@@ -34,20 +37,13 @@ export function SnapshotsTab({ vm, connectionId }: SnapshotsTabProps) {
 
   const handleDelete = () => {
     if (!deleteTarget) return
-    deleteSnapshot.mutate(
-      { node: vm.node, vmid: vm.vmid, name: deleteTarget.name },
-      {
-        onSuccess: () => {
-          setDeleteTarget(null)
-        },
-      },
-    )
+    deleteSnapshot.mutate({ node: vm.node, vmid: vm.vmid, vmType: vm.type, name: deleteTarget.name })
   }
 
   const handleRollback = () => {
     if (!rollbackTarget) return
     rollbackSnapshot.mutate(
-      { node: vm.node, vmid: vm.vmid, name: rollbackTarget.name },
+      { node: vm.node, vmid: vm.vmid, vmType: vm.type, name: rollbackTarget.name },
       {
         onSuccess: () => {
           setRollbackTarget(null)
@@ -58,8 +54,15 @@ export function SnapshotsTab({ vm, connectionId }: SnapshotsTabProps) {
 
   if (isLoading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-muted-foreground">Loading snapshots...</p>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-4 w-40" />
+          </div>
+          <Skeleton className="h-8 w-36" />
+        </div>
+        <Skeleton className="h-64 w-full" />
       </div>
     )
   }
@@ -78,7 +81,7 @@ export function SnapshotsTab({ vm, connectionId }: SnapshotsTabProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-medium">Snapshots</h3>
+          <h3 className="text-lg font-semibold tracking-tight">Snapshots</h3>
           <p className="text-sm text-muted-foreground">
             {snapshotList.length} snapshot{snapshotList.length !== 1 ? 's' : ''}
           </p>
@@ -92,51 +95,51 @@ export function SnapshotsTab({ vm, connectionId }: SnapshotsTabProps) {
       <Card>
         <CardContent className="p-0">
           {snapshotList.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <Camera className="h-8 w-8 mb-2 opacity-50" />
-              <p>No snapshots</p>
-              <p className="text-xs mt-1">Create a snapshot to save the current VM state</p>
-            </div>
+            <EmptyState
+              icon={Camera}
+              title="No snapshots"
+              description="Create a snapshot to save the current VM state"
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="h-10 px-4 text-left font-medium text-muted-foreground">Name</th>
-                    <th className="h-10 px-4 text-left font-medium text-muted-foreground">Description</th>
-                    <th className="h-10 px-4 text-left font-medium text-muted-foreground">Created</th>
-                    <th className="h-10 px-4 text-left font-medium text-muted-foreground">VM State</th>
-                    <th className="h-10 px-4 text-left font-medium text-muted-foreground">Parent</th>
-                    <th className="h-10 px-4 text-right font-medium text-muted-foreground">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {snapshotList.map((snapshot) => (
-                    <tr
-                      key={snapshot.name}
-                      className="border-b last:border-b-0 hover:bg-muted/50 transition-colors"
-                    >
-                      <td className="px-4 py-3 font-mono font-medium">{snapshot.name}</td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {snapshot.description || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {formatDate(snapshot.snaptime)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`text-xs px-1.5 py-0.5 rounded ${
-                            snapshot.vmstate === 1
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                              : 'bg-muted text-muted-foreground'
-                          }`}
-                        >
-                          {snapshot.vmstate === 1 ? 'Included' : 'Not included'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground font-mono text-xs">
-                        {snapshot.parent ?? '-'}
-                      </td>
+                  <thead>
+                    <tr className="border-b">
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Name</th>
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Description</th>
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Created</th>
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">VM State</th>
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Parent</th>
+                      <th className="h-10 px-4 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {snapshotList.map((snapshot) => (
+                      <tr
+                        key={snapshot.name}
+                        className="border-b last:border-b-0 hover:bg-accent/50 transition-colors duration-150"
+                      >
+                        <td className="px-4 py-3 font-mono font-medium">{snapshot.name}</td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {snapshot.description || '-'}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs tabular-nums text-muted-foreground">
+                          {formatDate(snapshot.snaptime)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex items-center rounded-sm border px-1.5 py-0.5 text-xs font-medium ${
+                              snapshot.vmstate === 1
+                                ? 'border-success/25 bg-success/10 text-success'
+                                : 'border-border bg-muted/60 text-muted-foreground'
+                            }`}
+                          >
+                            {snapshot.vmstate === 1 ? 'Included' : 'Not included'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground font-mono text-xs">
+                          {snapshot.parent ?? '-'}
+                        </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button
@@ -176,28 +179,17 @@ export function SnapshotsTab({ vm, connectionId }: SnapshotsTabProps) {
       />
 
       {/* Delete confirmation */}
-      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Snapshot</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete snapshot &quot;{deleteTarget?.name}&quot;? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={deleteSnapshot.isPending}
-            >
-              {deleteSnapshot.isPending ? 'Deleting...' : 'Delete'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null)
+        }}
+        title="Delete Snapshot"
+        description={`Are you sure you want to delete snapshot "${deleteTarget?.name}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        isLoading={deleteSnapshot.isPending}
+        onConfirm={handleDelete}
+      />
 
       {/* Rollback confirmation */}
       <Dialog open={!!rollbackTarget} onOpenChange={(open) => { if (!open) setRollbackTarget(null) }}>
@@ -207,7 +199,7 @@ export function SnapshotsTab({ vm, connectionId }: SnapshotsTabProps) {
             <DialogDescription>
               Are you sure you want to rollback {vm.name} to snapshot &quot;{rollbackTarget?.name}&quot;?
               {vm.status === 'running' && (
-                <span className="block mt-1 text-yellow-600 font-medium">
+                <span className="block mt-1 font-medium text-warning">
                   The VM will be stopped during the rollback process.
                 </span>
               )}

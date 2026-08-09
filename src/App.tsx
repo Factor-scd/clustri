@@ -4,6 +4,8 @@ import { Dashboard } from '@/components/layout/Dashboard'
 import { ConnectionDialog } from '@/components/connections/ConnectionDialog'
 import { VMList } from '@/components/vms/VMList'
 import { VMDetail } from '@/components/vms/VMDetail'
+import { ContainerList } from '@/components/vms/ContainerList'
+import { NodesPage } from '@/components/nodes/NodesPage'
 import { TaskList } from '@/components/tasks/TaskList'
 import { BackupList } from '@/components/backups/BackupList'
 import { CommandPalette } from '@/components/command/CommandPalette'
@@ -11,11 +13,13 @@ import { StorageOverview } from '@/components/storage/StorageOverview'
 import { StorageDetail } from '@/components/storage/StorageDetail'
 import { SettingsPage } from '@/components/settings/SettingsPage'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { ToastProvider } from '@/components/ui/toast'
+import { ToastProvider, useToast } from '@/components/ui/toast'
+import { Server, AlertTriangle } from 'lucide-react'
 import { useConnectionStore } from '@/stores/connectionStore'
 import { useUIStore } from '@/stores/uiStore'
 import { useWebSocket } from '@/hooks/useWebSocket'
-import { useEffect, useState } from 'react'
+import { isTauri, loadConnections, connectToServer, getConnectionStatus, updateTrayMenu } from '@/lib/tauri'
+import { useEffect, useRef, useState } from 'react'
 import type { ProxmoxVM } from '@/types/proxmox'
 
 const queryClient = new QueryClient({
@@ -31,6 +35,9 @@ type View =
   | { type: 'dashboard' }
   | { type: 'vms' }
   | { type: 'vm-detail'; vm: ProxmoxVM }
+  | { type: 'nodes' }
+  | { type: 'node-detail'; nodeName: string }
+  | { type: 'containers' }
   | { type: 'tasks' }
   | { type: 'backups' }
   | { type: 'storage' }
@@ -39,17 +46,115 @@ type View =
 
 function AppContent() {
   const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
+  const connections = useConnectionStore((s) => s.connections)
+  const hydrate = useConnectionStore((s) => s.hydrate)
+  const setActiveConnection = useConnectionStore((s) => s.setActiveConnection)
+  const setConnectionStatus = useConnectionStore((s) => s.setConnectionStatus)
+  const updateConnection = useConnectionStore((s) => s.updateConnection)
+  const removeConnection = useConnectionStore((s) => s.removeConnection)
+  const setAuthStatus = useConnectionStore((s) => s.setAuthStatus)
+  const { addToast } = useToast()
   const [connectionDialogOpen, setConnectionDialogOpen] = useState(false)
   const [view, setView] = useState<View>({ type: 'dashboard' })
   const commandPaletteOpen = useUIStore((s) => s.commandPaletteOpen)
   const setCommandPaletteOpen = useUIStore((s) => s.setCommandPaletteOpen)
+  // In browser mock mode there is nothing to load, so the app is ready
+  // immediately. In Tauri mode the persisted connections load on mount.
+  const [connectionsLoaded, setConnectionsLoaded] = useState(!isTauri())
+  const bootRan = useRef(false)
 
-  // Auto-open login dialog when no active connection
+  // Startup: load persisted connections and auto-reconnect the active one
   useEffect(() => {
-    if (!activeConnectionId && !connectionDialogOpen) {
+    if (bootRan.current) return
+    bootRan.current = true
+
+    if (!isTauri()) return
+
+    let cancelled = false
+    const boot = async () => {
+      try {
+        const { connections: loaded, activeConnectionId } = await loadConnections()
+        if (cancelled) return
+        hydrate(loaded, activeConnectionId)
+
+        if (activeConnectionId && loaded.some((c) => c.id === activeConnectionId)) {
+          setActiveConnection(activeConnectionId)
+          setConnectionStatus(activeConnectionId, 'connecting')
+          try {
+            const result = await connectToServer(activeConnectionId)
+            if (cancelled) return
+            if (result.mergedInto && result.mergedInto !== activeConnectionId) {
+              // This connection belongs to a cluster we already have; the
+              // backend folded it into the surviving connection.
+              removeConnection(activeConnectionId)
+              setActiveConnection(result.mergedInto)
+              setConnectionStatus(result.mergedInto, result.status)
+              setAuthStatus('authenticated')
+              addToast('Already connected to this cluster — added as a failover endpoint.', 'success')
+            } else {
+              setConnectionStatus(result.connectionId, result.status)
+            }
+          } catch (err) {
+            if (!cancelled) {
+              setConnectionStatus(activeConnectionId, 'failed')
+              console.error('[App] Auto-reconnect failed:', err)
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[App] Failed to load connections:', err)
+      } finally {
+        if (!cancelled) setConnectionsLoaded(true)
+      }
+    }
+
+    boot()
+    return () => {
+      cancelled = true
+    }
+  }, [hydrate, setActiveConnection, setConnectionStatus, setAuthStatus, removeConnection, addToast])
+
+  // Keep the system tray menu in sync with the connection list (no-op in browser mode)
+  useEffect(() => {
+    updateTrayMenu(
+      connections.map((c) => ({ id: c.id, name: c.name, status: c.status })),
+    )
+  }, [connections])
+
+  // Poll the backend connection status while a connection is active so the
+  // sidebar node list and failover state stay in sync with the cluster.
+  useEffect(() => {
+    if (!isTauri() || !activeConnectionId) return
+    let cancelled = false
+
+    const poll = async () => {
+      try {
+        const info = await getConnectionStatus(activeConnectionId)
+        if (cancelled) return
+        setConnectionStatus(activeConnectionId, info.status)
+        updateConnection(activeConnectionId, {
+          nodes: info.nodes,
+          currentEndpointUrl: info.currentEndpointUrl,
+        })
+      } catch {
+        // Transient failures are ignored; the next tick keeps polling.
+      }
+    }
+
+    poll()
+    const interval = setInterval(poll, 10_000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [activeConnectionId, setConnectionStatus, updateConnection])
+
+  // Auto-open login dialog only when there are genuinely zero connections
+  useEffect(() => {
+    if (connectionsLoaded && connections.length === 0 && !connectionDialogOpen) {
       setConnectionDialogOpen(true)
     }
-  }, [activeConnectionId, connectionDialogOpen])
+  }, [connectionsLoaded, connections.length, connectionDialogOpen])
 
   // WebSocket integration – connects when a connection is active
   useWebSocket(activeConnectionId)
@@ -77,10 +182,15 @@ function AppContent() {
 
     if (!activeConnectionId) {
       return (
-        <div className="flex h-full items-center justify-center">
-          <div className="text-center space-y-4">
-            <h2 className="text-2xl font-semibold">ProxmoxDesktop</h2>
-            <p className="text-muted-foreground">
+        <div className="flex h-full items-center justify-center p-6">
+          <div className="flex flex-col items-center text-center">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-border bg-card shadow-card">
+              <Server className="h-5 w-5 text-primary" />
+            </div>
+            <h2 className="text-lg font-semibold tracking-tight">
+              No connection selected
+            </h2>
+            <p className="mt-1 max-w-sm text-sm text-muted-foreground">
               Connect to a Proxmox server to get started
             </p>
           </div>
@@ -115,6 +225,22 @@ function AppContent() {
             onBack={() => handleNavigate({ type: 'vms' })}
           />
         )
+      case 'nodes':
+        return <NodesPage connectionId={activeConnectionId} />
+      case 'node-detail':
+        return (
+          <NodesPage
+            connectionId={activeConnectionId}
+            initialNodeName={view.nodeName}
+          />
+        )
+      case 'containers':
+        return (
+          <ContainerList
+            connectionId={activeConnectionId}
+            onContainerClick={(vm) => handleNavigate({ type: 'vm-detail', vm })}
+          />
+        )
       case 'tasks':
         return <TaskList connectionId={activeConnectionId} />
       case 'backups':
@@ -146,16 +272,29 @@ function AppContent() {
     }
   }
 
+  const activeConnection = connections.find((c) => c.id === activeConnectionId)
+
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar
-        onAddConnection={() => setConnectionDialogOpen(true)}
-        activeView={view.type}
-        onNavigate={(v) => handleNavigate(v as View)}
-      />
-      <main className="flex-1 overflow-hidden">
-        {renderMainContent()}
-      </main>
+    <div className="flex h-screen flex-col bg-background">
+      {activeConnection?.status === 'failover' && activeConnection.currentEndpointUrl && (
+        <div className="flex items-center gap-2 border-b border-warning/25 bg-warning/10 px-4 py-1.5">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-warning" />
+          <p className="text-xs font-medium text-warning">Operating on a fallback node</p>
+          <p className="truncate font-mono text-[11px] tabular-nums text-warning/80">
+            {activeConnection.currentEndpointUrl}
+          </p>
+        </div>
+      )}
+      <div className="flex min-h-0 flex-1">
+        <Sidebar
+          onAddConnection={() => setConnectionDialogOpen(true)}
+          activeView={view.type}
+          onNavigate={(v) => handleNavigate(v as View)}
+        />
+        <main className="flex-1 overflow-hidden">
+          {renderMainContent()}
+        </main>
+      </div>
       <ConnectionDialog
         open={connectionDialogOpen}
         onOpenChange={setConnectionDialogOpen}

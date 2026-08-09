@@ -2,45 +2,49 @@ import { useState } from 'react'
 import { useConnectionStore } from '@/stores/connectionStore'
 import { useToast } from '@/components/ui/toast'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { ConnectionDialog } from '@/components/connections/ConnectionDialog'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { ConnectionConfig } from '@/types/connection'
 
 export function ConnectionManager() {
   const connections = useConnectionStore((s) => s.connections)
   const removeConnection = useConnectionStore((s) => s.removeConnection)
   const { addToast } = useToast()
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [editing, setEditing] = useState<ConnectionConfig | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'connected':
-        return 'bg-green-500'
+        return 'bg-success shadow-[0_0_6px] shadow-success/60'
       case 'connecting':
       case 'failover':
-        return 'bg-yellow-500'
+        return 'bg-warning'
       case 'failed':
-        return 'bg-red-500'
+        return 'bg-destructive'
       default:
-        return 'bg-gray-500'
+        return 'bg-muted-foreground/60'
     }
   }
 
   const handleDelete = (id: string, name: string) => {
     removeConnection(id)
-    setDeleteConfirmId(null)
     addToast(`Connection "${name}" removed`, 'success')
   }
+
+  const deleteTarget = connections.find((c) => c.id === deleteConfirmId) ?? null
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
+        <p className="font-mono text-sm tabular-nums text-muted-foreground">
           {connections.length} connection{connections.length !== 1 ? 's' : ''}
         </p>
         <Button size="sm" onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-1" />
+          <Plus />
           Add
         </Button>
       </div>
@@ -54,68 +58,66 @@ export function ConnectionManager() {
           {connections.map((connection) => (
             <div
               key={connection.id}
-              className="flex items-center justify-between rounded-lg border p-3"
+              className="flex items-center justify-between rounded-md border border-border/70 bg-card px-3 py-2.5 transition-colors duration-150 hover:bg-accent/40"
             >
               <div className="flex items-center gap-3">
                 <div
                   className={cn(
-                    'w-2.5 h-2.5 rounded-full',
+                    'h-2 w-2 rounded-full',
                     getStatusColor(connection.status)
                   )}
                 />
                 <div>
                   <p className="text-sm font-medium">{connection.name}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="font-mono text-xs tabular-nums text-muted-foreground">
                     {connection.primary.url}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                {deleteConfirmId === connection.id ? (
-                  <>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() =>
-                        handleDelete(connection.id, connection.name)
-                      }
-                    >
-                      Confirm
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setDeleteConfirmId(null)}
-                    >
-                      Cancel
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => setDeleteConfirmId(connection.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </>
-                )}
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8"
+                  onClick={() => setEditing(connection)}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 text-destructive hover:text-destructive"
+                  onClick={() => setDeleteConfirmId(connection.id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      <ConnectionDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <ConnectionDialog
+        open={!!editing || dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open)
+          if (!open) setEditing(null)
+        }}
+        editing={editing ?? undefined}
+      />
+
+      <ConfirmDialog
+        open={deleteConfirmId !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteConfirmId(null)
+        }}
+        title="Remove Connection"
+        description={`Are you sure you want to remove "${deleteTarget?.name}"? This action cannot be undone.`}
+        confirmLabel="Remove"
+        onConfirm={() => {
+          if (deleteTarget) handleDelete(deleteTarget.id, deleteTarget.name)
+        }}
+      />
     </div>
   )
 }
