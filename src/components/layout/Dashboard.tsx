@@ -9,6 +9,7 @@ import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
 import { QuickActions } from '@/components/dashboard/QuickActions'
 import { formatBytes } from '@/lib/format'
 import { Button } from '@/components/ui/button'
+import { PageSkeleton } from '@/components/ui/skeleton'
 
 interface DashboardProps {
   connectionId: string
@@ -36,27 +37,32 @@ export function Dashboard({ connectionId, onNavigate }: DashboardProps) {
     queryClient.invalidateQueries({ queryKey: queryKeys.tasks(connectionId) })
   }, [queryClient, connectionId])
 
+  const handleRetry = useCallback(() => {
+    queryClient.refetchQueries({ queryKey: queryKeys.nodes(connectionId) })
+    queryClient.refetchQueries({ queryKey: queryKeys.vms(connectionId) })
+    queryClient.refetchQueries({ queryKey: queryKeys.tasks(connectionId) })
+  }, [queryClient, connectionId])
+
   if (nodesLoading || vmsLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    )
+    return <PageSkeleton />
   }
 
   const hasError = nodesError || vmsError || tasksError
   if (hasError) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="text-center space-y-4">
-          <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
-          <div>
-            <h3 className="text-lg font-semibold">Failed to Load Dashboard</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              {nodesError?.message || vmsError?.message || tasksError?.message || 'An error occurred while loading data'}
-            </p>
+      <div className="flex h-full items-center justify-center p-6">
+        <div className="flex flex-col items-center text-center">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-destructive/25 bg-destructive/10">
+            <AlertCircle className="h-5 w-5 text-destructive" />
           </div>
-          <Button variant="outline" onClick={() => window.location.reload()}>
+          <h3 className="text-lg font-semibold tracking-tight">Unable to load dashboard</h3>
+          <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+            {nodesError?.message || vmsError?.message || tasksError?.message || 'An error occurred while loading data'}
+          </p>
+          <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+            Check the connection to your Proxmox server and try again.
+          </p>
+          <Button variant="outline" className="mt-4" onClick={handleRetry}>
             Retry
           </Button>
         </div>
@@ -68,65 +74,78 @@ export function Dashboard({ connectionId, onNavigate }: DashboardProps) {
     <div className="h-full overflow-auto p-6">
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-semibold">Dashboard</h2>
-          <p className="text-muted-foreground">Cluster overview and resource usage</p>
+          <h2 className="text-[1.625rem] font-semibold leading-tight tracking-[-0.02em]">
+            Dashboard
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Cluster overview and resource usage
+          </p>
         </div>
 
         {/* Summary Stats Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Nodes</CardTitle>
-              <Server className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Nodes</CardTitle>
+              <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-muted/40">
+                <Server className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {nodes?.filter((n) => n.status === 'online').length ?? 0} / {nodes?.length ?? 0}
+              <div className="font-mono text-2xl font-semibold leading-none tracking-tight tabular-nums">
+                {nodes?.filter((n) => n.status === 'online').length ?? 0}
+                <span className="text-muted-foreground"> / {nodes?.length ?? 0}</span>
               </div>
-              <p className="text-xs text-muted-foreground">Online</p>
+              <p className="mt-1.5 text-xs text-muted-foreground">Online</p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">CPU Usage</CardTitle>
-              <Cpu className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">CPU Usage</CardTitle>
+              <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-muted/40">
+                <Cpu className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="font-mono text-2xl font-semibold leading-none tracking-tight tabular-nums">
                 {totalCPU > 0 ? formatPercent(usedCPU / totalCPU) : '0%'}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="mt-1.5 font-mono text-xs tabular-nums text-muted-foreground">
                 {usedCPU.toFixed(1)} / {totalCPU} cores
               </p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Memory</CardTitle>
-              <MemoryStick className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Memory</CardTitle>
+              <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-muted/40">
+                <MemoryStick className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="font-mono text-2xl font-semibold leading-none tracking-tight tabular-nums">
                 {totalMem > 0 ? formatPercent(usedMem / totalMem) : '0%'}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="mt-1.5 font-mono text-xs tabular-nums text-muted-foreground">
                 {formatBytes(usedMem)} / {formatBytes(totalMem)}
               </p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Storage</CardTitle>
-              <HardDrive className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Storage</CardTitle>
+              <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-muted/40">
+                <HardDrive className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="font-mono text-2xl font-semibold leading-none tracking-tight tabular-nums">
                 {totalDisk > 0 ? formatPercent(usedDisk / totalDisk) : '0%'}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="mt-1.5 font-mono text-xs tabular-nums text-muted-foreground">
                 {formatBytes(usedDisk)} / {formatBytes(totalDisk)}
               </p>
             </CardContent>

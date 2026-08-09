@@ -1,56 +1,166 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-background: oklch(1 0 0);
-  --color-foreground: oklch(0.145 0 0);
-  --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.145 0 0);
-  --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.145 0 0);
-  --color-primary: oklch(0.205 0 0);
-  --color-primary-foreground: oklch(0.985 0 0);
-  --color-secondary: oklch(0.97 0 0);
-  --color-secondary-foreground: oklch(0.205 0 0);
-  --color-muted: oklch(0.97 0 0);
-  --color-muted-foreground: oklch(0.556 0 0);
-  --color-accent: oklch(0.97 0 0);
-  --color-accent-foreground: oklch(0.205 0 0);
-  --color-destructive: oklch(0.577 0.245 27.325);
-  --color-destructive-foreground: oklch(0.577 0.245 27.325);
-  --color-border: oklch(0.922 0 0);
-  --color-input: oklch(0.922 0 0);
-  --color-ring: oklch(0.708 0 0);
+  /* ------------------------------------------------------------------
+   * Typography — offline-safe variable fonts (bundled via fontsource)
+   * ------------------------------------------------------------------ */
+  --font-sans:
+    'Geist Variable', 'Geist', ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', sans-serif;
+  --font-mono:
+    'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SF Mono',
+    Menlo, monospace;
+
+  /* ------------------------------------------------------------------
+   * Radius scale — tighter on inner elements, softer on containers
+   * ------------------------------------------------------------------ */
   --radius: 0.625rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.75rem;
+
+  /* ------------------------------------------------------------------
+   * Light theme (default) — warm paper neutrals, cool ink, Proxmox accent
+   * ------------------------------------------------------------------ */
+  --color-background: oklch(0.972 0.004 85);
+  --color-foreground: oklch(0.24 0.012 250);
+  --color-card: oklch(0.998 0.002 85);
+  --color-card-foreground: oklch(0.24 0.012 250);
+  --color-popover: oklch(1 0 0);
+  --color-popover-foreground: oklch(0.24 0.012 250);
+  --color-primary: oklch(0.62 0.15 55);
+  --color-primary-foreground: oklch(0.985 0.008 60);
+  --color-secondary: oklch(0.95 0.005 85);
+  --color-secondary-foreground: oklch(0.3 0.012 250);
+  --color-muted: oklch(0.95 0.005 85);
+  --color-muted-foreground: oklch(0.51 0.014 250);
+  --color-accent: oklch(0.935 0.008 85);
+  --color-accent-foreground: oklch(0.28 0.012 250);
+  --color-destructive: oklch(0.56 0.19 25);
+  --color-destructive-foreground: oklch(0.98 0.008 25);
+  --color-border: oklch(0.905 0.006 85);
+  --color-input: oklch(0.885 0.007 85);
+  --color-ring: oklch(0.62 0.15 55);
+
+  /* Semantic status colors — data semantics, not UI accents */
+  --color-success: oklch(0.55 0.13 155);
+  --color-warning: oklch(0.62 0.13 80);
+  --color-info: oklch(0.55 0.11 245);
+
+  /* Tinted card shadow — carries the warm hue of the surface */
+  --shadow-card:
+    0 1px 2px 0 oklch(0.3 0.02 60 / 0.06), 0 2px 8px -2px oklch(0.3 0.02 60 / 0.05);
 }
 
 .dark {
-  --color-background: oklch(0.145 0 0);
-  --color-foreground: oklch(0.985 0 0);
-  --color-card: oklch(0.145 0 0);
-  --color-card-foreground: oklch(0.985 0 0);
-  --color-popover: oklch(0.145 0 0);
-  --color-popover-foreground: oklch(0.985 0 0);
-  --color-primary: oklch(0.985 0 0);
-  --color-primary-foreground: oklch(0.205 0 0);
-  --color-secondary: oklch(0.269 0 0);
-  --color-secondary-foreground: oklch(0.985 0 0);
-  --color-muted: oklch(0.269 0 0);
-  --color-muted-foreground: oklch(0.708 0 0);
-  --color-accent: oklch(0.269 0 0);
-  --color-accent-foreground: oklch(0.985 0 0);
-  --color-destructive: oklch(0.577 0.245 27.325);
-  --color-destructive-foreground: oklch(0.577 0.245 27.325);
-  --color-border: oklch(0.269 0 0);
-  --color-input: oklch(0.269 0 0);
-  --color-ring: oklch(0.439 0 0);
+  /* ------------------------------------------------------------------
+   * Dark theme — blue-black ink surfaces, cool neutrals, muted orange
+   * ------------------------------------------------------------------ */
+  --color-background: oklch(0.16 0.011 250);
+  --color-foreground: oklch(0.965 0.004 250);
+  --color-card: oklch(0.19 0.012 250);
+  --color-card-foreground: oklch(0.965 0.004 250);
+  --color-popover: oklch(0.215 0.013 250);
+  --color-popover-foreground: oklch(0.965 0.004 250);
+  --color-primary: oklch(0.72 0.15 60);
+  --color-primary-foreground: oklch(0.18 0.02 50);
+  --color-secondary: oklch(0.235 0.011 250);
+  --color-secondary-foreground: oklch(0.94 0.004 250);
+  --color-muted: oklch(0.235 0.011 250);
+  --color-muted-foreground: oklch(0.655 0.012 250);
+  --color-accent: oklch(0.275 0.012 250);
+  --color-accent-foreground: oklch(0.965 0.004 250);
+  --color-destructive: oklch(0.645 0.18 25);
+  --color-destructive-foreground: oklch(0.97 0.015 25);
+  --color-border: oklch(0.255 0.012 250);
+  --color-input: oklch(0.3 0.013 250);
+  --color-ring: oklch(0.72 0.15 60);
+
+  --color-success: oklch(0.7 0.14 155);
+  --color-warning: oklch(0.76 0.13 80);
+  --color-info: oklch(0.68 0.11 245);
+
+  --shadow-card:
+    0 1px 2px 0 oklch(0.06 0.01 250 / 0.4), 0 2px 10px -2px oklch(0.06 0.01 250 / 0.35);
 }
 
 @layer base {
   * {
     @apply border-border;
   }
+
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+
+  /* Keep native form controls and webview widgets on theme */
+  ::selection {
+    @apply bg-primary/20 text-foreground;
+  }
+
+  /* Monospace and code contexts always use tabular numerals */
+  code,
+  kbd,
+  samp,
+  pre {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Consistent focus ring everywhere, including custom elements */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Native scrollbars tuned to the surface language */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--color-border);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-muted-foreground);
+    background-clip: padding-box;
+  }
+
+  /* Very subtle fixed grain overlay to break digital flatness */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0.02;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+  }
+
+  html.dark body::after {
+    opacity: 0.04;
   }
 }
 

@@ -4,6 +4,7 @@ import { Cpu, MemoryStick, HardDrive, Clock, Server, Box } from 'lucide-react'
 import { AreaChart, Area, ResponsiveContainer } from 'recharts'
 import type { ProxmoxNode, ProxmoxVM } from '@/types/proxmox'
 import { formatBytes, formatUptime } from '@/lib/format'
+import { cn } from '@/lib/utils'
 
 interface NodeHealthGridProps {
   nodes: ProxmoxNode[] | undefined
@@ -11,7 +12,13 @@ interface NodeHealthGridProps {
 }
 
 function getStatusColor(status: 'online' | 'offline'): string {
-  return status === 'online' ? 'bg-green-500' : 'bg-red-500'
+  return status === 'online'
+    ? 'bg-success shadow-[0_0_6px] shadow-success/60'
+    : 'bg-destructive'
+}
+
+function getStatusTextColor(status: 'online' | 'offline'): string {
+  return status === 'online' ? 'text-success' : 'text-destructive'
 }
 
 function getStatusLabel(status: 'online' | 'offline'): string {
@@ -40,20 +47,24 @@ function NodeCard({ node, vmCount }: { node: ProxmoxNode; vmCount: number }) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${getStatusColor(node.status)}`} />
-          <CardTitle className="text-sm font-medium">{node.node}</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+        <div className="flex items-center gap-2.5">
+          <span className={cn('h-2 w-2 rounded-full', getStatusColor(node.status))} />
+          <CardTitle className="font-mono text-sm font-semibold tracking-tight">
+            {node.node}
+          </CardTitle>
         </div>
-        <span className="text-xs text-muted-foreground">{getStatusLabel(node.status)}</span>
+        <span className={cn('text-xs font-medium', getStatusTextColor(node.status))}>
+          {getStatusLabel(node.status)}
+        </span>
       </CardHeader>
       <CardContent className="space-y-3">
         {/* Sparklines */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <div className="flex items-center gap-1 mb-1">
+            <div className="mb-1 flex items-center gap-1.5">
               <Cpu className="h-3 w-3 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">CPU</span>
+              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">CPU</span>
             </div>
             <div className="h-8">
               <ResponsiveContainer width="100%" height="100%">
@@ -61,9 +72,9 @@ function NodeCard({ node, vmCount }: { node: ProxmoxNode; vmCount: number }) {
                   <Area
                     type="monotone"
                     dataKey="value"
-                    stroke="hsl(var(--color-primary))"
-                    fill="hsl(var(--color-primary))"
-                    fillOpacity={0.2}
+                    stroke="var(--color-primary)"
+                    fill="var(--color-primary)"
+                    fillOpacity={0.18}
                     strokeWidth={1.5}
                     dot={false}
                     isAnimationActive={false}
@@ -73,9 +84,9 @@ function NodeCard({ node, vmCount }: { node: ProxmoxNode; vmCount: number }) {
             </div>
           </div>
           <div>
-            <div className="flex items-center gap-1 mb-1">
+            <div className="mb-1 flex items-center gap-1.5">
               <MemoryStick className="h-3 w-3 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">RAM</span>
+              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">RAM</span>
             </div>
             <div className="h-8">
               <ResponsiveContainer width="100%" height="100%">
@@ -83,9 +94,9 @@ function NodeCard({ node, vmCount }: { node: ProxmoxNode; vmCount: number }) {
                   <Area
                     type="monotone"
                     dataKey="value"
-                    stroke="hsl(var(--color-primary))"
-                    fill="hsl(var(--color-primary))"
-                    fillOpacity={0.2}
+                    stroke="var(--color-primary)"
+                    fill="var(--color-primary)"
+                    fillOpacity={0.18}
                     strokeWidth={1.5}
                     dot={false}
                     isAnimationActive={false}
@@ -97,33 +108,33 @@ function NodeCard({ node, vmCount }: { node: ProxmoxNode; vmCount: number }) {
         </div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Cpu className="h-3 w-3" />
+        <div className="grid grid-cols-3 gap-2 font-mono text-xs tabular-nums text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <Cpu className="h-3 w-3 shrink-0" />
             <span>{(cpuPercent * 100).toFixed(0)}%</span>
           </div>
-          <div className="flex items-center gap-1">
-            <MemoryStick className="h-3 w-3" />
+          <div className="flex items-center gap-1.5">
+            <MemoryStick className="h-3 w-3 shrink-0" />
             <span>{(memPercent * 100).toFixed(0)}%</span>
           </div>
-          <div className="flex items-center gap-1">
-            <HardDrive className="h-3 w-3" />
+          <div className="flex items-center gap-1.5">
+            <HardDrive className="h-3 w-3 shrink-0" />
             <span>{(diskPercent * 100).toFixed(0)}%</span>
           </div>
         </div>
 
         {/* Bottom info */}
-        <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t">
-          <div className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
+        <div className="flex items-center justify-between border-t pt-2.5 font-mono text-xs tabular-nums text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <Clock className="h-3 w-3 shrink-0" />
             <span>{formatUptime(node.uptime)}</span>
           </div>
-          <div className="flex items-center gap-1">
-            <Box className="h-3 w-3" />
+          <div className="flex items-center gap-1.5">
+            <Box className="h-3 w-3 shrink-0" />
             <span>{vmCount} VMs</span>
           </div>
-          <div className="flex items-center gap-1">
-            <HardDrive className="h-3 w-3" />
+          <div className="flex items-center gap-1.5">
+            <HardDrive className="h-3 w-3 shrink-0" />
             <span>{formatBytes(node.disk)}</span>
           </div>
         </div>
@@ -146,13 +157,15 @@ export function NodeHealthGrid({ nodes, vms }: NodeHealthGridProps) {
     return (
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <Server className="h-4 w-4 text-muted-foreground" />
-            <CardTitle>Node Health</CardTitle>
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-muted/40">
+              <Server className="h-3.5 w-3.5 text-muted-foreground" />
+            </div>
+            <CardTitle className="text-sm font-semibold">Node Health</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground text-center py-4">No nodes available</p>
+          <p className="py-4 text-center text-sm text-muted-foreground">No nodes available</p>
         </CardContent>
       </Card>
     )
@@ -161,9 +174,11 @@ export function NodeHealthGrid({ nodes, vms }: NodeHealthGridProps) {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center gap-2">
-          <Server className="h-4 w-4 text-muted-foreground" />
-          <CardTitle>Node Health</CardTitle>
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-muted/40">
+            <Server className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+          <CardTitle className="text-sm font-semibold">Node Health</CardTitle>
         </div>
       </CardHeader>
       <CardContent>

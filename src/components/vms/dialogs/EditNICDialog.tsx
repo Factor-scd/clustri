@@ -33,6 +33,7 @@ export function EditNICDialog({ open, onOpenChange, vm, nic }: EditNICDialogProp
       {
         node: vm.node,
         vmid: vm.vmid,
+        vmType: vm.type,
         nic: nic.name,
         config: {
           bridge: bridge || undefined,
@@ -100,7 +101,7 @@ export function EditNICDialog({ open, onOpenChange, vm, nic }: EditNICDialogProp
               type="checkbox"
               checked={firewall}
               onChange={(e) => setFirewall(e.target.checked)}
-              className="h-4 w-4 rounded border-input"
+              className="h-4 w-4 rounded border-input accent-primary"
             />
             <Label htmlFor="edit-firewall" className="cursor-pointer">
               Enable firewall

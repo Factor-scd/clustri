@@ -9,11 +9,47 @@ export interface ConnectionConfig {
   fallbacks: EndpointConfig[]
   certFingerprint?: string
   trusted: boolean
+  acceptUntrusted?: boolean
   status: ConnectionStatus
   clusterName?: string
+  clusterId?: string
   isCluster: boolean
   authMode: AuthMode
   username?: string
+  /** Nodes discovered in the cluster this connection is anchored on. */
+  nodes?: DiscoveredNode[]
+  /** The endpoint currently serving this connection (after failover). */
+  currentEndpointUrl?: string
+}
+
+/** A node discovered in the cluster connected through a connection. */
+export interface DiscoveredNode {
+  name: string
+  url: string
+  status: 'online' | 'offline'
+  isPrimary: boolean
+  local: boolean
+}
+
+/** The outcome of a connect attempt, returned by `connect_to_server`. */
+export interface ConnectResult {
+  connectionId: string
+  mergedInto: string | null
+  status: 'connected' | 'failover' | 'failed'
+}
+
+/** A snapshot of a connection's runtime state, returned by `get_connection_status`. */
+export interface ConnectionStatusInfo {
+  connectionId: string
+  status: 'connected' | 'failover' | 'failed' | 'disconnected'
+  primaryUrl: string
+  currentEndpointUrl: string
+  nodes: DiscoveredNode[]
+}
+
+export interface LoadConnectionsResult {
+  activeConnectionId: string | null
+  connections: ConnectionConfig[]
 }
 
 export interface EndpointConfig {

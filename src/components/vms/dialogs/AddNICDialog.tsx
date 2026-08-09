@@ -33,6 +33,7 @@ export function AddNICDialog({ open, onOpenChange, vm }: AddNICDialogProps) {
       {
         node: vm.node,
         vmid: vm.vmid,
+        vmType: vm.type,
         config: {
           bridge,
           model,
@@ -114,7 +115,7 @@ export function AddNICDialog({ open, onOpenChange, vm }: AddNICDialogProps) {
               type="checkbox"
               checked={firewall}
               onChange={(e) => setFirewall(e.target.checked)}
-              className="h-4 w-4 rounded border-input"
+              className="h-4 w-4 rounded border-input accent-primary"
             />
             <Label htmlFor="firewall" className="cursor-pointer">
               Enable firewall

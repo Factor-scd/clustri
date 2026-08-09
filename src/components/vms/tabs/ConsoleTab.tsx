@@ -85,7 +85,7 @@ export function ConsoleTab({ vm, connectionId }: ConsoleTabProps) {
   return (
     <div className="flex flex-col h-[600px]">
       {/* Toolbar */}
-      <div className="flex items-center justify-between border rounded-t-lg bg-muted/30 px-3 py-2">
+      <div className="flex items-center justify-between rounded-t-lg border border-b-0 border-border bg-muted/30 px-3 py-2">
         <div className="flex items-center gap-2">
           {isVM ? (
             <Monitor className="h-4 w-4 text-muted-foreground" />
@@ -95,7 +95,7 @@ export function ConsoleTab({ vm, connectionId }: ConsoleTabProps) {
           <span className="text-sm font-medium">
             {isVM ? 'VNC Console' : 'Terminal Console'}
           </span>
-          <span className="text-xs text-muted-foreground">
+          <span className="font-mono text-xs text-muted-foreground">
             ({vm.name} - {vm.type.toUpperCase()})
           </span>
         </div>
@@ -149,7 +149,7 @@ export function ConsoleTab({ vm, connectionId }: ConsoleTabProps) {
               onClick={handleRetry}
               className="h-7 text-xs"
             >
-              <RotateCw className="h-3 w-3 mr-1" />
+              <RotateCw />
               Retry
             </Button>
           ) : (
@@ -168,7 +168,7 @@ export function ConsoleTab({ vm, connectionId }: ConsoleTabProps) {
       {/* Console Area */}
       <div
         ref={containerRef}
-        className="flex-1 border border-t-0 rounded-b-lg overflow-hidden bg-black relative"
+        className="relative flex-1 overflow-hidden rounded-b-lg border border-t-0 border-border bg-black"
       >
         {/* Idle state - show placeholder */}
         {status === 'idle' && (
@@ -183,7 +183,7 @@ export function ConsoleTab({ vm, connectionId }: ConsoleTabProps) {
                 {isVM ? 'VNC Console' : 'Terminal Console'}
               </p>
               {!canConnect ? (
-                <p className="text-xs text-amber-500">
+                <p className="text-xs text-warning">
                   VM must be running to access console
                 </p>
               ) : (
@@ -214,7 +214,7 @@ export function ConsoleTab({ vm, connectionId }: ConsoleTabProps) {
                 onClick={handleRetry}
                 className="mt-2"
               >
-                <RotateCw className="h-3 w-3 mr-1" />
+                <RotateCw />
                 Retry Connection
               </Button>
             </div>

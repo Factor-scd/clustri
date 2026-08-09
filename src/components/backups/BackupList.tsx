@@ -1,6 +1,9 @@
 import { useState, useMemo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { EmptyState } from '@/components/ui/empty-state'
+import { PageSkeleton, Skeleton } from '@/components/ui/skeleton'
 import {
   Shield,
   Plus,
@@ -71,9 +74,10 @@ export function BackupList({ connectionId }: BackupListProps) {
 
   if (jobsLoading || backupsLoading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground">Loading backups...</p>
-      </div>
+      <PageSkeleton filter>
+        <Skeleton className="h-56 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </PageSkeleton>
     )
   }
 
@@ -91,8 +95,8 @@ export function BackupList({ connectionId }: BackupListProps) {
         {/* Header */}
         <div>
           <div className="flex items-center gap-2">
-            <Shield className="h-6 w-6" />
-            <h2 className="text-2xl font-semibold">Backups</h2>
+            <Shield className="h-6 w-6 text-muted-foreground" />
+            <h2 className="text-2xl font-semibold tracking-tight">Backups</h2>
           </div>
           <p className="text-muted-foreground">
             Manage backup jobs and existing backups
@@ -118,9 +122,9 @@ export function BackupList({ connectionId }: BackupListProps) {
         {/* Backup Jobs Section */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium">Backup Jobs</h3>
+            <h3 className="text-lg font-semibold tracking-tight">Backup Jobs</h3>
             <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" />
+              <Plus />
               Create Job
             </Button>
           </div>
@@ -128,61 +132,61 @@ export function BackupList({ connectionId }: BackupListProps) {
           <Card>
             <CardContent className="p-0">
               {!backupJobs || backupJobs.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Shield className="h-8 w-8 mx-auto text-muted-foreground/50" />
-                  <p>No backup jobs configured</p>
-                  <p className="text-sm mt-1">Create a backup job to get started</p>
-                </div>
+                <EmptyState
+                  icon={Shield}
+                  title="No backup jobs configured"
+                  description="Create a backup job to get started"
+                />
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="h-10 px-4 text-left font-medium text-muted-foreground">ID</th>
-                        <th className="h-10 px-4 text-left font-medium text-muted-foreground">Schedule</th>
-                        <th className="h-10 px-4 text-left font-medium text-muted-foreground">Storage</th>
-                        <th className="h-10 px-4 text-left font-medium text-muted-foreground">Mode</th>
-                        <th className="h-10 px-4 text-left font-medium text-muted-foreground">Status</th>
-                        <th className="h-10 px-4 text-right font-medium text-muted-foreground">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {backupJobs.map((job) => (
-                        <tr
-                          key={job.id}
-                          className="border-b last:border-b-0 hover:bg-muted/50 transition-colors"
-                        >
-                          <td className="px-4 py-3 font-mono text-muted-foreground">{job.id}</td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-1.5">
-                              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                              {job.schedule}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-1.5">
-                              <HardDrive className="h-3.5 w-3.5 text-muted-foreground" />
-                              {job.store}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-xs uppercase text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                              {job.mode ?? 'snapshot'}
+                  <thead>
+                    <tr className="border-b">
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">ID</th>
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Schedule</th>
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Storage</th>
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Mode</th>
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</th>
+                      <th className="h-10 px-4 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {backupJobs.map((job) => (
+                      <tr
+                        key={job.id}
+                        className="border-b last:border-b-0 hover:bg-accent/50 transition-colors duration-150"
+                      >
+                        <td className="px-4 py-3 font-mono text-muted-foreground">{job.id}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5 font-mono text-xs tabular-nums">
+                            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                            {job.schedule}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5 font-mono">
+                            <HardDrive className="h-3.5 w-3.5 text-muted-foreground" />
+                            {job.store}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-xs uppercase text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                            {job.mode ?? 'snapshot'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {job.enabled === 1 ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-sm border border-success/25 bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
+                              <CheckCircle className="h-3 w-3" />
+                              Enabled
                             </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            {job.enabled === 1 ? (
-                              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-                                <CheckCircle className="h-3 w-3" />
-                                Enabled
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300">
-                                <XCircle className="h-3 w-3" />
-                                Disabled
-                              </span>
-                            )}
-                          </td>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-muted/60 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                              <XCircle className="h-3 w-3" />
+                              Disabled
+                            </span>
+                          )}
+                        </td>
                           <td className="px-4 py-3 text-right">
                             <div className="flex items-center justify-end gap-1">
                               <Button
@@ -217,39 +221,15 @@ export function BackupList({ connectionId }: BackupListProps) {
                               >
                                 <Edit className="h-3.5 w-3.5" />
                               </Button>
-                              {confirmDeleteJob === job.id ? (
-                                <div className="flex items-center gap-1">
-                                  <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    className="h-7 text-xs"
-                                    onClick={() => {
-                                      deleteBackupJob.mutate({ id: job.id })
-                                      setConfirmDeleteJob(null)
-                                    }}
-                                  >
-                                    Confirm
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 text-xs"
-                                    onClick={() => setConfirmDeleteJob(null)}
-                                  >
-                                    Cancel
-                                  </Button>
-                                </div>
-                              ) : (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-destructive"
-                                  title="Delete"
-                                  onClick={() => setConfirmDeleteJob(job.id)}
-                                >
-                                  <Trash className="h-3.5 w-3.5" />
-                                </Button>
-                              )}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive"
+                                title="Delete"
+                                onClick={() => setConfirmDeleteJob(job.id)}
+                              >
+                                <Trash className="h-3.5 w-3.5" />
+                              </Button>
                             </div>
                           </td>
                         </tr>
@@ -264,54 +244,51 @@ export function BackupList({ connectionId }: BackupListProps) {
 
         {/* Existing Backups Section */}
         <div className="space-y-4">
-          <h3 className="text-lg font-medium">Existing Backups</h3>
+          <h3 className="text-lg font-semibold tracking-tight">Existing Backups</h3>
 
           <Card>
             <CardContent className="p-0">
               {!filteredBackups || filteredBackups.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <HardDrive className="h-8 w-8 mx-auto text-muted-foreground/50" />
-                  <p>No backups found</p>
-                </div>
+                <EmptyState icon={HardDrive} title="No backups found" />
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="h-10 px-4 text-left font-medium text-muted-foreground">VMID</th>
-                        <th className="h-10 px-4 text-left font-medium text-muted-foreground">Type</th>
-                        <th className="h-10 px-4 text-left font-medium text-muted-foreground">Date</th>
-                        <th className="h-10 px-4 text-right font-medium text-muted-foreground">Size</th>
-                        <th className="h-10 px-4 text-left font-medium text-muted-foreground">Storage</th>
-                        <th className="h-10 px-4 text-right font-medium text-muted-foreground">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredBackups.map((backup) => (
-                        <tr
-                          key={backup.volid}
-                          className="border-b last:border-b-0 hover:bg-muted/50 transition-colors"
-                        >
-                          <td className="px-4 py-3 font-mono text-muted-foreground">
-                            {backup['backup-id']}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-xs uppercase text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                              {backup['backup-type']}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {formatTimestamp(backup['backup-time'])}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            {formatBytes(backup.size)}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-1.5">
-                              <HardDrive className="h-3.5 w-3.5 text-muted-foreground" />
-                              {backup.storage}
-                            </div>
-                          </td>
+                  <thead>
+                    <tr className="border-b">
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">VMID</th>
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Type</th>
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Date</th>
+                      <th className="h-10 px-4 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Size</th>
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Storage</th>
+                      <th className="h-10 px-4 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredBackups.map((backup) => (
+                      <tr
+                        key={backup.volid}
+                        className="border-b last:border-b-0 hover:bg-accent/50 transition-colors duration-150"
+                      >
+                        <td className="px-4 py-3 font-mono tabular-nums text-muted-foreground">
+                          {backup['backup-id']}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-xs uppercase text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                            {backup['backup-type']}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs tabular-nums text-muted-foreground">
+                          {formatTimestamp(backup['backup-time'])}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono text-xs tabular-nums">
+                          {formatBytes(backup.size)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5 font-mono">
+                            <HardDrive className="h-3.5 w-3.5 text-muted-foreground" />
+                            {backup.storage}
+                          </div>
+                        </td>
                           <td className="px-4 py-3 text-right">
                             <div className="flex items-center justify-end gap-1">
                               <Button
@@ -323,39 +300,15 @@ export function BackupList({ connectionId }: BackupListProps) {
                               >
                                 <RotateCcw className="h-3.5 w-3.5" />
                               </Button>
-                              {confirmDeleteBackup === backup.volid ? (
-                                <div className="flex items-center gap-1">
-                                  <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    className="h-7 text-xs"
-                                    onClick={() => {
-                                      deleteBackup.mutate({ volid: backup.volid })
-                                      setConfirmDeleteBackup(null)
-                                    }}
-                                  >
-                                    Confirm
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 text-xs"
-                                    onClick={() => setConfirmDeleteBackup(null)}
-                                  >
-                                    Cancel
-                                  </Button>
-                                </div>
-                              ) : (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-destructive"
-                                  title="Delete"
-                                  onClick={() => setConfirmDeleteBackup(backup.volid)}
-                                >
-                                  <Trash className="h-3.5 w-3.5" />
-                                </Button>
-                              )}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive"
+                                title="Delete"
+                                onClick={() => setConfirmDeleteBackup(backup.volid)}
+                              >
+                                <Trash className="h-3.5 w-3.5" />
+                              </Button>
                             </div>
                           </td>
                         </tr>
@@ -398,6 +351,35 @@ export function BackupList({ connectionId }: BackupListProps) {
           storageOptions={storageOptions}
         />
       )}
+
+      {/* Delete confirmations */}
+      <ConfirmDialog
+        open={confirmDeleteJob !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmDeleteJob(null)
+        }}
+        title="Delete Backup Job"
+        description={`Are you sure you want to delete backup job "${confirmDeleteJob}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        isLoading={deleteBackupJob.isPending}
+        onConfirm={() => {
+          if (confirmDeleteJob) deleteBackupJob.mutate({ id: confirmDeleteJob })
+        }}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteBackup !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmDeleteBackup(null)
+        }}
+        title="Delete Backup"
+        description={`Are you sure you want to delete this backup? This action cannot be undone.`}
+        confirmLabel="Delete"
+        isLoading={deleteBackup.isPending}
+        onConfirm={() => {
+          if (confirmDeleteBackup) deleteBackup.mutate({ volid: confirmDeleteBackup })
+        }}
+      />
     </div>
   )
 }

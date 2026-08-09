@@ -9,9 +9,9 @@ interface StorageCardProps {
 }
 
 function getUsageColor(percent: number): string {
-  if (percent >= 90) return 'bg-red-500'
-  if (percent >= 70) return 'bg-yellow-500'
-  return 'bg-green-500'
+  if (percent >= 90) return 'bg-destructive'
+  if (percent >= 70) return 'bg-warning'
+  return 'bg-success'
 }
 
 function getStorageIcon(type: string) {
@@ -67,7 +67,7 @@ export function StorageCard({ storage, onClick }: StorageCardProps) {
 
   return (
     <Card
-      className="cursor-pointer hover:shadow-lg transition-shadow"
+      className="cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:shadow-card"
       onClick={onClick}
     >
       <CardHeader className="pb-3">
@@ -77,7 +77,7 @@ export function StorageCard({ storage, onClick }: StorageCardProps) {
         </CardTitle>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="uppercase bg-muted px-1.5 py-0.5 rounded">{storage.type}</span>
-          {storage.node && <span>{storage.node}</span>}
+          {storage.node && <span className="font-mono">{storage.node}</span>}
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -85,22 +85,22 @@ export function StorageCard({ storage, onClick }: StorageCardProps) {
         <div className="space-y-1">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Usage</span>
-            <span className="font-medium">{percent.toFixed(1)}%</span>
+            <span className="font-mono font-medium tabular-nums">{percent.toFixed(1)}%</span>
           </div>
           <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all ${usageColor}`}
+              className={`h-full rounded-full transition-all duration-500 ${usageColor}`}
               style={{ width: `${Math.min(percent, 100)}%` }}
             />
           </div>
         </div>
 
         {/* Size Info */}
-        <div className="flex justify-between text-xs text-muted-foreground">
+        <div className="flex justify-between font-mono text-xs tabular-nums text-muted-foreground">
           <span>{formatBytes(storage.used)} used</span>
           <span>{formatBytes(storage.total)} total</span>
         </div>
-        <div className="text-xs text-muted-foreground">
+        <div className="font-mono text-xs tabular-nums text-muted-foreground">
           {formatBytes(storage.avail)} available
         </div>
 
@@ -112,7 +112,7 @@ export function StorageCard({ storage, onClick }: StorageCardProps) {
               return (
                 <span
                   key={type}
-                  className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+                  className="inline-flex items-center gap-1 rounded-sm border border-border/70 bg-muted px-2 py-0.5 text-xs text-muted-foreground"
                 >
                   <TypeIcon className="h-3 w-3" />
                   {getContentTypeLabel(type)}

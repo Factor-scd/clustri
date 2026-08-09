@@ -12,6 +12,9 @@ pub enum Error {
     #[error("HTTP request failed: {0}")]
     HttpError(#[from] reqwest::Error),
 
+    #[error("Cannot connect to server: {0}")]
+    ConnectionFailed(String),
+
     #[error("Certificate error: {0}")]
     CertificateError(String),
 

@@ -33,6 +33,7 @@ export function ResizeDiskDialog({ open, onOpenChange, vm, disk }: ResizeDiskDia
       {
         node: vm.node,
         vmid: vm.vmid,
+        vmType: vm.type,
         disk: disk.device,
         size: sizeBytes,
       },

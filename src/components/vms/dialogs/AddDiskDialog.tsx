@@ -32,6 +32,7 @@ export function AddDiskDialog({ open, onOpenChange, vm }: AddDiskDialogProps) {
       {
         node: vm.node,
         vmid: vm.vmid,
+        vmType: vm.type,
         config: { storage, size: sizeBytes, busType },
       },
       {

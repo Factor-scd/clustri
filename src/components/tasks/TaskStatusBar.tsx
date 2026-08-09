@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { ListTodo, Play } from 'lucide-react'
+import { ListTodo, Loader2 } from 'lucide-react'
 import { useTasks } from '@/hooks/useProxmox'
 import type { ProxmoxTask } from '@/types/proxmox'
 
@@ -27,20 +27,20 @@ export function TaskStatusBar({ connectionId, onClick }: TaskStatusBarProps) {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors hover:bg-accent/50 text-muted-foreground hover:text-accent-foreground"
+      className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors duration-150 hover:bg-accent/50 text-muted-foreground hover:text-accent-foreground"
     >
       <ListTodo className="h-4 w-4" />
       <span className="flex-1 text-left">
         {runningCount > 0 ? (
           <span className="flex items-center gap-1.5">
-            <span className="text-blue-500 font-medium">{runningCount} task{runningCount !== 1 ? 's' : ''} running</span>
+            <span className="font-medium text-info">{runningCount} task{runningCount !== 1 ? 's' : ''} running</span>
           </span>
         ) : (
           <span>No tasks running</span>
         )}
       </span>
       {runningCount > 0 && (
-        <Play className="h-3 w-3 text-blue-500 animate-pulse" />
+        <Loader2 className="h-3 w-3 text-info animate-spin" />
       )}
     </button>
   )

@@ -30,6 +30,7 @@ export function MoveDiskDialog({ open, onOpenChange, vm, disk }: MoveDiskDialogP
       {
         node: vm.node,
         vmid: vm.vmid,
+        vmType: vm.type,
         disk: disk.device,
         storage: targetStorage,
       },

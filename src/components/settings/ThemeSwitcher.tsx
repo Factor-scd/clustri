@@ -23,10 +23,10 @@ export function ThemeSwitcher() {
             key={option.value}
             onClick={() => setTheme(option.value)}
             className={cn(
-              'flex items-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition-colors',
+              'flex items-center gap-2 rounded-md border px-4 py-2.5 text-sm font-medium transition-colors duration-150',
               theme === option.value
-                ? 'border-primary bg-primary text-primary-foreground'
-                : 'border-input bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                ? 'border-primary/40 bg-primary/10 text-primary'
+                : 'border-border bg-background text-muted-foreground hover:border-border hover:bg-accent hover:text-accent-foreground'
             )}
           >
             <Icon className="h-4 w-4" />

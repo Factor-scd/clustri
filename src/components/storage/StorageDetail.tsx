@@ -1,5 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Skeleton } from '@/components/ui/skeleton'
 import { ArrowLeft, HardDrive, Database, Archive, Disc, Box, Clock, File } from 'lucide-react'
 import { useStorageDetail, useStorageContent } from '@/hooks/useProxmox'
 import type { ProxmoxStorageContent } from '@/types/proxmox'
@@ -13,9 +15,9 @@ interface StorageDetailProps {
 }
 
 function getUsageColor(percent: number): string {
-  if (percent >= 90) return 'bg-red-500'
-  if (percent >= 70) return 'bg-yellow-500'
-  return 'bg-green-500'
+  if (percent >= 90) return 'bg-destructive'
+  if (percent >= 70) return 'bg-warning'
+  return 'bg-success'
 }
 
 function getStorageIcon(type: string) {
@@ -89,8 +91,19 @@ export function StorageDetail({ connectionId, storage, node, onBack }: StorageDe
 
   if (detailLoading || contentLoading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground">Loading storage details...</p>
+      <div className="h-full overflow-auto p-6">
+        <div className="space-y-6">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-9 w-9" />
+            <div className="space-y-2">
+              <Skeleton className="h-7 w-48" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+          </div>
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
       </div>
     )
   }
@@ -114,10 +127,11 @@ export function StorageDetail({ connectionId, storage, node, onBack }: StorageDe
           <div>
             <div className="flex items-center gap-2">
               <Icon className="h-6 w-6 text-muted-foreground" />
-              <h2 className="text-2xl font-semibold">{detail.storage}</h2>
+              <h2 className="font-mono text-2xl font-semibold tracking-tight">{detail.storage}</h2>
             </div>
-            <p className="text-muted-foreground">
-              {detail.type.toUpperCase()} storage on {detail.node}
+            <p className="text-sm text-muted-foreground">
+              <span className="font-mono">{detail.type.toUpperCase()}</span> storage on{' '}
+              <span className="font-mono">{detail.node}</span>
             </p>
           </div>
         </div>
@@ -132,15 +146,15 @@ export function StorageDetail({ connectionId, storage, node, onBack }: StorageDe
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Disk Usage</span>
-                <span className="font-medium">{percent.toFixed(1)}%</span>
+                <span className="font-mono font-medium tabular-nums">{percent.toFixed(1)}%</span>
               </div>
               <div className="h-4 bg-muted rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all ${usageColor}`}
+                  className={`h-full rounded-full transition-all duration-500 ${usageColor}`}
                   style={{ width: `${Math.min(percent, 100)}%` }}
                 />
               </div>
-              <div className="flex justify-between text-xs text-muted-foreground">
+              <div className="flex justify-between font-mono text-xs tabular-nums text-muted-foreground">
                 <span>{formatBytes(detail.used)} used</span>
                 <span>{formatBytes(detail.total)} total</span>
               </div>
@@ -149,24 +163,24 @@ export function StorageDetail({ connectionId, storage, node, onBack }: StorageDe
             {/* Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Total Size</p>
-                <p className="text-sm font-medium">{formatBytes(detail.total)}</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total Size</p>
+                <p className="font-mono text-sm font-medium tabular-nums">{formatBytes(detail.total)}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Used</p>
-                <p className="text-sm font-medium">{formatBytes(detail.used)}</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Used</p>
+                <p className="font-mono text-sm font-medium tabular-nums">{formatBytes(detail.used)}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Available</p>
-                <p className="text-sm font-medium">{formatBytes(detail.avail)}</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Available</p>
+                <p className="font-mono text-sm font-medium tabular-nums">{formatBytes(detail.avail)}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Status</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</p>
                 <p className="text-sm font-medium">
                   {detail.active ? (
-                    <span className="text-green-600">Active</span>
+                    <span className="text-success">Active</span>
                   ) : (
-                    <span className="text-gray-500">Inactive</span>
+                    <span className="text-muted-foreground">Inactive</span>
                   )}
                 </p>
               </div>
@@ -180,29 +194,29 @@ export function StorageDetail({ connectionId, storage, node, onBack }: StorageDe
             <CardTitle className="text-base">Storage Information</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-5">
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Name</p>
-                <p className="text-sm font-medium">{detail.storage}</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Name</p>
+                <p className="font-mono text-sm font-medium">{detail.storage}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Type</p>
-                <p className="text-sm font-medium uppercase">{detail.type}</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Type</p>
+                <p className="font-mono text-sm font-medium uppercase">{detail.type}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Node</p>
-                <p className="text-sm font-medium">{detail.node}</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Node</p>
+                <p className="font-mono text-sm font-medium">{detail.node}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Enabled</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Enabled</p>
                 <p className="text-sm font-medium">{detail.enabled ? 'Yes' : 'No'}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Shared</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Shared</p>
                 <p className="text-sm font-medium">{detail.shared ? 'Yes' : 'No'}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Content Types</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Content Types</p>
                 <p className="text-sm font-medium">{detail.content || 'None'}</p>
               </div>
             </div>
@@ -223,7 +237,7 @@ export function StorageDetail({ connectionId, storage, node, onBack }: StorageDe
           </CardHeader>
           <CardContent>
             {!contentList || contentList.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No content found</p>
+              <EmptyState icon={File} title="No content found" />
             ) : (
               <div className="space-y-4">
                 {Object.entries(contentByType).map(([type, items]) => {
@@ -243,11 +257,11 @@ export function StorageDetail({ connectionId, storage, node, onBack }: StorageDe
                           >
                             <div className="flex items-center gap-2">
                               <File className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span className="truncate max-w-[300px]">
+                              <span className="truncate max-w-[300px] font-mono text-xs">
                                 {formatContentItem(item)}
                               </span>
                             </div>
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-4 font-mono text-xs tabular-nums text-muted-foreground">
                               {item.format && (
                                 <span className="uppercase bg-muted px-1.5 py-0.5 rounded">
                                   {item.format}

@@ -1,9 +1,12 @@
 import { useState, useMemo, Fragment } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Search, ListTodo, ChevronDown, ChevronRight, Play, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { EmptyState } from '@/components/ui/empty-state'
+import { PageSkeleton, Skeleton } from '@/components/ui/skeleton'
+import { Search, ListTodo, ChevronDown, ChevronRight, CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react'
 import { useTasks } from '@/hooks/useProxmox'
 import type { ProxmoxTask } from '@/types/proxmox'
+import { cn } from '@/lib/utils'
 
 interface TaskListProps {
   connectionId: string
@@ -44,19 +47,19 @@ function getTaskStatus(task: ProxmoxTask): 'running' | 'completed' | 'failed' {
 function TaskStatusIcon({ status }: { status: 'running' | 'completed' | 'failed' }) {
   switch (status) {
     case 'running':
-      return <Play className="h-3.5 w-3.5 text-blue-500" />
+      return <Loader2 className="h-3.5 w-3.5 text-info animate-spin" />
     case 'completed':
-      return <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+      return <CheckCircle className="h-3.5 w-3.5 text-success" />
     case 'failed':
-      return <XCircle className="h-3.5 w-3.5 text-red-500" />
+      return <XCircle className="h-3.5 w-3.5 text-destructive" />
   }
 }
 
 function TaskStatusBadge({ status }: { status: 'running' | 'completed' | 'failed' }) {
   const config = {
-    running: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-    completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-    failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+    running: 'border-info/25 bg-info/10 text-info',
+    completed: 'border-success/25 bg-success/10 text-success',
+    failed: 'border-destructive/25 bg-destructive/10 text-destructive',
   }
 
   const label = {
@@ -67,7 +70,7 @@ function TaskStatusBadge({ status }: { status: 'running' | 'completed' | 'failed
 
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${config[status]}`}
+      className={`inline-flex items-center gap-1.5 rounded-sm border px-2 py-0.5 text-xs font-medium ${config[status]}`}
     >
       <TaskStatusIcon status={status} />
       {label[status]}
@@ -140,9 +143,9 @@ export function TaskList({ connectionId }: TaskListProps) {
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground">Loading tasks...</p>
-      </div>
+      <PageSkeleton filter>
+        <Skeleton className="h-96 w-full" />
+      </PageSkeleton>
     )
   }
 
@@ -160,13 +163,13 @@ export function TaskList({ connectionId }: TaskListProps) {
         {/* Header */}
         <div>
           <div className="flex items-center gap-2">
-            <ListTodo className="h-6 w-6" />
-            <h2 className="text-2xl font-semibold">Tasks</h2>
+            <ListTodo className="h-6 w-6 text-muted-foreground" />
+            <h2 className="text-2xl font-semibold tracking-tight">Tasks</h2>
           </div>
           <p className="text-muted-foreground">
             {tasks?.length ?? 0} total tasks
             {runningCount > 0 && (
-              <span className="ml-2 text-blue-500 font-medium">
+              <span className="ml-2 font-medium text-info">
                 ({runningCount} running)
               </span>
             )}
@@ -227,32 +230,24 @@ export function TaskList({ connectionId }: TaskListProps) {
         <Card>
           <CardContent className="p-0">
             {filteredTasks.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                {tasks?.length === 0 ? (
-                  <div className="space-y-2">
-                    <ListTodo className="h-8 w-8 mx-auto text-muted-foreground/50" />
-                    <p>No tasks found</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Search className="h-8 w-8 mx-auto text-muted-foreground/50" />
-                    <p>No tasks match your filters</p>
-                  </div>
-                )}
-              </div>
+              tasks?.length === 0 ? (
+                <EmptyState icon={ListTodo} title="No tasks found" />
+              ) : (
+                <EmptyState icon={Search} title="No tasks match your filters" />
+              )
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="h-10 px-4 text-left font-medium text-muted-foreground w-8" />
-                      <th className="h-10 px-4 text-left font-medium text-muted-foreground">UPID</th>
-                      <th className="h-10 px-4 text-left font-medium text-muted-foreground">Type</th>
-                      <th className="h-10 px-4 text-left font-medium text-muted-foreground">Node</th>
-                      <th className="h-10 px-4 text-left font-medium text-muted-foreground">User</th>
-                      <th className="h-10 px-4 text-left font-medium text-muted-foreground">Status</th>
-                      <th className="h-10 px-4 text-left font-medium text-muted-foreground">Start Time</th>
-                      <th className="h-10 px-4 text-right font-medium text-muted-foreground">Duration</th>
+                    <tr className="border-b">
+                      <th className="h-10 px-4 w-8 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground" />
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">UPID</th>
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Type</th>
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Node</th>
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">User</th>
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</th>
+                      <th className="h-10 px-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Start Time</th>
+                      <th className="h-10 px-4 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Duration</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -262,7 +257,7 @@ export function TaskList({ connectionId }: TaskListProps) {
                       return (
                         <Fragment key={task.upid}>
                           <tr
-                            className="border-b last:border-b-0 hover:bg-muted/50 transition-colors cursor-pointer"
+                            className="border-b last:border-b-0 hover:bg-accent/50 transition-colors duration-150 cursor-pointer"
                             onClick={() => toggleExpanded(task.upid)}
                           >
                             <td className="px-4 py-3">
@@ -272,57 +267,57 @@ export function TaskList({ connectionId }: TaskListProps) {
                                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
                               )}
                             </td>
-                            <td className="px-4 py-3 font-mono text-muted-foreground">{task.upid}</td>
+                            <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{task.upid}</td>
                             <td className="px-4 py-3">
                               <span className="text-xs uppercase text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                                 {task.type}
                               </span>
                             </td>
-                            <td className="px-4 py-3">{task.node}</td>
+                            <td className="px-4 py-3 font-mono">{task.node}</td>
                             <td className="px-4 py-3 text-muted-foreground">{task.user}</td>
                             <td className="px-4 py-3">
                               <TaskStatusBadge status={taskStatus} />
                             </td>
-                            <td className="px-4 py-3 text-muted-foreground">
+                            <td className="px-4 py-3 font-mono text-xs tabular-nums text-muted-foreground">
                               <div className="flex items-center gap-1.5">
                                 <Clock className="h-3.5 w-3.5" />
                                 {formatTimestamp(task.starttime)}
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-right text-muted-foreground">
+                            <td className="px-4 py-3 text-right font-mono text-xs tabular-nums text-muted-foreground">
                               {formatDuration(task.starttime, task.endtime)}
                             </td>
                           </tr>
                           {isExpanded && (
-                            <tr key={`${task.upid}-details`} className="border-b bg-muted/20">
+                            <tr key={`${task.upid}-details`} className="border-b bg-muted/40">
                               <td colSpan={8} className="px-4 py-3">
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-4 text-sm">
                                   <div>
-                                    <span className="text-muted-foreground">UPID:</span>
-                                    <p className="font-mono">{task.upid}</p>
+                                    <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">UPID</span>
+                                    <p className="mt-0.5 font-mono text-xs">{task.upid}</p>
                                   </div>
                                   <div>
-                                    <span className="text-muted-foreground">Task ID:</span>
-                                    <p className="font-mono">{task.id}</p>
+                                    <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Task ID</span>
+                                    <p className="mt-0.5 font-mono text-xs">{task.id}</p>
                                   </div>
                                   <div>
-                                    <span className="text-muted-foreground">PID:</span>
-                                    <p className="font-mono">{task.pid}</p>
+                                    <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">PID</span>
+                                    <p className="mt-0.5 font-mono text-xs tabular-nums">{task.pid}</p>
                                   </div>
                                   <div>
-                                    <span className="text-muted-foreground">PStart:</span>
-                                    <p className="font-mono">{task.pstart}</p>
+                                    <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">PStart</span>
+                                    <p className="mt-0.5 font-mono text-xs tabular-nums">{task.pstart}</p>
                                   </div>
                                   {task.endtime && (
                                     <div>
-                                      <span className="text-muted-foreground">End Time:</span>
-                                      <p>{formatTimestamp(task.endtime)}</p>
+                                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">End Time</span>
+                                      <p className="mt-0.5 font-mono text-xs tabular-nums">{formatTimestamp(task.endtime)}</p>
                                     </div>
                                   )}
                                   {task.exitstatus && (
                                     <div>
-                                      <span className="text-muted-foreground">Exit Status:</span>
-                                      <p className={task.exitstatus === 'OK' ? 'text-green-500' : 'text-red-500'}>
+                                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Exit Status</span>
+                                      <p className={cn('mt-0.5 font-mono text-xs', task.exitstatus === 'OK' ? 'text-success' : 'text-destructive')}>
                                         {task.exitstatus}
                                       </p>
                                     </div>

@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::TrayIconBuilder;
@@ -6,12 +7,19 @@ use tauri::Manager;
 use tokio::sync::RwLock;
 
 mod connection;
-mod proxmox;
 mod error;
+mod proxmox;
+pub mod tls;
 mod websocket;
 
-use connection::ConnectionManager;
-use error::Error;
+pub use connection::{
+    api_request, derive_node_url, AuthContext, AuthMode, ConnectionManager, LoadResult,
+};
+pub use error::Error;
+pub use proxmox::{
+    AddDiskConfig, AddNICConfig, BackupJobConfig, CreateSnapshotConfig, EditNICConfig,
+    RestoreConfig,
+};
 use websocket::WebSocketManager;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -23,13 +31,36 @@ pub struct ConnectionConfig {
     pub name: String,
     pub primary: EndpointConfig,
     pub fallbacks: Vec<EndpointConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cert_fingerprint: Option<String>,
     pub trusted: bool,
+    #[serde(default)]
+    pub accept_untrusted: bool,
     pub status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cluster_name: Option<String>,
     pub is_cluster: bool,
     pub auth_mode: String,
     pub username: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub nodes: Vec<DiscoveredNode>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cluster_id: Option<String>,
+}
+
+/// A node discovered in the cluster connected through a
+/// [`ConnectionConfig`]. `url` is the endpoint URL derived from the
+/// connection's primary endpoint (same scheme and port, host replaced with
+/// the node's cluster IP or name); `is_primary` marks the node that the
+/// connection is anchored on.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct DiscoveredNode {
+    pub name: String,
+    pub url: String,
+    pub status: String,
+    pub is_primary: bool,
+    pub local: bool,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -37,6 +68,7 @@ pub struct ConnectionConfig {
 pub struct EndpointConfig {
     pub url: String,
     pub node: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub token: Option<String>,
 }
 
@@ -48,7 +80,38 @@ pub struct LoginResult {
     pub csrf_token: String,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+/// The outcome of a `connect` attempt. A standalone success reports
+/// `merged_into: None`; connecting to a cluster already represented by another
+/// connection folds the new endpoint into it and reports
+/// `merged_into: Some(target)`. When no endpoint is reachable the connection
+/// is still tracked and reported with `status: "failed"` instead of an error.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConnectResult {
+    /// The effective connection id to use after the connect (the merge target
+    /// when this connect merged into an existing same-cluster connection).
+    pub connection_id: String,
+    /// `Some(target)` when this connect merged into an existing connection.
+    pub merged_into: Option<String>,
+    /// `"connected"` | `"failover"` | `"failed"`.
+    pub status: String,
+}
+
+/// A snapshot of a connection's runtime state for the status bar: the
+/// effective status, the primary and currently-serving endpoints, and the last
+/// discovered node list.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConnectionStatusInfo {
+    pub connection_id: String,
+    /// `"connected"` | `"failover"` | `"failed"` | `"disconnected"`.
+    pub status: String,
+    pub primary_url: String,
+    pub current_endpoint_url: String,
+    pub nodes: Vec<DiscoveredNode>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CertificateInfo {
     pub fingerprint: String,
@@ -64,38 +127,91 @@ struct AppState {
     ws_manager: Arc<RwLock<WebSocketManager>>,
 }
 
+/// Returns the path of the persisted connections file.
+///
+/// Lives at `{app_config_dir}/proxmoxdesktop/connections.json`; the parent
+/// directory is created lazily when the file is first written.
+fn connections_file(app: &tauri::AppHandle) -> Result<PathBuf> {
+    let dir = app.path().app_config_dir()?;
+    Ok(dir.join("proxmoxdesktop").join("connections.json"))
+}
+
+#[tauri::command]
+async fn load_connections(
+    state: tauri::State<'_, AppState>,
+    app: tauri::AppHandle,
+) -> Result<LoadResult> {
+    let mut manager = state.connection_manager.write().await;
+    let path = connections_file(&app)?;
+    manager.load_connections(&path).await
+}
+
 #[tauri::command]
 async fn add_connection(
     state: tauri::State<'_, AppState>,
     config: ConnectionConfig,
+    app: tauri::AppHandle,
 ) -> Result<()> {
     let mut manager = state.connection_manager.write().await;
-    manager.add_connection(config).await
+    let path = connections_file(&app)?;
+    manager.add_connection(config, &path).await
 }
 
 #[tauri::command]
 async fn remove_connection(
     state: tauri::State<'_, AppState>,
     id: String,
+    app: tauri::AppHandle,
 ) -> Result<()> {
     let mut manager = state.connection_manager.write().await;
-    manager.remove_connection(&id).await
+    let path = connections_file(&app)?;
+    manager.remove_connection(&id, &path).await
+}
+
+#[tauri::command]
+async fn update_connection(
+    state: tauri::State<'_, AppState>,
+    config: ConnectionConfig,
+    app: tauri::AppHandle,
+) -> Result<()> {
+    let mut manager = state.connection_manager.write().await;
+    let path = connections_file(&app)?;
+    manager.update_connection(config, &path).await
 }
 
 #[tauri::command]
 async fn connect_to_server(
     state: tauri::State<'_, AppState>,
     id: String,
-) -> Result<()> {
+    app: tauri::AppHandle,
+) -> Result<ConnectResult> {
     let mut manager = state.connection_manager.write().await;
-    manager.connect(&id).await
+    let path = connections_file(&app)?;
+    manager.connect(&id, &path).await
 }
 
 #[tauri::command]
-async fn disconnect_from_server(
+async fn get_connection_status(
+    state: tauri::State<'_, AppState>,
+    connection_id: String,
+) -> Result<ConnectionStatusInfo> {
+    let mut manager = state.connection_manager.write().await;
+    manager.status_info(&connection_id).await
+}
+
+#[tauri::command]
+async fn set_active_connection(
     state: tauri::State<'_, AppState>,
     id: String,
+    app: tauri::AppHandle,
 ) -> Result<()> {
+    let mut manager = state.connection_manager.write().await;
+    let path = connections_file(&app)?;
+    manager.set_active_connection(id, &path).await
+}
+
+#[tauri::command]
+async fn disconnect_from_server(state: tauri::State<'_, AppState>, id: String) -> Result<()> {
     let mut manager = state.connection_manager.write().await;
     manager.disconnect(&id).await
 }
@@ -114,9 +230,11 @@ async fn trust_certificate(
     state: tauri::State<'_, AppState>,
     id: String,
     fingerprint: String,
+    app: tauri::AppHandle,
 ) -> Result<()> {
-    let manager = state.connection_manager.read().await;
-    manager.trust_certificate(&id, &fingerprint).await
+    let mut manager = state.connection_manager.write().await;
+    let path = connections_file(&app)?;
+    manager.trust_certificate(&id, &fingerprint, &path).await
 }
 
 #[tauri::command]
@@ -164,7 +282,9 @@ async fn get_storage_detail(
     storage: String,
 ) -> Result<proxmox::StorageDetail> {
     let manager = state.connection_manager.read().await;
-    manager.get_storage_detail(&connection_id, &node, &storage).await
+    manager
+        .get_storage_detail(&connection_id, &node, &storage)
+        .await
 }
 
 #[tauri::command]
@@ -191,9 +311,12 @@ async fn start_vm(
     connection_id: String,
     node: String,
     vmid: u32,
+    vm_type: String,
 ) -> Result<()> {
     let manager = state.connection_manager.read().await;
-    manager.start_vm(&connection_id, &node, vmid).await
+    manager
+        .start_vm(&connection_id, &node, vmid, &vm_type)
+        .await
 }
 
 #[tauri::command]
@@ -202,9 +325,10 @@ async fn stop_vm(
     connection_id: String,
     node: String,
     vmid: u32,
+    vm_type: String,
 ) -> Result<()> {
     let manager = state.connection_manager.read().await;
-    manager.stop_vm(&connection_id, &node, vmid).await
+    manager.stop_vm(&connection_id, &node, vmid, &vm_type).await
 }
 
 #[tauri::command]
@@ -213,9 +337,12 @@ async fn shutdown_vm(
     connection_id: String,
     node: String,
     vmid: u32,
+    vm_type: String,
 ) -> Result<()> {
     let manager = state.connection_manager.read().await;
-    manager.shutdown_vm(&connection_id, &node, vmid).await
+    manager
+        .shutdown_vm(&connection_id, &node, vmid, &vm_type)
+        .await
 }
 
 #[tauri::command]
@@ -224,9 +351,12 @@ async fn reboot_vm(
     connection_id: String,
     node: String,
     vmid: u32,
+    vm_type: String,
 ) -> Result<()> {
     let manager = state.connection_manager.read().await;
-    manager.reboot_vm(&connection_id, &node, vmid).await
+    manager
+        .reboot_vm(&connection_id, &node, vmid, &vm_type)
+        .await
 }
 
 #[tauri::command]
@@ -235,9 +365,12 @@ async fn suspend_vm(
     connection_id: String,
     node: String,
     vmid: u32,
+    vm_type: String,
 ) -> Result<()> {
     let manager = state.connection_manager.read().await;
-    manager.suspend_vm(&connection_id, &node, vmid).await
+    manager
+        .suspend_vm(&connection_id, &node, vmid, &vm_type)
+        .await
 }
 
 #[tauri::command]
@@ -246,9 +379,12 @@ async fn resume_vm(
     connection_id: String,
     node: String,
     vmid: u32,
+    vm_type: String,
 ) -> Result<()> {
     let manager = state.connection_manager.read().await;
-    manager.resume_vm(&connection_id, &node, vmid).await
+    manager
+        .resume_vm(&connection_id, &node, vmid, &vm_type)
+        .await
 }
 
 #[tauri::command]
@@ -257,9 +393,12 @@ async fn get_disks(
     connection_id: String,
     node: String,
     vmid: u32,
+    vm_type: String,
 ) -> Result<Vec<proxmox::Disk>> {
     let manager = state.connection_manager.read().await;
-    manager.get_disks(&connection_id, &node, vmid).await
+    manager
+        .get_disks(&connection_id, &node, vmid, &vm_type)
+        .await
 }
 
 #[tauri::command]
@@ -268,10 +407,13 @@ async fn add_disk(
     connection_id: String,
     node: String,
     vmid: u32,
+    vm_type: String,
     config: proxmox::AddDiskConfig,
 ) -> Result<()> {
     let manager = state.connection_manager.read().await;
-    manager.add_disk(&connection_id, &node, vmid, config).await
+    manager
+        .add_disk(&connection_id, &node, vmid, &vm_type, config)
+        .await
 }
 
 #[tauri::command]
@@ -280,11 +422,14 @@ async fn resize_disk(
     connection_id: String,
     node: String,
     vmid: u32,
+    vm_type: String,
     disk: String,
     size: u64,
 ) -> Result<()> {
     let manager = state.connection_manager.read().await;
-    manager.resize_disk(&connection_id, &node, vmid, &disk, size).await
+    manager
+        .resize_disk(&connection_id, &node, vmid, &vm_type, &disk, size)
+        .await
 }
 
 #[tauri::command]
@@ -293,10 +438,13 @@ async fn remove_disk(
     connection_id: String,
     node: String,
     vmid: u32,
+    vm_type: String,
     disk: String,
 ) -> Result<()> {
     let manager = state.connection_manager.read().await;
-    manager.remove_disk(&connection_id, &node, vmid, &disk).await
+    manager
+        .remove_disk(&connection_id, &node, vmid, &vm_type, &disk)
+        .await
 }
 
 #[tauri::command]
@@ -305,11 +453,14 @@ async fn move_disk(
     connection_id: String,
     node: String,
     vmid: u32,
+    vm_type: String,
     disk: String,
     storage: String,
 ) -> Result<()> {
     let manager = state.connection_manager.read().await;
-    manager.move_disk(&connection_id, &node, vmid, &disk, &storage).await
+    manager
+        .move_disk(&connection_id, &node, vmid, &vm_type, &disk, &storage)
+        .await
 }
 
 #[tauri::command]
@@ -318,9 +469,12 @@ async fn get_network_interfaces(
     connection_id: String,
     node: String,
     vmid: u32,
+    vm_type: String,
 ) -> Result<Vec<proxmox::NetworkInterface>> {
     let manager = state.connection_manager.read().await;
-    manager.get_network_interfaces(&connection_id, &node, vmid).await
+    manager
+        .get_network_interfaces(&connection_id, &node, vmid, &vm_type)
+        .await
 }
 
 #[tauri::command]
@@ -329,10 +483,13 @@ async fn add_nic(
     connection_id: String,
     node: String,
     vmid: u32,
+    vm_type: String,
     config: proxmox::AddNICConfig,
 ) -> Result<()> {
     let manager = state.connection_manager.read().await;
-    manager.add_nic(&connection_id, &node, vmid, config).await
+    manager
+        .add_nic(&connection_id, &node, vmid, &vm_type, config)
+        .await
 }
 
 #[tauri::command]
@@ -341,11 +498,14 @@ async fn edit_nic(
     connection_id: String,
     node: String,
     vmid: u32,
+    vm_type: String,
     nic: String,
     config: proxmox::EditNICConfig,
 ) -> Result<()> {
     let manager = state.connection_manager.read().await;
-    manager.edit_nic(&connection_id, &node, vmid, &nic, config).await
+    manager
+        .edit_nic(&connection_id, &node, vmid, &vm_type, &nic, config)
+        .await
 }
 
 #[tauri::command]
@@ -354,10 +514,13 @@ async fn remove_nic(
     connection_id: String,
     node: String,
     vmid: u32,
+    vm_type: String,
     nic: String,
 ) -> Result<()> {
     let manager = state.connection_manager.read().await;
-    manager.remove_nic(&connection_id, &node, vmid, &nic).await
+    manager
+        .remove_nic(&connection_id, &node, vmid, &vm_type, &nic)
+        .await
 }
 
 #[tauri::command]
@@ -366,9 +529,12 @@ async fn get_snapshots(
     connection_id: String,
     node: String,
     vmid: u32,
+    vm_type: String,
 ) -> Result<Vec<proxmox::Snapshot>> {
     let manager = state.connection_manager.read().await;
-    manager.get_snapshots(&connection_id, &node, vmid).await
+    manager
+        .get_snapshots(&connection_id, &node, vmid, &vm_type)
+        .await
 }
 
 #[tauri::command]
@@ -377,10 +543,13 @@ async fn create_snapshot(
     connection_id: String,
     node: String,
     vmid: u32,
+    vm_type: String,
     config: proxmox::CreateSnapshotConfig,
 ) -> Result<()> {
     let manager = state.connection_manager.read().await;
-    manager.create_snapshot(&connection_id, &node, vmid, config).await
+    manager
+        .create_snapshot(&connection_id, &node, vmid, &vm_type, config)
+        .await
 }
 
 #[tauri::command]
@@ -389,10 +558,13 @@ async fn delete_snapshot(
     connection_id: String,
     node: String,
     vmid: u32,
+    vm_type: String,
     name: String,
 ) -> Result<()> {
     let manager = state.connection_manager.read().await;
-    manager.delete_snapshot(&connection_id, &node, vmid, &name).await
+    manager
+        .delete_snapshot(&connection_id, &node, vmid, &vm_type, &name)
+        .await
 }
 
 #[tauri::command]
@@ -401,10 +573,13 @@ async fn rollback_snapshot(
     connection_id: String,
     node: String,
     vmid: u32,
+    vm_type: String,
     name: String,
 ) -> Result<()> {
     let manager = state.connection_manager.read().await;
-    manager.rollback_snapshot(&connection_id, &node, vmid, &name).await
+    manager
+        .rollback_snapshot(&connection_id, &node, vmid, &vm_type, &name)
+        .await
 }
 
 #[tauri::command]
@@ -413,11 +588,14 @@ async fn migrate_vm(
     connection_id: String,
     node: String,
     vmid: u32,
+    vm_type: String,
     target_node: String,
     online: bool,
 ) -> Result<()> {
     let manager = state.connection_manager.read().await;
-    manager.migrate_vm(&connection_id, &node, vmid, &target_node, online).await
+    manager
+        .migrate_vm(&connection_id, &node, vmid, &vm_type, &target_node, online)
+        .await
 }
 
 // Authentication commands
@@ -429,7 +607,9 @@ async fn login_with_password(
     password: String,
 ) -> Result<LoginResult> {
     let manager = state.connection_manager.read().await;
-    manager.login_with_password(&url, &username, &password).await
+    manager
+        .login_with_password(&url, &username, &password)
+        .await
 }
 
 #[tauri::command]
@@ -443,10 +623,7 @@ async fn login_with_token(
 }
 
 #[tauri::command]
-async fn logout(
-    state: tauri::State<'_, AppState>,
-    connection_id: String,
-) -> Result<()> {
+async fn logout(state: tauri::State<'_, AppState>, connection_id: String) -> Result<()> {
     let manager = state.connection_manager.read().await;
     manager.logout(&connection_id).await
 }
@@ -461,7 +638,7 @@ async fn get_stored_credentials(
 }
 
 // Console proxy types
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VNCProxyResponse {
     pub ticket: String,
@@ -469,7 +646,7 @@ pub struct VNCProxyResponse {
     pub cert: String,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TermProxyResponse {
     pub ticket: String,
@@ -554,7 +731,9 @@ async fn get_backups(
     storage: Option<String>,
 ) -> Result<Vec<proxmox::Backup>> {
     let manager = state.connection_manager.read().await;
-    manager.get_backups(&connection_id, storage.as_deref()).await
+    manager
+        .get_backups(&connection_id, storage.as_deref())
+        .await
 }
 
 #[tauri::command]
@@ -689,10 +868,14 @@ pub fn run() {
             ws_manager: Arc::new(RwLock::new(WebSocketManager::new())),
         })
         .invoke_handler(tauri::generate_handler![
+            load_connections,
             add_connection,
             remove_connection,
+            update_connection,
+            set_active_connection,
             connect_to_server,
             disconnect_from_server,
+            get_connection_status,
             login_with_password,
             login_with_token,
             logout,
@@ -759,23 +942,21 @@ pub fn run() {
                 .tooltip("ProxmoxDesktop")
                 .icon(app.default_window_icon().cloned().expect("no default icon"))
                 .menu(&menu)
-                .on_menu_event(move |app, event| {
-                    match event.id.as_ref() {
-                        "show_hide" => {
-                            if let Some(window) = app.get_webview_window("main") {
-                                if window.is_visible().unwrap_or(false) {
-                                    let _ = window.hide();
-                                } else {
-                                    let _ = window.show();
-                                    let _ = window.set_focus();
-                                }
+                .on_menu_event(move |app, event| match event.id.as_ref() {
+                    "show_hide" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            if window.is_visible().unwrap_or(false) {
+                                let _ = window.hide();
+                            } else {
+                                let _ = window.show();
+                                let _ = window.set_focus();
                             }
                         }
-                        "quit" => {
-                            app.exit(0);
-                        }
-                        _ => {}
                     }
+                    "quit" => {
+                        app.exit(0);
+                    }
+                    _ => {}
                 })
                 .build(app)?;
 

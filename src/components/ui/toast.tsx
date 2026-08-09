@@ -68,22 +68,26 @@ function ToastContainer({
   )
 }
 
-const variantStyles: Record<ToastVariant, { icon: React.ComponentType<{ className?: string }>; container: string }> = {
+const variantStyles: Record<ToastVariant, { icon: React.ComponentType<{ className?: string }>; bar: string; iconColor: string }> = {
   success: {
     icon: CheckCircle,
-    container: 'bg-green-50 border-green-200 text-green-800 dark:bg-green-950 dark:border-green-800 dark:text-green-200',
+    bar: 'border-l-success',
+    iconColor: 'text-success',
   },
   error: {
     icon: AlertCircle,
-    container: 'bg-red-50 border-red-200 text-red-800 dark:bg-red-950 dark:border-red-800 dark:text-red-200',
+    bar: 'border-l-destructive',
+    iconColor: 'text-destructive',
   },
   warning: {
     icon: AlertTriangle,
-    container: 'bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-950 dark:border-yellow-800 dark:text-yellow-200',
+    bar: 'border-l-warning',
+    iconColor: 'text-warning',
   },
   info: {
     icon: Info,
-    container: 'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-950 dark:border-blue-800 dark:text-blue-200',
+    bar: 'border-l-info',
+    iconColor: 'text-info',
   },
 }
 
@@ -100,18 +104,18 @@ function ToastItem({
   return (
     <div
       className={cn(
-        'flex items-start gap-3 rounded-lg border p-4 shadow-lg',
-        config.container
+        'flex items-start gap-3 rounded-md border border-border border-l-2 bg-card p-3.5 text-sm text-foreground shadow-lg shadow-black/10 dark:shadow-black/40',
+        config.bar
       )}
       style={{
         animation: 'toast-slide-in 0.3s ease-out',
       }}
     >
-      <Icon className="h-5 w-5 mt-0.5 shrink-0" />
-      <p className="text-sm flex-1">{toast.message}</p>
+      <Icon className={cn('h-5 w-5 mt-0.5 shrink-0', config.iconColor)} />
+      <p className="flex-1 text-sm">{toast.message}</p>
       <button
         onClick={() => onRemove(toast.id)}
-        className="shrink-0 rounded-md p-0.5 opacity-70 hover:opacity-100 transition-opacity"
+        className="shrink-0 rounded-md p-0.5 text-muted-foreground opacity-70 transition-opacity hover:text-foreground hover:opacity-100"
       >
         <X className="h-4 w-4" />
       </button>

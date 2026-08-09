@@ -299,7 +299,7 @@ export function CommandPalette({
             icon: Square,
             category: 'actions',
             keywords: ['stop', 'halt', 'power off', vm.name, String(vm.vmid)],
-            onExecute: () => stopVM.mutate({ node: vm.node, vmid: vm.vmid }),
+            onExecute: () => stopVM.mutate({ node: vm.node, vmid: vm.vmid, vmType: vm.type }),
           },
           {
             id: `action-shutdown-${vm.vmid}`,
@@ -308,7 +308,7 @@ export function CommandPalette({
             icon: Power,
             category: 'actions',
             keywords: ['shutdown', 'graceful', 'power', vm.name, String(vm.vmid)],
-            onExecute: () => shutdownVM.mutate({ node: vm.node, vmid: vm.vmid }),
+            onExecute: () => shutdownVM.mutate({ node: vm.node, vmid: vm.vmid, vmType: vm.type }),
           },
           {
             id: `action-reboot-${vm.vmid}`,
@@ -317,7 +317,7 @@ export function CommandPalette({
             icon: RotateCw,
             category: 'actions',
             keywords: ['reboot', 'restart', vm.name, String(vm.vmid)],
-            onExecute: () => rebootVM.mutate({ node: vm.node, vmid: vm.vmid }),
+            onExecute: () => rebootVM.mutate({ node: vm.node, vmid: vm.vmid, vmType: vm.type }),
           },
         )
       }
@@ -329,7 +329,7 @@ export function CommandPalette({
           icon: Play,
           category: 'actions',
           keywords: ['start', 'boot', 'power on', vm.name, String(vm.vmid)],
-          onExecute: () => startVM.mutate({ node: vm.node, vmid: vm.vmid }),
+          onExecute: () => startVM.mutate({ node: vm.node, vmid: vm.vmid, vmType: vm.type }),
         })
       }
     }
@@ -538,7 +538,7 @@ export function CommandPalette({
             ) : (
               groupedItems.map((group, gIdx) => (
                 <div key={group.heading}>
-                  <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground select-none">
+                  <div className="px-2 pb-1 pt-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground select-none">
                     {group.heading}
                   </div>
                   {group.items.map((item, iIdx) => {
