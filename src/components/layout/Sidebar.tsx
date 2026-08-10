@@ -43,7 +43,7 @@ export function Sidebar({ onAddConnection, activeView, onNavigate }: SidebarProp
         </div>
         <div className="min-w-0 leading-tight">
           <h1 className="truncate text-sm font-semibold tracking-tight text-foreground">
-            ProxmoxDesktop
+            Clustri
           </h1>
           <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
             Ops Console

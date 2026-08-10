@@ -129,11 +129,11 @@ struct AppState {
 
 /// Returns the path of the persisted connections file.
 ///
-/// Lives at `{app_config_dir}/proxmoxdesktop/connections.json`; the parent
+/// Lives at `{app_config_dir}/clustri/connections.json`; the parent
 /// directory is created lazily when the file is first written.
 fn connections_file(app: &tauri::AppHandle) -> Result<PathBuf> {
     let dir = app.path().app_config_dir()?;
-    Ok(dir.join("proxmoxdesktop").join("connections.json"))
+    Ok(dir.join("clustri").join("connections.json"))
 }
 
 #[tauri::command]
@@ -939,7 +939,7 @@ pub fn run() {
                 .build()?;
 
             let _tray = TrayIconBuilder::with_id("main-tray")
-                .tooltip("ProxmoxDesktop")
+                .tooltip("Clustri")
                 .icon(app.default_window_icon().cloned().expect("no default icon"))
                 .menu(&menu)
                 .on_menu_event(move |app, event| match event.id.as_ref() {

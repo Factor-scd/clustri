@@ -8,7 +8,7 @@
 
 use httpmock::prelude::*;
 use httpmock::Mock;
-use proxmox_desktop::{
+use clustri::{
     api_request, AuthContext, AuthMode, ConnectionConfig, ConnectionManager, EndpointConfig, Error,
 };
 use reqwest::Client;

@@ -1,5 +1,5 @@
 [package]
-name = "proxmox-desktop"
+name = "clustri"
 version = "0.1.0"
 description = "A cross-platform desktop application for managing Proxmox VE servers"
 authors = ["you"]

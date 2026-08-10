@@ -370,7 +370,7 @@ impl Connection {
 }
 
 fn keyring_service() -> &'static str {
-    "proxmox-desktop"
+    "clustri"
 }
 
 fn keyring_entry(connection_id: &str, field: &str) -> crate::Result<keyring::Entry> {

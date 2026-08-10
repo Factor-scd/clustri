@@ -11,7 +11,7 @@
 //! `body_includes` assertions use the encoded form (e.g. `:` becomes `%3A`).
 
 use httpmock::prelude::*;
-use proxmox_desktop::{
+use clustri::{
     AddDiskConfig, AddNICConfig, ConnectionConfig, ConnectionManager, EditNICConfig,
     EndpointConfig, Error,
 };

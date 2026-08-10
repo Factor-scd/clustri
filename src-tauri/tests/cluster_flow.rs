@@ -11,7 +11,7 @@
 
 use httpmock::prelude::*;
 use httpmock::Mock;
-use proxmox_desktop::{ConnectionConfig, ConnectionManager, EndpointConfig, Error};
+use clustri::{ConnectionConfig, ConnectionManager, EndpointConfig, Error};
 
 const TOKEN: &str = "root@pam!cluster-token";
 

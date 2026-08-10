@@ -8,7 +8,7 @@
 
 use httpmock::prelude::*;
 use httpmock::Mock;
-use proxmox_desktop::{derive_node_url, ConnectionConfig, ConnectionManager, EndpointConfig};
+use clustri::{derive_node_url, ConnectionConfig, ConnectionManager, EndpointConfig};
 
 const TOKEN: &str = "root@pam!discovery-token";
 

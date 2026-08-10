@@ -9,7 +9,7 @@
 //! directly on an added connection without `connect()`.
 
 use httpmock::prelude::*;
-use proxmox_desktop::{ConnectionConfig, ConnectionManager, EndpointConfig, Error};
+use clustri::{ConnectionConfig, ConnectionManager, EndpointConfig, Error};
 
 /// Builds a `ConnectionManager` with a single token-mode connection whose
 /// primary endpoint points at `url`.
