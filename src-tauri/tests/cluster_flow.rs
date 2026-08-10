@@ -426,7 +426,7 @@ async fn status_info_when_disconnected() {
     assert_eq!(info.current_endpoint_url, server.base_url());
     assert!(info.nodes.is_empty());
     assert_eq!(
-        version_mock.hits(),
+        version_mock.calls(),
         0,
         "a disconnected connection must not hit the network"
     );

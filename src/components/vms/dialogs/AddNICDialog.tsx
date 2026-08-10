@@ -20,6 +20,7 @@ interface AddNICDialogProps {
 }
 
 export function AddNICDialog({ open, onOpenChange, vm }: AddNICDialogProps) {
+  const isLxc = vm.type === 'lxc'
   const [bridge, setBridge] = useState('vmbr0')
   const [model, setModel] = useState('virtio')
   const [macaddr, setMacaddr] = useState('')
@@ -36,9 +37,11 @@ export function AddNICDialog({ open, onOpenChange, vm }: AddNICDialogProps) {
         vmType: vm.type,
         config: {
           bridge,
-          model,
+          // Container interfaces always use the veth type; the model and VLAN
+          // tag concepts only apply to QEMU VMs.
+          model: isLxc ? 'veth' : model,
           macaddr: macaddr || undefined,
-          tag: tag ? parseInt(tag, 10) : undefined,
+          tag: isLxc ? undefined : tag ? parseInt(tag, 10) : undefined,
           firewall,
         },
       },
@@ -75,19 +78,25 @@ export function AddNICDialog({ open, onOpenChange, vm }: AddNICDialogProps) {
               required
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="model">Model</Label>
-            <select
-              id="model"
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            >
-              <option value="virtio">VirtIO (paravirtualized)</option>
-              <option value="e1000">Intel E1000</option>
-              <option value="rtl8139">Realtek RTL8139</option>
-            </select>
-          </div>
+          {isLxc ? (
+            <p className="text-sm text-muted-foreground">
+              Container interfaces use the veth type.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="model">Model</Label>
+              <select
+                id="model"
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="virtio">VirtIO (paravirtualized)</option>
+                <option value="e1000">Intel E1000</option>
+                <option value="rtl8139">Realtek RTL8139</option>
+              </select>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="macaddr">MAC Address (optional)</Label>
             <Input
@@ -97,18 +106,20 @@ export function AddNICDialog({ open, onOpenChange, vm }: AddNICDialogProps) {
               placeholder="auto-generated if empty"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="tag">VLAN Tag (optional)</Label>
-            <Input
-              id="tag"
-              type="number"
-              min={0}
-              max={4094}
-              value={tag}
-              onChange={(e) => setTag(e.target.value)}
-              placeholder="none"
-            />
-          </div>
+          {!isLxc && (
+            <div className="space-y-2">
+              <Label htmlFor="tag">VLAN Tag (optional)</Label>
+              <Input
+                id="tag"
+                type="number"
+                min={0}
+                max={4094}
+                value={tag}
+                onChange={(e) => setTag(e.target.value)}
+                placeholder="none"
+              />
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <input
               id="firewall"

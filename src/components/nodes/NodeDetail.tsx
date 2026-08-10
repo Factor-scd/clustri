@@ -3,12 +3,13 @@ import { StatusBadge } from '@/components/ui/status-badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Server, Cpu, MemoryStick, HardDrive } from 'lucide-react'
 import { useVMs } from '@/hooks/useProxmox'
-import type { ProxmoxNode } from '@/types/proxmox'
+import type { ProxmoxNode, ProxmoxVM } from '@/types/proxmox'
 import { formatBytes, formatUptime } from '@/lib/format'
 
 interface NodeDetailProps {
   node: ProxmoxNode
   connectionId: string
+  onVMClick?: (vm: ProxmoxVM) => void
 }
 
 function ResourceBar({ label, used, total, icon: Icon }: {
@@ -47,7 +48,7 @@ function ResourceBar({ label, used, total, icon: Icon }: {
   )
 }
 
-export function NodeDetail({ node, connectionId }: NodeDetailProps) {
+export function NodeDetail({ node, connectionId, onVMClick }: NodeDetailProps) {
   const { data: vms, isLoading: vmsLoading } = useVMs(connectionId)
 
   const nodeVMs = vms?.filter((vm) => vm.node === node.node) ?? []
@@ -136,6 +137,7 @@ export function NodeDetail({ node, connectionId }: NodeDetailProps) {
                   <div
                     key={`${vm.type}-${vm.vmid}`}
                     className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2.5 transition-colors duration-150 hover:bg-accent/50 cursor-pointer"
+                    onClick={() => onVMClick?.(vm)}
                   >
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-2">

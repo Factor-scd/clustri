@@ -7,6 +7,7 @@ import { VMDetail } from '@/components/vms/VMDetail'
 import { ContainerList } from '@/components/vms/ContainerList'
 import { NodesPage } from '@/components/nodes/NodesPage'
 import { TaskList } from '@/components/tasks/TaskList'
+import { TaskStatusBar } from '@/components/tasks/TaskStatusBar'
 import { BackupList } from '@/components/backups/BackupList'
 import { CommandPalette } from '@/components/command/CommandPalette'
 import { StorageOverview } from '@/components/storage/StorageOverview'
@@ -18,8 +19,8 @@ import { Server, AlertTriangle } from 'lucide-react'
 import { useConnectionStore } from '@/stores/connectionStore'
 import { useUIStore } from '@/stores/uiStore'
 import { useWebSocket } from '@/hooks/useWebSocket'
-import { isTauri, loadConnections, connectToServer, getConnectionStatus, updateTrayMenu } from '@/lib/tauri'
-import { useEffect, useRef, useState } from 'react'
+import { isTauri, loadConnections, connectToServer, getConnectionStatus, getWebSocketURL, updateTrayMenu } from '@/lib/tauri'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ProxmoxVM } from '@/types/proxmox'
 
 const queryClient = new QueryClient({
@@ -121,6 +122,23 @@ function AppContent() {
     )
   }, [connections])
 
+  // Tray connection clicks switch the active connection (mirrored to the
+  // backend by the store so it persists across launches).
+  useEffect(() => {
+    if (!isTauri()) return
+    let unlisten: (() => void) | undefined
+    import('@tauri-apps/api/event')
+      .then(async ({ listen }) => {
+        unlisten = await listen<string>('tray-connection-click', (event) => {
+          setActiveConnection(event.payload)
+        })
+      })
+      .catch(() => {})
+    return () => {
+      unlisten?.()
+    }
+  }, [setActiveConnection])
+
   // Poll the backend connection status while a connection is active so the
   // sidebar node list and failover state stay in sync with the cluster.
   useEffect(() => {
@@ -157,7 +175,36 @@ function AppContent() {
   }, [connectionsLoaded, connections.length, connectionDialogOpen])
 
   // WebSocket integration – connects when a connection is active
-  useWebSocket(activeConnectionId)
+  const { connect: connectRelay, disconnect: disconnectRelay } = useWebSocket(activeConnectionId)
+
+  // Start the backend event relay once a connection is connected, so task and
+  // node events invalidate queries in near real-time. Polling remains the
+  // fallback when the relay is not connected.
+  const activeStatus = useMemo(
+    () => connections.find((c) => c.id === activeConnectionId)?.status,
+    [connections, activeConnectionId],
+  )
+  useEffect(() => {
+    if (!isTauri() || !activeConnectionId) return
+    if (activeStatus !== 'connected' && activeStatus !== 'failover') {
+      disconnectRelay().catch(() => {})
+      return
+    }
+    let cancelled = false
+    const startRelay = async () => {
+      try {
+        const origin = await getWebSocketURL(activeConnectionId, '')
+        if (cancelled) return
+        await connectRelay(`${origin}/api2/json/events`)
+      } catch (err) {
+        console.error('[App] Failed to start event relay:', err)
+      }
+    }
+    startRelay()
+    return () => {
+      cancelled = true
+    }
+  }, [activeConnectionId, activeStatus, connectRelay, disconnectRelay])
 
   // Global keyboard shortcut: Cmd/Ctrl+K to open command palette
   useEffect(() => {
@@ -204,6 +251,7 @@ function AppContent() {
           switch (viewName) {
             case 'dashboard': handleNavigate({ type: 'dashboard' }); break
             case 'vms': handleNavigate({ type: 'vms' }); break
+            case 'nodes': handleNavigate({ type: 'nodes' }); break
             case 'tasks': handleNavigate({ type: 'tasks' }); break
             case 'backups': handleNavigate({ type: 'backups' }); break
             case 'storage': handleNavigate({ type: 'storage' }); break
@@ -226,12 +274,18 @@ function AppContent() {
           />
         )
       case 'nodes':
-        return <NodesPage connectionId={activeConnectionId} />
+        return (
+          <NodesPage
+            connectionId={activeConnectionId}
+            onVMClick={(vm) => handleNavigate({ type: 'vm-detail', vm })}
+          />
+        )
       case 'node-detail':
         return (
           <NodesPage
             connectionId={activeConnectionId}
             initialNodeName={view.nodeName}
+            onVMClick={(vm) => handleNavigate({ type: 'vm-detail', vm })}
           />
         )
       case 'containers':
@@ -291,8 +345,18 @@ function AppContent() {
           activeView={view.type}
           onNavigate={(v) => handleNavigate(v as View)}
         />
-        <main className="flex-1 overflow-hidden">
-          {renderMainContent()}
+        <main className="flex min-h-0 flex-1 flex-col">
+          {activeConnectionId && (
+            <div className="shrink-0 border-b px-3 py-1.5">
+              <TaskStatusBar
+                connectionId={activeConnectionId}
+                onClick={() => handleNavigate({ type: 'tasks' })}
+              />
+            </div>
+          )}
+          <div className="min-h-0 flex-1 overflow-hidden">
+            {renderMainContent()}
+          </div>
         </main>
       </div>
       <ConnectionDialog

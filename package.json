@@ -8,6 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
+    "site:build": "npm --prefix site run build",
+    "site:dev": "npm --prefix site run dev",
+    "site:preview": "npm --prefix site run preview",
     "tauri": "tauri"
   },
   "dependencies": {

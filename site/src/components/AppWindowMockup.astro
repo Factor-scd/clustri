@@ -1,0 +1,482 @@
+---
+// Static data for the mockup — compiled away at build time, zero runtime JS.
+const navItems = [
+  { label: 'Dashboard', icon: 'grid', active: true },
+  { label: 'Nodes', icon: 'server', active: false },
+  { label: 'VMs', icon: 'box', active: false },
+  { label: 'Containers', icon: 'box', active: false },
+  { label: 'Storage', icon: 'hdd', active: false },
+  { label: 'Tasks', icon: 'todo', active: false },
+  { label: 'Backups', icon: 'shield', active: false },
+]
+
+const clusterNodes = [
+  { name: 'pve1', dot: 'bg-success shadow-[0_0_6px] shadow-success/60', chip: 'primary' },
+  { name: 'pve2', dot: 'bg-warning', chip: null },
+  { name: 'pve3', dot: 'bg-success', chip: null },
+]
+
+const nodeCards = [
+  {
+    name: 'pve1',
+    dot: 'bg-success shadow-[0_0_6px] shadow-success/60',
+    chip: { label: 'primary', cls: 'border-primary/30 bg-primary/10 text-primary' },
+    statusLabel: null,
+    fill: 'bg-primary',
+    rows: [
+      { label: 'CPU', value: '42% · 3.4/8 c', width: '42%' },
+      { label: 'RAM', value: '10.2/32 GiB', width: '32%' },
+      { label: 'Disk', value: '187/500 GB', width: '37%' },
+    ],
+    footer: ['up 42d 11h', '4 VMs'],
+  },
+  {
+    name: 'pve2',
+    dot: 'bg-warning',
+    chip: null,
+    statusLabel: 'failover',
+    statusCls: 'text-warning',
+    fill: 'bg-warning',
+    rows: [
+      { label: 'CPU', value: '31% · 2.5/8 c', width: '31%' },
+      { label: 'RAM', value: '7.1/32 GiB', width: '22%' },
+      { label: 'Disk', value: '163/500 GB', width: '33%' },
+    ],
+    footer: ['up 9d 4h', '2 VMs'],
+  },
+  {
+    name: 'pve3',
+    dot: 'bg-success shadow-[0_0_6px] shadow-success/60',
+    chip: null,
+    statusLabel: 'online',
+    statusCls: 'text-success',
+    fill: 'bg-primary',
+    rows: [
+      { label: 'CPU', value: '18% · 1.4/8 c', width: '18%' },
+      { label: 'RAM', value: '5.8/16 GiB', width: '36%' },
+      { label: 'Disk', value: '121/240 GB', width: '50%' },
+    ],
+    footer: ['up 117d 2h', '3 VMs'],
+  },
+]
+
+const tasks = [
+  {
+    chip: { label: 'RUNNING', cls: 'border-warning/25 bg-warning/10 text-warning' },
+    text: 'start VM 100',
+    node: 'pve1',
+    time: '12s ago',
+  },
+  {
+    chip: { label: 'OK', cls: 'border-success/25 bg-success/10 text-success' },
+    text: 'backup VM 101 → local-lvm',
+    node: 'pve2',
+    time: '3m ago',
+  },
+  {
+    chip: { label: 'OK', cls: 'border-success/25 bg-success/10 text-success' },
+    text: 'migrate VM 102',
+    node: 'pve1 → pve3',
+    time: '18m ago',
+  },
+  {
+    chip: { label: 'DONE', cls: 'border-border bg-muted text-muted-foreground' },
+    text: 'update apt',
+    node: 'pve3',
+    time: '1h ago',
+  },
+]
+
+const gauges = [
+  { label: 'CPU', icon: 'cpu', percent: '30%', width: '30%', detail: '7.3 / 24 cores' },
+  { label: 'RAM', icon: 'mem', percent: '24%', width: '24%', detail: '23.1 / 96 GiB' },
+]
+
+const quickActions = [
+  { label: 'Start', icon: 'play' },
+  { label: 'Stop', icon: 'stop' },
+  { label: 'Migrate', icon: 'migrate' },
+  { label: 'Console', icon: 'term' },
+]
+---
+
+<div
+  role="img"
+  aria-label="Clustri desktop app showing the cluster dashboard"
+  class="w-full select-none"
+>
+  <!-- Inline icon library (rendered once, referenced via <use>) -->
+  <svg class="absolute h-0 w-0 overflow-hidden" aria-hidden="true">
+    <defs>
+      <symbol id="i-hex" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+      </symbol>
+      <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect width="7" height="9" x="3" y="3" rx="1" />
+        <rect width="7" height="5" x="14" y="3" rx="1" />
+        <rect width="7" height="9" x="14" y="12" rx="1" />
+        <rect width="7" height="5" x="3" y="16" rx="1" />
+      </symbol>
+      <symbol id="i-server" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect width="20" height="8" x="2" y="2" rx="2" />
+        <rect width="20" height="8" x="2" y="14" rx="2" />
+        <line x1="6" x2="6.01" y1="6" y2="6" />
+        <line x1="6" x2="6.01" y1="18" y2="18" />
+      </symbol>
+      <symbol id="i-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+        <path d="m3.3 7 8.7 5 8.7-5" />
+        <path d="M12 22V12" />
+      </symbol>
+      <symbol id="i-hdd" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" x2="2" y1="12" y2="12" />
+        <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+        <line x1="6" x2="6.01" y1="16" y2="16" />
+        <line x1="10" x2="10.01" y1="16" y2="16" />
+      </symbol>
+      <symbol id="i-todo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect width="6" height="6" x="3" y="5" rx="1" />
+        <path d="m3 17 2 2 4-4" />
+        <path d="M13 6h8" />
+        <path d="M13 12h8" />
+        <path d="M13 18h8" />
+      </symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1 1 0 0 1 1.52 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1z" />
+      </symbol>
+      <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+        <circle cx="12" cy="12" r="3" />
+      </symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 12h14" />
+        <path d="M12 5v14" />
+      </symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+        <path d="M12 9v4" />
+        <path d="M12 17h.01" />
+      </symbol>
+      <symbol id="i-cpu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect width="16" height="16" x="4" y="4" rx="2" />
+        <rect width="6" height="6" x="9" y="9" rx="1" />
+        <path d="M15 2v2" />
+        <path d="M15 20v2" />
+        <path d="M2 15h2" />
+        <path d="M2 9h2" />
+        <path d="M20 15h2" />
+        <path d="M20 9h2" />
+        <path d="M9 2v2" />
+        <path d="M9 20v2" />
+      </symbol>
+      <symbol id="i-mem" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 19v-3" />
+        <path d="M10 19v-3" />
+        <path d="M14 19v-3" />
+        <path d="M18 19v-3" />
+        <path d="M8 11V9" />
+        <path d="M16 11V9" />
+        <path d="M12 11V9" />
+        <path d="M2 15h20" />
+        <path d="M2 7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v1.1a2 2 0 0 0 0 3.837V17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-5.1a2 2 0 0 0 0-3.837Z" />
+      </symbol>
+      <symbol id="i-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+      </symbol>
+      <symbol id="i-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="6 3 20 12 6 21 6 3" />
+      </symbol>
+      <symbol id="i-stop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect width="10" height="10" x="7" y="7" rx="1" />
+      </symbol>
+      <symbol id="i-migrate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m16 3 4 4-4 4" />
+        <path d="M20 7H4" />
+        <path d="m8 21-4-4 4-4" />
+        <path d="M4 17h16" />
+      </symbol>
+      <symbol id="i-term" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="4 17 10 11 4 5" />
+        <line x1="12" x2="20" y1="19" y2="19" />
+      </symbol>
+    </defs>
+  </svg>
+
+  <!-- Window frame -->
+  <div class="overflow-hidden rounded-lg border border-border bg-card shadow-card">
+    <!-- Title bar -->
+    <div class="relative flex h-9 items-center border-b border-border bg-background">
+      <div class="absolute left-4 flex items-center gap-1.5" aria-hidden="true">
+        <span class="h-2.5 w-2.5 rounded-full border border-border bg-muted-foreground/40"></span>
+        <span class="h-2.5 w-2.5 rounded-full border border-border bg-muted-foreground/40"></span>
+        <span class="h-2.5 w-2.5 rounded-full border border-border bg-muted-foreground/40"></span>
+      </div>
+      <p class="w-full text-center font-mono text-[10px] tabular-nums text-muted-foreground">
+        Clustri — Ops Console
+      </p>
+    </div>
+
+    <!-- Failover banner -->
+    <div class="flex items-center gap-2 border-b border-warning/25 bg-warning/10 px-4 py-1.5">
+      <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-warning" aria-hidden="true"></span>
+      <p class="shrink-0 font-mono text-[10px] text-warning">Operating on a fallback node</p>
+      <p class="ml-auto min-w-0 truncate font-mono text-[10px] tabular-nums text-warning/80">
+        https://192.168.1.12:8006
+      </p>
+    </div>
+
+    <!-- Body -->
+    <div class="flex">
+      <!-- Sidebar -->
+      <aside class="hidden w-52 shrink-0 flex-col border-r border-border bg-card sm:flex">
+        <!-- Brand header -->
+        <div class="flex h-14 shrink-0 items-center gap-2.5 border-b border-border px-4">
+          <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primary">
+            <svg class="h-4 w-4" aria-hidden="true"><use href="#i-hex" /></svg>
+          </div>
+          <div class="min-w-0 leading-tight">
+            <p class="truncate text-sm font-semibold tracking-tight text-foreground">Clustri</p>
+            <p class="font-mono text-[9px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+              Ops Console
+            </p>
+          </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="min-h-0 flex-1 p-2">
+          <div class="space-y-1">
+            <!-- Active connection -->
+            <div class="flex items-center gap-2.5 rounded-md bg-accent px-3 py-2">
+              <span
+                class="h-1.5 w-1.5 shrink-0 rounded-full bg-success shadow-[0_0_6px] shadow-success/60"
+                aria-hidden="true"
+              ></span>
+              <span class="truncate font-mono text-[13px] font-medium text-accent-foreground">home-lab</span>
+            </div>
+
+            <!-- Sub-nav -->
+            <div class="ml-4 mt-1 space-y-0.5">
+              {
+                navItems.map((item) => (
+                  <button
+                    type="button"
+                    class:list={[
+                      'relative flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors',
+                      item.active
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground',
+                    ]}
+                  >
+                    {item.active && (
+                      <span
+                        class="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-primary"
+                        aria-hidden="true"
+                      ></span>
+                    )}
+                    <svg class="h-4 w-4 shrink-0" aria-hidden="true"><use href={`#i-${item.icon}`} /></svg>
+                    <span>{item.label}</span>
+                  </button>
+                ))
+              }
+            </div>
+
+            <!-- Second connection (offline) -->
+            <div class="mt-2">
+              <div class="flex items-center gap-2.5 rounded-md px-3 py-2">
+                <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/40" aria-hidden="true"></span>
+                <span class="truncate font-mono text-[13px] font-medium text-muted-foreground">office-prod</span>
+              </div>
+              <p class="ml-7 font-mono text-[10px] text-muted-foreground">Offline</p>
+            </div>
+
+            <!-- Cluster nodes -->
+            <p class="px-3 pb-1 pt-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+              Cluster nodes
+            </p>
+            <div class="space-y-0.5">
+              {
+                clusterNodes.map((n) => (
+                  <div class="flex w-full items-center gap-2.5 rounded-md px-3 py-1.5">
+                    <span class={`h-1.5 w-1.5 shrink-0 rounded-full ${n.dot}`} aria-hidden="true"></span>
+                    <span class="min-w-0 flex-1 truncate font-mono text-[13px] font-medium text-muted-foreground">
+                      {n.name}
+                    </span>
+                    {n.chip && (
+                      <span class="shrink-0 rounded border border-primary/30 bg-primary/10 px-1 py-px font-mono text-[9px] uppercase text-primary">
+                        {n.chip}
+                      </span>
+                    )}
+                  </div>
+                ))
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar footer -->
+        <div class="space-y-1 border-t border-border p-2">
+          <button
+            type="button"
+            class="flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
+          >
+            <svg class="h-4 w-4 shrink-0" aria-hidden="true"><use href="#i-gear" /></svg>
+            <span>Settings</span>
+          </button>
+          <button
+            type="button"
+            class="flex w-full items-center gap-2 rounded-md border border-border bg-background px-3 py-1.5 text-[12px] font-medium text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            <svg class="h-3.5 w-3.5 shrink-0" aria-hidden="true"><use href="#i-plus" /></svg>
+            <span>Add Connection</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main area -->
+      <main class="min-w-0 flex-1 bg-background p-4">
+        <div class="space-y-4">
+          <!-- Header row -->
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="text-base font-semibold tracking-tight">Overview</h2>
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="font-mono text-[10px] tabular-nums text-muted-foreground">
+                home-lab · 192.168.1.10:8006
+              </span>
+              <span class="font-mono text-[10px] tabular-nums text-muted-foreground">
+                3 nodes · 2 online
+              </span>
+              <span class="rounded border border-success/25 bg-success/10 px-1.5 py-0.5 font-mono text-[10px] text-success">
+                Connected
+              </span>
+            </div>
+          </div>
+
+          <!-- Node health grid -->
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {
+              nodeCards.map((node) => (
+                <article class="rounded-md border border-border bg-card p-3">
+                  <div class="flex items-center justify-between gap-2">
+                    <div class="flex min-w-0 items-center gap-2">
+                      <span class={`h-1.5 w-1.5 shrink-0 rounded-full ${node.dot}`} aria-hidden="true"></span>
+                      <h3 class="truncate font-mono text-[13px] font-semibold tracking-tight text-foreground">
+                        {node.name}
+                      </h3>
+                    </div>
+                    {node.chip && (
+                      <span class={`shrink-0 rounded border px-1 py-px font-mono text-[9px] uppercase ${node.chip.cls}`}>
+                        {node.chip.label}
+                      </span>
+                    )}
+                    {node.statusLabel && (
+                      <span class={`shrink-0 font-mono text-[9px] font-medium uppercase ${node.statusCls}`}>
+                        {node.statusLabel}
+                      </span>
+                    )}
+                  </div>
+                  <div class="mt-3 space-y-2.5">
+                    {
+                      node.rows.map((row) => (
+                        <div>
+                          <div class="flex items-center justify-between gap-2">
+                            <span class="font-mono text-[9px] uppercase tracking-[0.1em] text-muted-foreground">
+                              {row.label}
+                            </span>
+                            <span class="font-mono text-[10px] tabular-nums text-muted-foreground">
+                              {row.value}
+                            </span>
+                          </div>
+                          <div class="mt-1 h-1 overflow-hidden rounded-full bg-muted">
+                            <div class={`h-full rounded-full ${node.fill}`} style={`width: ${row.width}`}></div>
+                          </div>
+                        </div>
+                      ))
+                    }
+                  </div>
+                  <div class="mt-3 flex items-center justify-between border-t pt-2 font-mono text-[9px] tabular-nums text-muted-foreground">
+                    <span>{node.footer[0]}</span>
+                    <span>{node.footer[1]}</span>
+                  </div>
+                </article>
+              ))
+            }
+          </div>
+
+          <!-- Lower row: activity feed + resource gauges -->
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-5">
+            <section class="rounded-md border border-border bg-card sm:col-span-3">
+              <header class="flex items-center gap-2 border-b border-border px-3 py-2">
+                <svg class="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true"><use href="#i-activity" /></svg>
+                <h3 class="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                  Task activity
+                </h3>
+              </header>
+              <div class="divide-y divide-border">
+                {
+                  tasks.map((task) => (
+                    <div class="flex items-center justify-between gap-3 px-3 py-2">
+                      <div class="flex min-w-0 items-center gap-2">
+                        <span class={`shrink-0 rounded border px-1.5 py-0.5 font-mono text-[9px] font-medium ${task.chip.cls}`}>
+                          {task.chip.label}
+                        </span>
+                        <p class="truncate font-mono text-[11px] tabular-nums text-foreground">
+                          {task.text}
+                          <span class="text-muted-foreground"> · {task.node}</span>
+                        </p>
+                      </div>
+                      <span class="shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground">
+                        {task.time}
+                      </span>
+                    </div>
+                  ))
+                }
+              </div>
+            </section>
+
+            <div class="space-y-3 sm:col-span-2">
+              {
+                gauges.map((gauge) => (
+                  <section class="rounded-md border border-border bg-card p-3">
+                    <div class="flex items-center gap-1.5">
+                      <svg class="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true"><use href={`#i-${gauge.icon}`} /></svg>
+                      <span class="font-mono text-[9px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                        {gauge.label}
+                      </span>
+                    </div>
+                    <div class="mt-2 flex items-end justify-between gap-2">
+                      <span class="font-mono text-2xl font-semibold leading-none tracking-tight tabular-nums">
+                        {gauge.percent}
+                      </span>
+                      <span class="font-mono text-[10px] tabular-nums text-muted-foreground">
+                        {gauge.detail}
+                      </span>
+                    </div>
+                    <div class="mt-2 h-1 overflow-hidden rounded-full bg-muted">
+                      <div class="h-full rounded-full bg-primary" style={`width: ${gauge.width}`}></div>
+                    </div>
+                  </section>
+                ))
+              }
+            </div>
+          </div>
+
+          <!-- Quick actions -->
+          <div class="flex flex-wrap items-center gap-2">
+            {
+              quickActions.map((action) => (
+                <button
+                  type="button"
+                  class="flex items-center gap-1.5 rounded border border-border px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
+                >
+                  <svg class="h-3 w-3" aria-hidden="true"><use href={`#i-${action.icon}`} /></svg>
+                  <span>{action.label}</span>
+                </button>
+              ))
+            }
+          </div>
+        </div>
+      </main>
+
+    </div>
+  </div>
+</div>

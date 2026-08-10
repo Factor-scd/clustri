@@ -2,7 +2,7 @@ use crate::error::Error;
 use crate::proxmox::{
     AddDiskConfig, AddNICConfig, Backup, BackupJob, BackupJobConfig, ClusterNode, ClusterStatus,
     CreateSnapshotConfig, Disk, EditNICConfig, NetworkInterface, Node, RestoreConfig, Snapshot,
-    Storage, StorageContent, StorageDetail, Task, VM,
+    Storage, StorageContent, StorageDetail, Task, UpdateVMConfig, VM,
 };
 use crate::{
     CertificateInfo, ConnectResult, ConnectionConfig, ConnectionStatusInfo, DiscoveredNode,
@@ -11,9 +11,10 @@ use crate::{
 use percent_encoding::{utf8_percent_encode, AsciiSet, NON_ALPHANUMERIC};
 use reqwest::{Client, Method};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::Mutex;
+use std::time::Duration;
 use url::Url;
 
 /// Characters left unencoded when percent-encoding a volume id into a URL
@@ -26,6 +27,29 @@ const VOLID_ENCODE_SET: &AsciiSet = &NON_ALPHANUMERIC
     .remove(b'.')
     .remove(b'_')
     .remove(b'~');
+
+/// Characters left unencoded when percent-encoding a single URL path segment
+/// (node names, snapshot names). Same set as [`VOLID_ENCODE_SET`] but without
+/// the `:` that separates a storage prefix from a volid.
+const SEGMENT_ENCODE_SET: &AsciiSet = &NON_ALPHANUMERIC
+    .remove(b'-')
+    .remove(b'.')
+    .remove(b'_')
+    .remove(b'~');
+
+/// Builds the HTTP client used for every connection. TLS verification is
+/// intentionally off at the transport layer (self-signed Proxmox servers are
+/// the norm); trust is enforced by the application-level TOFU pinning in
+/// `tls.rs`. Connect and total timeouts keep a dead server from hanging the
+/// UI forever.
+fn build_client() -> crate::Result<Client> {
+    Client::builder()
+        .danger_accept_invalid_certs(true)
+        .connect_timeout(Duration::from_secs(10))
+        .timeout(Duration::from_secs(30))
+        .build()
+        .map_err(Error::HttpError)
+}
 
 /// The result of loading persisted connections from disk.
 #[derive(Clone, Serialize, Deserialize)]
@@ -99,7 +123,12 @@ where
 pub fn derive_node_url(primary_url: &str, node_ip: Option<&str>, node_name: &str) -> String {
     let host = node_ip.filter(|ip| !ip.is_empty()).unwrap_or(node_name);
     match Url::parse(primary_url) {
-        Ok(url) => format!("{}://{}:{}", url.scheme(), host, url.port().unwrap_or(8006)),
+        Ok(url) => {
+            // pveproxy listens on 8006 for both http and https, but a scheme
+            // default applies when no explicit port is given (`http` → 80).
+            let default_port = if url.scheme() == "http" { 80 } else { 8006 };
+            format!("{}://{}:{}", url.scheme(), host, url.port().unwrap_or(default_port))
+        }
         Err(_) => format!("https://{}:8006", host),
     }
 }
@@ -182,17 +211,60 @@ pub async fn api_request(
     });
 
     if !status.is_success() {
-        let message = body["errors"]
-            .as_str()
-            .or_else(|| body["message"].as_str())
-            .or_else(|| body["data"].as_str())
-            .or_else(|| body.as_str())
-            .map(str::to_string)
-            .unwrap_or_else(|| format!("Proxmox API error (HTTP {})", status.as_u16()));
+        let message = error_message_from_body(&body, status.as_u16());
         return Err(Error::ApiError(message));
     }
 
     Ok(body.get("data").cloned().unwrap_or(body))
+}
+
+/// Builds the error message surfaced for a non-success API response.
+///
+/// The `errors` field is preferred over the generic `message` (Proxmox
+/// parameter-verification failures send a body like
+/// `{"errors":{"limit":"property is not defined in schema"},
+/// "message":"Parameter verification failed."}`, and the specific `errors`
+/// entry is what tells the user what went wrong). The precedence is:
+/// 1. `errors` as a string
+/// 2. `errors` as an object — the first `key: value` pair, formatted as
+///    `key: value` (string values verbatim, other values as JSON)
+/// 3. `message` as a string
+/// 4. `data` as a string
+/// 5. the raw body when it is itself a string
+/// 6. a generic `Proxmox API error (HTTP {status})` fallback
+fn error_message_from_body(body: &serde_json::Value, status: u16) -> String {
+    if let Some(errors) = body.get("errors") {
+        if let Some(text) = errors.as_str() {
+            if !text.is_empty() {
+                return text.to_string();
+            }
+        }
+        if let Some(obj) = errors.as_object() {
+            if let Some((key, value)) = obj.iter().next() {
+                let value_text = value
+                    .as_str()
+                    .map(str::to_string)
+                    .unwrap_or_else(|| value.to_string());
+                return format!("{}: {}", key, value_text);
+            }
+        }
+    }
+    if let Some(message) = body.get("message").and_then(|m| m.as_str()) {
+        if !message.is_empty() {
+            return message.to_string();
+        }
+    }
+    if let Some(data) = body.get("data").and_then(|d| d.as_str()) {
+        if !data.is_empty() {
+            return data.to_string();
+        }
+    }
+    if let Some(text) = body.as_str() {
+        if !text.is_empty() {
+            return text.to_string();
+        }
+    }
+    format!("Proxmox API error (HTTP {})", status)
 }
 
 struct Connection {
@@ -393,13 +465,9 @@ impl ConnectionManager {
 
     /// Builds the HTTP client and session state for a connection.
     fn build_connection(config: ConnectionConfig) -> crate::Result<Connection> {
-        let client = Client::builder()
-            .danger_accept_invalid_certs(true)
-            .build()
-            .map_err(Error::HttpError)?;
         Ok(Connection {
             config,
-            client,
+            client: build_client()?,
             ticket: Mutex::new(None),
             csrf_token: Mutex::new(None),
             current_endpoint_index: Mutex::new(0),
@@ -906,10 +974,7 @@ impl ConnectionManager {
             return Err(Error::InvalidUrl("URL cannot be empty".to_string()));
         }
 
-        let client = Client::builder()
-            .danger_accept_invalid_certs(true)
-            .build()
-            .map_err(|e| Error::HttpError(e))?;
+        let client = build_client()?;
 
         let login_url = format!("{}/access/ticket", url);
 
@@ -999,10 +1064,7 @@ impl ConnectionManager {
             ));
         }
 
-        let client = Client::builder()
-            .danger_accept_invalid_certs(true)
-            .build()
-            .map_err(|e| Error::HttpError(e))?;
+        let client = build_client()?;
 
         // Validate the token by making an authenticated request
         let test_url = format!("{}/cluster/status", url);
@@ -1114,6 +1176,22 @@ impl ConnectionManager {
                     .map_err(|e| Error::KeyringError(e.to_string()))
             })?;
         }
+        Ok(())
+    }
+
+    /// Injects a password-mode session (ticket + CSRF token) into an existing
+    /// connection's in-memory state without touching the OS keyring. Used by
+    /// integration tests that authenticate against a live server where no
+    /// keyring secret-service is available; any later login or ticket refresh
+    /// overwrites the values.
+    pub async fn set_session_ticket(
+        &self,
+        connection_id: &str,
+        ticket: &str,
+        csrf_token: &str,
+    ) -> crate::Result<()> {
+        let conn = self.connection(connection_id)?;
+        conn.set_session(ticket.to_string(), csrf_token.to_string());
         Ok(())
     }
 
@@ -1274,19 +1352,52 @@ impl ConnectionManager {
         let data = conn
             .request(Method::GET, "/cluster/resources", &query, None)
             .await?;
-        parse_api("/cluster/resources?type=storage", data)
+        // `/cluster/resources?type=storage` entries carry usage as `disk` /
+        // `maxdisk` and an `available`/`unavailable` status string — not the
+        // `used`/`total`/`avail`/`enabled`/`active` fields the struct models.
+        // Each entry is mapped manually so the overview shows real numbers.
+        let entries: Vec<serde_json::Value> =
+            parse_api("/cluster/resources?type=storage", data)?;
+        let mut storages = Vec::with_capacity(entries.len());
+        for entry in entries {
+            let disk = entry["disk"].as_u64().unwrap_or(0);
+            let maxdisk = entry["maxdisk"].as_u64().unwrap_or(0);
+            let status = entry["status"].as_str().unwrap_or("");
+            let available = status == "available";
+            storages.push(Storage {
+                storage: entry["storage"].as_str().unwrap_or("").to_string(),
+                r#type: entry["type"].as_str().unwrap_or("").to_string(),
+                content: entry["content"].as_str().unwrap_or("").to_string(),
+                active: u32::from(available),
+                enabled: u32::from(available),
+                shared: entry["shared"]
+                    .as_u64()
+                    .map(|v| v as u32)
+                    .or_else(|| entry["shared"].as_bool().map(u32::from))
+                    .unwrap_or(0),
+                used: disk,
+                total: maxdisk,
+                avail: maxdisk.saturating_sub(disk),
+                node: entry["node"].as_str().unwrap_or("").to_string(),
+            });
+        }
+        Ok(storages)
     }
 
     pub async fn get_storage_content(
         &self,
         connection_id: &str,
         storage: &str,
+        node: Option<&str>,
     ) -> crate::Result<Vec<StorageContent>> {
         let conn = self.connection(connection_id)?;
-        // The content endpoint is node-scoped. Prefer the node configured on
-        // the connection's primary endpoint; otherwise pick the first online
-        // node from the cluster.
-        let node = self.storage_node(connection_id).await?;
+        // The content endpoint is node-scoped. Prefer an explicitly requested
+        // node; otherwise use the node configured on the connection's primary
+        // endpoint, falling back to the first online node from the cluster.
+        let node = match node.filter(|n| !n.is_empty()) {
+            Some(node) => node.to_string(),
+            None => self.storage_node(connection_id).await?,
+        };
         let path = format!("/nodes/{}/storage/{}/content", node, storage);
         let data = conn.request(Method::GET, &path, &[], None).await?;
         parse_api(&path, data)
@@ -1306,9 +1417,11 @@ impl ConnectionManager {
 
     pub async fn get_tasks(&self, connection_id: &str) -> crate::Result<Vec<Task>> {
         let conn = self.connection(connection_id)?;
-        let query = [("limit", "50".to_string())];
+        // The server rejects `/cluster/tasks?limit=...` with HTTP 400 (`limit`
+        // is not in the endpoint schema); the default server-side limit of 50
+        // applies when no query is sent.
         let data = conn
-            .request(Method::GET, "/cluster/tasks", &query, None)
+            .request(Method::GET, "/cluster/tasks", &[], None)
             .await?;
         parse_api("/cluster/tasks", data)
     }
@@ -1713,8 +1826,11 @@ impl ConnectionManager {
         config: AddNICConfig,
     ) -> crate::Result<()> {
         Self::validate_vm_type(vm_type)?;
+        // NIC model validation applies to QEMU guests only; LXC containers
+        // always use the veth device type and the model is ignored by the
+        // server (the frontend sends `veth` for containers).
         const VALID_MODELS: [&str; 4] = ["virtio", "e1000", "rtl8139", "vmxnet3"];
-        if !VALID_MODELS.contains(&config.model.as_str()) {
+        if vm_type != "lxc" && !VALID_MODELS.contains(&config.model.as_str()) {
             return Err(Error::InvalidUrl(format!(
                 "Invalid NIC model '{}': expected one of virtio, e1000, rtl8139, vmxnet3",
                 config.model
@@ -1726,14 +1842,29 @@ impl ConnectionManager {
         let data = conn.request(Method::GET, &path, &[], None).await?;
         let index = first_free_bus_index(&data, "net");
         let mac = config.macaddr.unwrap_or_else(|| "random".to_string());
-        let mut value = format!("{}={}", config.model, mac);
-        value.push_str(&format!(",bridge={}", config.bridge));
-        if let Some(tag) = config.tag {
-            value.push_str(&format!(",tag={}", tag));
-        }
-        if let Some(firewall) = config.firewall {
-            value.push_str(&format!(",firewall={}", u32::from(firewall)));
-        }
+        let value = if vm_type == "lxc" {
+            // LXC net values use the `name=ethN,type=veth,bridge=...` form;
+            // a user-supplied MAC (anything but `random`) is sent as
+            // `hwaddr`, and `firewall=1` is added when firewall is enabled.
+            let mut value = format!("name=eth{},type=veth,bridge={}", index, config.bridge);
+            if !mac.is_empty() && mac != "random" {
+                value.push_str(&format!(",hwaddr={}", mac));
+            }
+            if config.firewall.unwrap_or(false) {
+                value.push_str(",firewall=1");
+            }
+            value
+        } else {
+            let mut value = format!("{}={}", config.model, mac);
+            value.push_str(&format!(",bridge={}", config.bridge));
+            if let Some(tag) = config.tag {
+                value.push_str(&format!(",tag={}", tag));
+            }
+            if let Some(firewall) = config.firewall {
+                value.push_str(&format!(",firewall={}", u32::from(firewall)));
+            }
+            value
+        };
         let key = format!("net{}", index);
         let form = vec![(key.as_str(), value)];
         conn.request(Method::POST, &path, &[], Some(&form)).await?;
@@ -1778,6 +1909,41 @@ impl ConnectionManager {
         let form = [("delete", nic.to_string())];
         conn.request(Method::DELETE, &path, &[], Some(&form))
             .await?;
+        Ok(())
+    }
+
+    /// Updates a VM/container's basic configuration (`name`, `cores`, `memory`,
+    /// `description`) by POSTing a form containing only the present fields.
+    /// A config with every field `None` errors out instead of sending an empty
+    /// POST.
+    pub async fn update_vm_config(
+        &self,
+        connection_id: &str,
+        node: &str,
+        vmid: u32,
+        vm_type: &str,
+        config: UpdateVMConfig,
+    ) -> crate::Result<()> {
+        Self::validate_vm_type(vm_type)?;
+        let conn = self.connection(connection_id)?;
+        let path = format!("/nodes/{}/{}/{}/config", node, vm_type, vmid);
+        let mut form: Vec<(&str, String)> = Vec::new();
+        if let Some(name) = config.name {
+            form.push(("name", name));
+        }
+        if let Some(cores) = config.cores {
+            form.push(("cores", cores.to_string()));
+        }
+        if let Some(memory) = config.memory {
+            form.push(("memory", memory.to_string()));
+        }
+        if let Some(description) = config.description {
+            form.push(("description", description));
+        }
+        if form.is_empty() {
+            return Err(Error::ApiError("Nothing to update".to_string()));
+        }
+        conn.request(Method::POST, &path, &[], Some(&form)).await?;
         Ok(())
     }
 
@@ -1827,9 +1993,10 @@ impl ConnectionManager {
     ) -> crate::Result<()> {
         Self::validate_vm_type(vm_type)?;
         let conn = self.connection(connection_id)?;
-        // Snapshot names can contain URL-hostile characters, but Proxmox
-        // expects the name inline in the path, so it is inserted verbatim.
-        let path = format!("/nodes/{}/{}/{}/snapshot/{}", node, vm_type, vmid, name);
+        // Snapshot names can contain URL-hostile characters, so the name is
+        // percent-encoded into the path (everything but `A-Za-z0-9-._~`).
+        let encoded_name = utf8_percent_encode(name, SEGMENT_ENCODE_SET).to_string();
+        let path = format!("/nodes/{}/{}/{}/snapshot/{}", node, vm_type, vmid, encoded_name);
         conn.request(Method::DELETE, &path, &[], None).await?;
         Ok(())
     }
@@ -1844,9 +2011,10 @@ impl ConnectionManager {
     ) -> crate::Result<()> {
         Self::validate_vm_type(vm_type)?;
         let conn = self.connection(connection_id)?;
+        let encoded_name = utf8_percent_encode(name, SEGMENT_ENCODE_SET).to_string();
         let path = format!(
             "/nodes/{}/{}/{}/snapshot/{}/rollback",
-            node, vm_type, vmid, name
+            node, vm_type, vmid, encoded_name
         );
         conn.request(Method::POST, &path, &[], None).await?;
         Ok(())
@@ -1962,15 +2130,56 @@ impl ConnectionManager {
         connection_id: &str,
         storage: Option<&str>,
     ) -> crate::Result<Vec<Backup>> {
-        let conn = self.connection(connection_id)?;
         let node = self.storage_node(connection_id).await?;
-        let storage = storage.unwrap_or("local");
+        // A specific storage is queried verbatim and its errors propagate.
+        // Without one, every enabled storage whose content list includes
+        // `backup` is queried and the results are aggregated; a storage whose
+        // content query fails during aggregation is skipped rather than
+        // failing the whole call.
+        match storage.map(str::trim).filter(|s| !s.is_empty()) {
+            Some(storage) => self.backup_entries(connection_id, &node, storage).await,
+            None => {
+                let storages = self.get_storage(connection_id).await?;
+                let mut seen = HashSet::new();
+                let mut names = Vec::new();
+                for storage in storages {
+                    if storage.enabled == 0 {
+                        continue;
+                    }
+                    let content_tokens: Vec<&str> =
+                        storage.content.split(',').map(str::trim).collect();
+                    if !content_tokens.contains(&"backup") {
+                        continue;
+                    }
+                    if seen.insert(storage.storage.clone()) {
+                        names.push(storage.storage);
+                    }
+                }
+                let mut backups = Vec::new();
+                for name in names {
+                    if let Ok(entries) = self.backup_entries(connection_id, &node, &name).await {
+                        backups.extend(entries);
+                    }
+                }
+                Ok(backups)
+            }
+        }
+    }
+
+    /// Fetches the backup entries of a single storage on `node` from the
+    /// node-scoped content endpoint. The content endpoint can mix backup
+    /// entries with iso/vztmpl entries, so the requested `content=backup`
+    /// filter is mirrored here and only entries tagged `backup` are mapped.
+    async fn backup_entries(
+        &self,
+        connection_id: &str,
+        node: &str,
+        storage: &str,
+    ) -> crate::Result<Vec<Backup>> {
+        let conn = self.connection(connection_id)?;
         let path = format!("/nodes/{}/storage/{}/content", node, storage);
         let query = [("content", "backup".to_string())];
         let data = conn.request(Method::GET, &path, &query, None).await?;
-        // The content endpoint can mix backup entries with iso/vztmpl entries,
-        // so the requested `content=backup` filter is mirrored here and only
-        // entries tagged `backup` are mapped.
         let entries: Vec<serde_json::Value> = parse_api(&path, data)?;
         let mut backups = Vec::new();
         for entry in entries {
@@ -2183,15 +2392,19 @@ fn parse_disk_attrs(value: &str) -> (String, u64, String) {
     (storage, size, format)
 }
 
-/// True when `key` is a VM disk config key (`scsi0`, `virtio1`, `ide2`,
-/// `sata0`, `nvme0`, ...).
+/// True when `key` is a VM/container disk config key. QEMU guests use the
+/// `scsi0`/`virtio1`/`ide2`/`sata0`/`nvme0` bus keys; LXC containers use
+/// `rootfs` and mount-point keys `mp0`, `mp1`, ...
 fn is_disk_key(key: &str) -> bool {
     const BUSES: [&str; 5] = ["scsi", "virtio", "ide", "sata", "nvme"];
-    BUSES.iter().any(|bus| {
+    let bus_key = |bus: &str| {
         key.strip_prefix(bus).map_or(false, |suffix| {
             !suffix.is_empty() && suffix.bytes().all(|b| b.is_ascii_digit())
         })
-    })
+    };
+    BUSES.iter().any(|bus| bus_key(bus))
+        || key == "rootfs"
+        || bus_key("mp")
 }
 
 /// True when `key` is a NIC config key (`net0`, `net1`, ...).
@@ -2215,8 +2428,13 @@ fn first_free_bus_index(config: &serde_json::Value, bus: &str) -> u32 {
 }
 
 /// The parsed pieces of a NIC config value such as
-/// `virtio=BC:24:11:AA:BB:CC,bridge=vmbr0,tag=10,firewall=1`.
+/// `virtio=BC:24:11:AA:BB:CC,bridge=vmbr0,tag=10,firewall=1` (QEMU) or
+/// `name=eth0,type=veth,hwaddr=BC:24:11:8D:DF:95,bridge=vmbr0,ip=dhcp` (LXC).
 struct ParsedNetValue {
+    /// True when the value uses the LXC `name=eth0,...` format.
+    lxc: bool,
+    /// The interface name segment of an LXC value (`eth0`); empty for QEMU.
+    name: String,
     model: String,
     macaddr: String,
     bridge: Option<String>,
@@ -2225,10 +2443,16 @@ struct ParsedNetValue {
     link_down: Option<u32>,
 }
 
-/// Parses a NIC config value into its components. The first comma-separated
-/// segment is `model=macaddr`; the remaining segments are key=value
-/// attributes.
+/// Parses a NIC config value into its components.
+///
+/// QEMU values start with `model=macaddr` and continue with `key=value`
+/// attributes (`bridge`, `tag`, `firewall`, ...). LXC values start with
+/// `name=ethN` and express the device type and MAC as `type=veth` /
+/// `hwaddr=...` attributes, which are mapped onto `model` and `macaddr` so
+/// callers see a uniform shape.
 fn parse_net_value(value: &str) -> ParsedNetValue {
+    let mut lxc = false;
+    let mut name = String::new();
     let mut model = String::new();
     let mut macaddr = String::new();
     let mut bridge = None;
@@ -2238,9 +2462,14 @@ fn parse_net_value(value: &str) -> ParsedNetValue {
 
     let mut segments = value.split(',');
     if let Some(first) = segments.next() {
-        if let Some((m, mac)) = first.split_once('=') {
-            model = m.trim().to_string();
-            macaddr = mac.trim().to_string();
+        if let Some((key, val)) = first.split_once('=') {
+            if key.trim() == "name" {
+                lxc = true;
+                name = val.trim().to_string();
+            } else {
+                model = key.trim().to_string();
+                macaddr = val.trim().to_string();
+            }
         }
     }
     for segment in segments {
@@ -2251,12 +2480,19 @@ fn parse_net_value(value: &str) -> ParsedNetValue {
                 "tag" => tag = val.parse().ok(),
                 "firewall" => firewall = val.parse().ok(),
                 "link_down" => link_down = val.parse().ok(),
+                _ if lxc => match attr.trim() {
+                    "type" => model = val.to_string(),
+                    "hwaddr" => macaddr = val.to_string(),
+                    _ => {}
+                },
                 _ => {}
             }
         }
     }
 
     ParsedNetValue {
+        lxc,
+        name,
         model,
         macaddr,
         bridge,
@@ -2269,18 +2505,57 @@ fn parse_net_value(value: &str) -> ParsedNetValue {
 /// Re-encodes a NIC config value after applying the edited fields. The model
 /// and MAC address are always preserved; `config.bridge`, `config.tag` (a tag
 /// of `0` removes the tag) and `config.firewall` replace the existing values
-/// when present.
+/// when present. Any other comma-separated `key=value` attribute in the
+/// current value (e.g. `link_down`, `rate`, `queues`, `disconnect`) is
+/// carried over verbatim, so editing a NIC does not drop attributes the
+/// client does not model.
+///
+/// LXC values are re-encoded in their native form — `name=ethN,type=...,
+/// hwaddr=...,bridge=...[,firewall=...]` — with the same unknown-attribute
+/// pass-through. LXC has no VLAN tag, so a tag is never emitted.
 fn reencode_nic_value(current: &str, config: &EditNICConfig) -> String {
     let parsed = parse_net_value(current);
     let bridge = config.bridge.clone().or(parsed.bridge);
+    let firewall = match config.firewall {
+        Some(on) => Some(u32::from(on)),
+        None => parsed.firewall,
+    };
+
+    if parsed.lxc {
+        let mut value = format!(
+            "name={},type={},hwaddr={}",
+            parsed.name, parsed.model, parsed.macaddr
+        );
+        if let Some(bridge) = bridge {
+            value.push_str(&format!(",bridge={}", bridge));
+        }
+        if let Some(firewall) = firewall {
+            value.push_str(&format!(",firewall={}", firewall));
+        }
+        // Carry over every other `key=value` attribute from the current value
+        // verbatim, skipping the leading `name=` segment and the attributes
+        // already re-emitted above (`tag` is never valid for LXC).
+        let mut segments = current.split(',');
+        segments.next();
+        for segment in segments {
+            if let Some((attr, _)) = segment.split_once('=') {
+                if matches!(
+                    attr.trim(),
+                    "bridge" | "firewall" | "name" | "type" | "hwaddr" | "tag"
+                ) {
+                    continue;
+                }
+                value.push(',');
+                value.push_str(segment.trim());
+            }
+        }
+        return value;
+    }
+
     let tag = match config.tag {
         Some(0) => None,
         Some(t) => Some(t),
         None => parsed.tag.filter(|&t| t != 0),
-    };
-    let firewall = match config.firewall {
-        Some(on) => Some(u32::from(on)),
-        None => parsed.firewall,
     };
 
     let mut value = format!("{}={}", parsed.model, parsed.macaddr);
@@ -2292,6 +2567,20 @@ fn reencode_nic_value(current: &str, config: &EditNICConfig) -> String {
     }
     if let Some(firewall) = firewall {
         value.push_str(&format!(",firewall={}", firewall));
+    }
+    // Carry over every other `key=value` attribute from the current value
+    // verbatim, skipping the leading model=macaddr segment and the attributes
+    // already re-emitted above.
+    let mut segments = current.split(',');
+    segments.next();
+    for segment in segments {
+        if let Some((attr, _)) = segment.split_once('=') {
+            if matches!(attr.trim(), "bridge" | "tag" | "firewall") {
+                continue;
+            }
+            value.push(',');
+            value.push_str(segment.trim());
+        }
     }
     value
 }

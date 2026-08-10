@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react'
 import { Terminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit'
 import 'xterm/css/xterm.css'
+import { isTauri, startConsoleProxy, stopConsoleProxy } from '@/lib/tauri'
 
 interface TerminalConsoleProps {
   connectionId: string
@@ -16,8 +17,14 @@ export function TerminalConsole({ connectionId, node, vmid, onError, onConnected
   const termRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
+  const sessionRef = useRef<string | null>(null)
 
   const cleanup = useCallback(() => {
+    if (sessionRef.current) {
+      const sid = sessionRef.current
+      sessionRef.current = null
+      stopConsoleProxy(sid).catch(() => {})
+    }
     if (wsRef.current) {
       wsRef.current.close()
       wsRef.current = null
@@ -64,40 +71,22 @@ export function TerminalConsole({ connectionId, node, vmid, onError, onConnected
           return
         }
 
-        // Get WebSocket URL for terminal proxy
+        // Resolve the WebSocket URL: in Tauri mode a Rust-side loopback proxy
+        // bridges the self-signed Proxmox WebSocket; in dev mode there is a
+        // mock shell below so the URL is unused.
         let wsUrl: string
-
-        try {
-          const { isTauri, createTermProxy, getWebSocketURL } = await import('@/lib/tauri')
-
-          if (isTauri()) {
-            const [proxyInfo, baseUrl] = await Promise.all([
-              createTermProxy(connectionId, node, vmid),
-              getWebSocketURL(connectionId, node),
-            ])
-
-            wsUrl = `${baseUrl}/api2/json/nodes/${node}/lxc/${vmid}/proxy?port=${proxyInfo.port}&ticket=${encodeURIComponent(proxyInfo.ticket)}`
-          } else {
-            // Dev mode: construct a mock URL
-            wsUrl = `wss://localhost:8006/api2/json/nodes/${node}/lxc/${vmid}/proxy?port=6100&ticket=mock-ticket`
-          }
-        } catch {
-          // Fallback for dev mode
+        if (isTauri()) {
+          const info = await startConsoleProxy(connectionId, 'term', node, vmid)
+          if (cancelled) return
+          sessionRef.current = info.sessionId
+          wsUrl = info.url
+        } else {
           wsUrl = `wss://localhost:8006/api2/json/nodes/${node}/lxc/${vmid}/proxy?port=6100&ticket=mock-ticket`
         }
 
         if (cancelled) return
 
-        // In dev mode, show a mock terminal since we can't connect to real WebSocket
-        let isTauriMode = false
-        try {
-          const { isTauri } = await import('@/lib/tauri')
-          isTauriMode = isTauri()
-        } catch {
-          // not in tauri
-        }
-
-        if (!isTauriMode && !cancelled) {
+        if (!isTauri()) {
           // Dev mode mock terminal
           terminal.writeln('\x1b[1;32m╔══════════════════════════════════════════╗\x1b[0m')
           terminal.writeln('\x1b[1;32m║        Clustri - Terminal Console      ║\x1b[0m')
@@ -165,9 +154,7 @@ export function TerminalConsole({ connectionId, node, vmid, onError, onConnected
           }
         }
 
-        if (cancelled) return
-
-        // Production: connect via WebSocket
+        // Production: connect via the local proxy WebSocket
         const ws = new WebSocket(wsUrl)
         ws.binaryType = 'arraybuffer'
         wsRef.current = ws

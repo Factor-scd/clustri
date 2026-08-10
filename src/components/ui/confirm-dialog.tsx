@@ -34,7 +34,12 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const handleConfirm = () => {
     onConfirm()
-    onOpenChange(false)
+    // When the parent is running an async operation (isLoading), leave the
+    // dialog open so the spinner and disabled state give feedback; the parent
+    // closes it via onSettled/onSuccess.
+    if (!isLoading) {
+      onOpenChange(false)
+    }
   }
 
   return (

@@ -38,7 +38,10 @@ export function EditNICDialog({ open, onOpenChange, vm, nic }: EditNICDialogProp
         config: {
           bridge: bridge || undefined,
           model,
-          tag: tag ? parseInt(tag, 10) : undefined,
+          // An emptied tag field clears the tag: the backend treats tag: 0 as
+          // "remove the tag". `undefined` would be indistinguishable from no
+          // change, so a set tag could never be removed.
+          tag: tag === '' ? 0 : parseInt(tag, 10),
           firewall,
         },
       },

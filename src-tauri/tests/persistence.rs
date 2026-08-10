@@ -485,5 +485,5 @@ async fn disconnect_clears_session_and_status() {
         .await
         .expect("reconnect after disconnect should succeed");
     assert_eq!(result.status, "connected");
-    mock.assert_hits(2);
+    mock.assert_calls(2);
 }

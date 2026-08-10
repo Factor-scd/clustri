@@ -20,7 +20,7 @@ import {
   PlayCircle,
   ArrowRightLeft,
 } from 'lucide-react'
-import { useStartVM, useStopVM, useShutdownVM, useRebootVM, useSuspendVM, useResumeVM, useClusterStatus } from '@/hooks/useProxmox'
+import { useStartVM, useStopVM, useShutdownVM, useRebootVM, useSuspendVM, useResumeVM, useClusterStatus, useVMs } from '@/hooks/useProxmox'
 import { OverviewTab } from '@/components/vms/tabs/OverviewTab'
 import { HardwareTab } from '@/components/vms/tabs/HardwareTab'
 import { DisksTab } from '@/components/vms/tabs/DisksTab'
@@ -54,8 +54,17 @@ export function VMDetail({ vm, connectionId, onBack }: VMDetailProps) {
   const resumeVM = useResumeVM()
   const clusterStatus = useClusterStatus(connectionId)
 
-  const isRunning = vm.status === 'running'
-  const isStopped = vm.status === 'stopped'
+  // Re-derive the live guest so the header status and lifecycle buttons track
+  // the actual VM state after start/stop/resume instead of the snapshot
+  // captured at navigation time. node/vmid stay stable from the prop; the
+  // prop object is the fallback while the list is loading.
+  const { data: vms } = useVMs(connectionId)
+  const liveVM = vms?.find((v) => v.vmid === vm.vmid && v.type === vm.type)
+  const status = liveVM?.status ?? vm.status
+
+  const isRunning = status === 'running'
+  const isStopped = status === 'stopped'
+  const isSuspended = status === 'suspended'
   const isBusy = startVM.isPending || stopVM.isPending || shutdownVM.isPending || rebootVM.isPending || suspendVM.isPending || resumeVM.isPending
 
   const isCluster = clusterStatus.data?.type === 'cluster' && (clusterStatus.data?.nodes?.length ?? 0) > 1
@@ -126,7 +135,7 @@ export function VMDetail({ vm, connectionId, onBack }: VMDetailProps) {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-2xl font-semibold tracking-tight">{vm.name}</h2>
-                <StatusBadge status={vm.status} />
+                <StatusBadge status={status} />
               </div>
               <p className="mt-0.5 text-sm text-muted-foreground">
                 VMID <span className="font-mono tabular-nums">{vm.vmid}</span> &middot;{' '}
@@ -138,7 +147,7 @@ export function VMDetail({ vm, connectionId, onBack }: VMDetailProps) {
 
           {/* Lifecycle Actions */}
           <div className="flex flex-wrap gap-2">
-            {isStopped || !isRunning ? (
+            {isStopped && (
               <Button
                 size="sm"
                 onClick={handleStart}
@@ -147,7 +156,7 @@ export function VMDetail({ vm, connectionId, onBack }: VMDetailProps) {
                 <Play />
                 Start
               </Button>
-            ) : null}
+            )}
 
             {isRunning && (
               <>
@@ -193,7 +202,30 @@ export function VMDetail({ vm, connectionId, onBack }: VMDetailProps) {
               </Button>
             )}
 
-            {vm.status === 'paused' && (
+            {isSuspended && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleShutdown}
+                  disabled={isBusy}
+                >
+                  <Power />
+                  Shutdown
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleStop}
+                  disabled={isBusy}
+                >
+                  <Square />
+                  Stop
+                </Button>
+              </>
+            )}
+
+            {(status === 'paused' || isSuspended) && (
               <Button
                 variant="outline"
                 size="sm"

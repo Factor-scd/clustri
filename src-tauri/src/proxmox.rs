@@ -26,15 +26,25 @@ pub struct Node {
     pub node: String,
     #[serde(default)]
     pub status: String,
+    #[serde(default)]
     pub cpu: f64,
+    #[serde(default)]
     pub maxcpu: u32,
+    #[serde(default)]
     pub mem: u64,
+    #[serde(default)]
     pub maxmem: u64,
+    #[serde(default)]
     pub disk: u64,
+    #[serde(default)]
     pub maxdisk: u64,
+    #[serde(default)]
     pub uptime: u64,
+    #[serde(default)]
     pub level: String,
+    #[serde(default)]
     pub id: String,
+    #[serde(default)]
     pub r#type: String,
 }
 
@@ -47,6 +57,7 @@ pub struct VM {
     pub name: Option<String>,
     #[serde(default)]
     pub status: String,
+    #[serde(default)]
     pub r#type: String,
     #[serde(default)]
     pub node: String,
@@ -85,8 +96,11 @@ pub struct VM {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Storage {
+    #[serde(default)]
     pub storage: String,
+    #[serde(default)]
     pub r#type: String,
+    #[serde(default)]
     pub content: String,
     #[serde(default)]
     pub active: u32,
@@ -107,16 +121,23 @@ pub struct Storage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Task {
+    #[serde(default)]
     pub upid: String,
     #[serde(default)]
     pub node: String,
+    #[serde(default)]
     pub pid: u32,
+    #[serde(default)]
     pub pstart: u64,
+    #[serde(default)]
     pub starttime: u64,
     #[serde(default)]
     pub endtime: Option<u64>,
+    #[serde(default)]
     pub r#type: String,
+    #[serde(default)]
     pub id: String,
+    #[serde(default)]
     pub user: String,
     #[serde(default)]
     pub status: Option<String>,
@@ -136,20 +157,28 @@ pub struct ClusterStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ClusterNode {
+    #[serde(default)]
     pub name: String,
+    #[serde(default)]
     pub nodeid: u32,
+    #[serde(default)]
     pub online: u32,
+    #[serde(default)]
     pub local: Option<u32>,
+    #[serde(default)]
     pub ip: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Snapshot {
+    #[serde(default)]
     pub name: String,
     #[serde(default)]
     pub description: String,
+    #[serde(default)]
     pub snaptime: u64,
+    #[serde(default)]
     pub vmstate: u32,
     #[serde(default)]
     pub parent: Option<String>,
@@ -165,15 +194,12 @@ pub struct CreateSnapshotConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ApiResponse<T> {
-    pub data: T,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct NetworkInterface {
+    #[serde(default)]
     pub name: String,
+    #[serde(default)]
     pub model: String,
+    #[serde(default)]
     pub macaddr: String,
     #[serde(default)]
     pub bridge: Option<String>,
@@ -206,8 +232,20 @@ pub struct EditNICConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct UpdateVMConfig {
+    pub name: Option<String>,
+    pub cores: Option<u32>,
+    /// Memory size in MiB.
+    pub memory: Option<u64>,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Backup {
+    #[serde(default)]
     pub volid: String,
+    #[serde(default)]
     pub backupid: String,
     #[serde(rename = "backup-type")]
     pub backup_type: String,
@@ -215,8 +253,11 @@ pub struct Backup {
     pub backup_id: String,
     #[serde(rename = "backup-time")]
     pub backup_time: u64,
+    #[serde(default)]
     pub storage: String,
+    #[serde(default)]
     pub size: u64,
+    #[serde(default)]
     pub ctime: u64,
 }
 
@@ -224,9 +265,15 @@ pub struct Backup {
 #[serde(rename_all = "camelCase")]
 pub struct BackupJob {
     pub id: String,
+    /// The server sends `storage` (not `store`).
+    #[serde(rename = "storage")]
     pub store: String,
     pub schedule: String,
+    /// `all` is only present on jobs that back up every guest; jobs with an
+    /// explicit `vmid` selection omit it.
+    #[serde(default)]
     pub all: u32,
+    #[serde(default)]
     pub enabled: u32,
     #[serde(default)]
     pub node: Option<String>,
@@ -266,7 +313,9 @@ pub struct RestoreConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StorageContent {
+    #[serde(default)]
     pub content: String,
+    #[serde(default)]
     pub ctime: u64,
     #[serde(default)]
     pub format: Option<String>,
@@ -274,12 +323,14 @@ pub struct StorageContent {
     pub size: Option<u64>,
     #[serde(default)]
     pub subtype: Option<String>,
+    #[serde(default)]
     pub volid: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StorageDetail {
+    #[serde(default)]
     pub storage: String,
     pub r#type: String,
     pub content: String,

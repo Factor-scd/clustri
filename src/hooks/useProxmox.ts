@@ -2,22 +2,20 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as api from '@/lib/tauri'
 import { useConnectionStore } from '@/stores/connectionStore'
 import { useToast } from '@/components/ui/toast'
-import type { AddDiskConfig, AddNICConfig, EditNICConfig, CreateSnapshotConfig, BackupJobConfig, RestoreConfig } from '@/types/proxmox'
+import type { AddDiskConfig, AddNICConfig, EditNICConfig, UpdateVMConfig, CreateSnapshotConfig, BackupJobConfig, RestoreConfig } from '@/types/proxmox'
 
 // Query keys
 export const queryKeys = {
   nodes: (connectionId: string) => ['nodes', connectionId],
   vms: (connectionId: string) => ['vms', connectionId],
   storage: (connectionId: string) => ['storage', connectionId],
-  storageContent: (connectionId: string, storage: string) => ['storageContent', connectionId, storage],
+  storageContent: (connectionId: string, node: string, storage: string) => ['storageContent', connectionId, node, storage],
   storageDetail: (connectionId: string, node: string, storage: string) => ['storageDetail', connectionId, node, storage],
   tasks: (connectionId: string) => ['tasks', connectionId],
   cluster: (connectionId: string) => ['cluster', connectionId],
-  disks: (connectionId: string, node: string, vmid: number) => ['disks', connectionId, node, vmid],
-  networks: (connectionId: string, node: string, vmid: number) => ['networks', connectionId, node, vmid],
-  snapshots: (connectionId: string, node: string, vmid: number) => ['snapshots', connectionId, node, vmid],
-  vncProxy: (connectionId: string, node: string, vmid: number) => ['vncProxy', connectionId, node, vmid],
-  termProxy: (connectionId: string, node: string, vmid: number) => ['termProxy', connectionId, node, vmid],
+  disks: (connectionId: string, node: string, vmid: number, vmType: string) => ['disks', connectionId, node, vmid, vmType],
+  networks: (connectionId: string, node: string, vmid: number, vmType: string) => ['networks', connectionId, node, vmid, vmType],
+  snapshots: (connectionId: string, node: string, vmid: number, vmType: string) => ['snapshots', connectionId, node, vmid, vmType],
   backupJobs: (connectionId: string) => ['backupJobs', connectionId],
   backups: (connectionId: string, storage?: string) => ['backups', connectionId, storage],
 }
@@ -50,11 +48,11 @@ export const useStorage = (connectionId: string | null) => {
   })
 }
 
-export const useStorageContent = (connectionId: string | null, storage: string | null) => {
+export const useStorageContent = (connectionId: string | null, node: string | null, storage: string | null) => {
   return useQuery({
-    queryKey: queryKeys.storageContent(connectionId!, storage!),
-    queryFn: () => api.getStorageContent(connectionId!, storage!),
-    enabled: !!connectionId && !!storage,
+    queryKey: queryKeys.storageContent(connectionId!, node!, storage!),
+    queryFn: () => api.getStorageContent(connectionId!, storage!, node!),
+    enabled: !!connectionId && !!node && !!storage,
     refetchInterval: 30000,
   })
 }
@@ -222,7 +220,7 @@ export const useResumeVM = () => {
 // Disk management hooks
 export const useDisks = (connectionId: string, node: string, vmid: number, vmType: string) => {
   return useQuery({
-    queryKey: queryKeys.disks(connectionId, node, vmid),
+    queryKey: queryKeys.disks(connectionId, node, vmid, vmType),
     queryFn: () => api.getDisks(connectionId, node, vmid, vmType),
     enabled: !!connectionId && !!node && vmid > 0,
   })
@@ -252,7 +250,7 @@ export const useAddDisk = () => {
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.disks(connId, variables.node, variables.vmid),
+          queryKey:           queryKeys.disks(connId, variables.node, variables.vmid, variables.vmType),
         })
       }
     },
@@ -288,7 +286,7 @@ export const useResizeDisk = () => {
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.disks(connId, variables.node, variables.vmid),
+          queryKey:           queryKeys.disks(connId, variables.node, variables.vmid, variables.vmType),
         })
       }
     },
@@ -322,7 +320,7 @@ export const useRemoveDisk = () => {
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.disks(connId, variables.node, variables.vmid),
+          queryKey:           queryKeys.disks(connId, variables.node, variables.vmid, variables.vmType),
         })
       }
     },
@@ -358,7 +356,7 @@ export const useMoveDisk = () => {
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.disks(connId, variables.node, variables.vmid),
+          queryKey:           queryKeys.disks(connId, variables.node, variables.vmid, variables.vmType),
         })
       }
     },
@@ -371,7 +369,7 @@ export const useMoveDisk = () => {
 // Network management hooks
 export const useNetworkInterfaces = (connectionId: string, node: string, vmid: number, vmType: string) => {
   return useQuery({
-    queryKey: queryKeys.networks(connectionId, node, vmid),
+    queryKey: queryKeys.networks(connectionId, node, vmid, vmType),
     queryFn: () => api.getNetworkInterfaces(connectionId, node, vmid, vmType),
     enabled: !!connectionId && !!node && vmid > 0,
   })
@@ -401,7 +399,7 @@ export const useAddNIC = () => {
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.networks(connId, variables.node, variables.vmid),
+          queryKey:           queryKeys.networks(connId, variables.node, variables.vmid, variables.vmType),
         })
       }
     },
@@ -437,7 +435,7 @@ export const useEditNIC = () => {
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.networks(connId, variables.node, variables.vmid),
+          queryKey:           queryKeys.networks(connId, variables.node, variables.vmid, variables.vmType),
         })
       }
     },
@@ -471,7 +469,7 @@ export const useRemoveNIC = () => {
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.networks(connId, variables.node, variables.vmid),
+          queryKey:           queryKeys.networks(connId, variables.node, variables.vmid, variables.vmType),
         })
       }
     },
@@ -484,7 +482,7 @@ export const useRemoveNIC = () => {
 // Snapshot management hooks
 export const useSnapshots = (connectionId: string, node: string, vmid: number, vmType: string) => {
   return useQuery({
-    queryKey: queryKeys.snapshots(connectionId, node, vmid),
+    queryKey: queryKeys.snapshots(connectionId, node, vmid, vmType),
     queryFn: () => api.getSnapshots(connectionId, node, vmid, vmType),
     enabled: !!connectionId && !!node && vmid > 0,
   })
@@ -514,7 +512,7 @@ export const useCreateSnapshot = () => {
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.snapshots(connId, variables.node, variables.vmid),
+          queryKey:           queryKeys.snapshots(connId, variables.node, variables.vmid, variables.vmType),
         })
       }
     },
@@ -548,7 +546,7 @@ export const useDeleteSnapshot = () => {
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.snapshots(connId, variables.node, variables.vmid),
+          queryKey:           queryKeys.snapshots(connId, variables.node, variables.vmid, variables.vmType),
         })
       }
     },
@@ -582,7 +580,7 @@ export const useRollbackSnapshot = () => {
       const connId = useConnectionStore.getState().activeConnectionId
       if (connId) {
         queryClient.invalidateQueries({
-          queryKey: queryKeys.snapshots(connId, variables.node, variables.vmid),
+          queryKey:           queryKeys.snapshots(connId, variables.node, variables.vmid, variables.vmType),
         })
       }
     },
@@ -627,22 +625,35 @@ export const useMigrateVM = () => {
   })
 }
 
-// Console proxy hooks
-export const useVNCProxy = (connectionId: string, node: string, vmid: number) => {
-  return useQuery({
-    queryKey: queryKeys.vncProxy(connectionId, node, vmid),
-    queryFn: () => api.createVNCProxy(connectionId, node, vmid),
-    enabled: false, // Manual trigger only
-    retry: false,
-  })
-}
+export const useUpdateVMConfig = () => {
+  const queryClient = useQueryClient()
+  const { addToast } = useToast()
 
-export const useTermProxy = (connectionId: string, node: string, vmid: number) => {
-  return useQuery({
-    queryKey: queryKeys.termProxy(connectionId, node, vmid),
-    queryFn: () => api.createTermProxy(connectionId, node, vmid),
-    enabled: false, // Manual trigger only
-    retry: false,
+  return useMutation({
+    mutationFn: ({
+      node,
+      vmid,
+      vmType,
+      config,
+    }: {
+      node: string
+      vmid: number
+      vmType: string
+      config: UpdateVMConfig
+    }) => {
+      const connId = useConnectionStore.getState().activeConnectionId!
+      return api.updateVMConfig(connId, node, vmid, vmType, config)
+    },
+    onSuccess: () => {
+      addToast('VM configuration updated', 'success')
+      const connId = useConnectionStore.getState().activeConnectionId
+      if (connId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.vms(connId) })
+      }
+    },
+    onError: (error: Error) => {
+      addToast(error.message || 'Failed to update VM configuration', 'error')
+    },
   })
 }
 

@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Cpu, MemoryStick, HardDrive, Clock, Server, Box } from 'lucide-react'
-import { AreaChart, Area, ResponsiveContainer } from 'recharts'
 import type { ProxmoxNode, ProxmoxVM } from '@/types/proxmox'
 import { formatBytes, formatUptime } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -25,25 +24,10 @@ function getStatusLabel(status: 'online' | 'offline'): string {
   return status === 'online' ? 'Online' : 'Offline'
 }
 
-/** Generate deterministic mock sparkline data from node stats */
-function generateSparklineData(baseValue: number, points: number = 12): { value: number }[] {
-  const data: { value: number }[] = []
-  for (let i = 0; i < points; i++) {
-    // Deterministic pseudo-random variation around the base value
-    const seed = Math.sin(i * 2.1 + baseValue * 0.01) * 0.3
-    const variation = baseValue * seed
-    data.push({ value: Math.max(0, Math.min(1, baseValue + variation)) })
-  }
-  return data
-}
-
 function NodeCard({ node, vmCount }: { node: ProxmoxNode; vmCount: number }) {
   const cpuPercent = node.maxcpu > 0 ? node.cpu : 0
   const memPercent = node.maxmem > 0 ? node.mem / node.maxmem : 0
   const diskPercent = node.maxdisk > 0 ? node.disk / node.maxdisk : 0
-
-  const cpuData = useMemo(() => generateSparklineData(cpuPercent), [cpuPercent])
-  const memData = useMemo(() => generateSparklineData(memPercent), [memPercent])
 
   return (
     <Card>
@@ -59,54 +43,6 @@ function NodeCard({ node, vmCount }: { node: ProxmoxNode; vmCount: number }) {
         </span>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* Sparklines */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <div className="mb-1 flex items-center gap-1.5">
-              <Cpu className="h-3 w-3 text-muted-foreground" />
-              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">CPU</span>
-            </div>
-            <div className="h-8">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={cpuData}>
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="var(--color-primary)"
-                    fill="var(--color-primary)"
-                    fillOpacity={0.18}
-                    strokeWidth={1.5}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-          <div>
-            <div className="mb-1 flex items-center gap-1.5">
-              <MemoryStick className="h-3 w-3 text-muted-foreground" />
-              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">RAM</span>
-            </div>
-            <div className="h-8">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={memData}>
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="var(--color-primary)"
-                    fill="var(--color-primary)"
-                    fillOpacity={0.18}
-                    strokeWidth={1.5}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-
         {/* Stats row */}
         <div className="grid grid-cols-3 gap-2 font-mono text-xs tabular-nums text-muted-foreground">
           <div className="flex items-center gap-1.5">

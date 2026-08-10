@@ -127,7 +127,7 @@ async fn server_error_message_is_mapped_to_api_error() {
         when.method(GET).path("/api2/json/version");
         then.status(500)
             .header("content-type", "application/json")
-            .body(r#"{"message":"boom"}"#);
+            .body(r#"{"errors":"specific failure","message":"boom"}"#);
     });
 
     let error = api_request(
@@ -142,9 +142,48 @@ async fn server_error_message_is_mapped_to_api_error() {
     .await
     .expect_err("request should fail");
 
+    // A string `errors` field takes precedence over the generic `message`.
     assert!(
-        matches!(error, Error::ApiError(ref message) if message == "boom"),
-        "expected ApiError with message 'boom', got: {}",
+        matches!(error, Error::ApiError(ref message) if message == "specific failure"),
+        "expected ApiError with message 'specific failure', got: {}",
+        error
+    );
+    mock.assert();
+}
+
+#[tokio::test]
+async fn server_error_errors_object_first_pair_is_surfaced() {
+    let server = MockServer::start();
+    let mock = server.mock(|when, then| {
+        when.method(GET).path("/api2/json/version");
+        then.status(400)
+            .header("content-type", "application/json")
+            .body(
+                r#"{"errors":{"limit":"property is not defined in schema"},"message":"Parameter verification failed."}"#,
+            );
+    });
+
+    let error = api_request(
+        &Client::new(),
+        &server.base_url(),
+        RMethod::GET,
+        "/version",
+        &token_auth(),
+        &[],
+        None,
+    )
+    .await
+    .expect_err("request should fail");
+
+    // An `errors` object surfaces its first `key: value` pair, not the generic
+    // `message` fallback.
+    assert!(
+        matches!(
+            error,
+            Error::ApiError(ref message)
+                if message == "limit: property is not defined in schema"
+        ),
+        "expected ApiError with 'limit: property is not defined in schema', got: {}",
         error
     );
     mock.assert();

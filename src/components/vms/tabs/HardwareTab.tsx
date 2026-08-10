@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
+import { useUpdateVMConfig } from '@/hooks/useProxmox'
 import { Cpu, MemoryStick, Pencil, Save, X } from 'lucide-react'
 import type { ProxmoxVM } from '@/types/proxmox'
 import { formatBytes } from '@/lib/format'
@@ -24,6 +25,7 @@ interface HardwareTabProps {
 export function HardwareTab({ vm }: HardwareTabProps) {
   const [editOpen, setEditOpen] = useState(false)
   const { addToast } = useToast()
+  const updateVMConfig = useUpdateVMConfig()
   const [formData, setFormData] = useState({
     name: vm.name,
     description: vm.tags ?? '',
@@ -32,8 +34,34 @@ export function HardwareTab({ vm }: HardwareTabProps) {
   })
 
   const handleSave = () => {
-    addToast('VM configuration editing is not yet implemented', 'warning')
-    setEditOpen(false)
+    // The form holds memory in GB; Proxmox's `memory` param is MiB.
+    const cores = parseInt(formData.cores, 10)
+    const memoryMiB = Math.round(parseFloat(formData.memory) * 1024)
+
+    if (Number.isNaN(cores) || cores < 1) {
+      addToast('CPU cores must be at least 1', 'error')
+      return
+    }
+    if (Number.isNaN(memoryMiB) || memoryMiB < 128) {
+      addToast('Memory must be at least 128 MiB', 'error')
+      return
+    }
+
+    updateVMConfig.mutate(
+      {
+        node: vm.node,
+        vmid: vm.vmid,
+        vmType: vm.type,
+        config: {
+          name: formData.name,
+          cores,
+          memory: memoryMiB,
+        },
+      },
+      {
+        onSuccess: () => setEditOpen(false),
+      },
+    )
   }
 
   return (

@@ -321,7 +321,7 @@ export function CommandPalette({
           },
         )
       }
-      if (vm.status === 'stopped' || vm.status === 'paused') {
+      if (vm.status === 'stopped' || vm.status === 'paused' || vm.status === 'suspended') {
         items.push({
           id: `action-start-${vm.vmid}`,
           label: `Start ${vm.name}`,
