@@ -4,10 +4,10 @@
 //! Each test spawns a local TLS server with a freshly generated self-signed
 //! certificate and exercises the capture/verify helpers against it.
 
-use proxmox_desktop::tls::{
+use clustri::tls::{
     capture_fingerprint, fetch_certificate_info, verify_pin, verify_server_certificate,
 };
-use proxmox_desktop::Error;
+use clustri::Error;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
 use rustls::ServerConfig;
 use sha2::{Digest, Sha256};

@@ -25,11 +25,11 @@ function applyTheme(theme: Theme) {
     root.classList.add(theme)
   }
 
-  localStorage.setItem('proxmoxdesktop-theme', theme)
+  localStorage.setItem('clustri-theme', theme)
 }
 
 function getInitialTheme(): Theme {
-  const stored = localStorage.getItem('proxmoxdesktop-theme')
+  const stored = localStorage.getItem('clustri-theme')
   if (stored === 'light' || stored === 'dark' || stored === 'system') {
     return stored
   }

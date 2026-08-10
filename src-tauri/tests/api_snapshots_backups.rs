@@ -7,7 +7,7 @@
 //! directly on an added connection without `connect()`.
 
 use httpmock::prelude::*;
-use proxmox_desktop::{
+use clustri::{
     BackupJobConfig, ConnectionConfig, ConnectionManager, CreateSnapshotConfig, EndpointConfig,
     Error,
 };

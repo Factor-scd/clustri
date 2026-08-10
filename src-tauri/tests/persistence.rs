@@ -6,7 +6,7 @@
 //! request layer falls back to the OS keyring.
 
 use httpmock::prelude::*;
-use proxmox_desktop::{ConnectionConfig, ConnectionManager, EndpointConfig, Error};
+use clustri::{ConnectionConfig, ConnectionManager, EndpointConfig, Error};
 
 /// Builds a token-mode connection config with a real token set.
 fn token_config(id: &str, url: &str, token: &str, accept_untrusted: bool) -> ConnectionConfig {

@@ -100,7 +100,7 @@ export function TerminalConsole({ connectionId, node, vmid, onError, onConnected
         if (!isTauriMode && !cancelled) {
           // Dev mode mock terminal
           terminal.writeln('\x1b[1;32m╔══════════════════════════════════════════╗\x1b[0m')
-          terminal.writeln('\x1b[1;32m║     ProxmoxDesktop - Terminal Console    ║\x1b[0m')
+          terminal.writeln('\x1b[1;32m║        Clustri - Terminal Console      ║\x1b[0m')
           terminal.writeln('\x1b[1;32m╚══════════════════════════════════════════╝\x1b[0m')
           terminal.writeln('')
           terminal.writeln(`\x1b[33mNode: ${node} | VMID: ${vmid} | Type: LXC\x1b[0m`)

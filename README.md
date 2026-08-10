@@ -1,4 +1,4 @@
-# ProxmoxDesktop
+# Clustri
 
 A cross-platform desktop client for managing Proxmox VE servers and clusters. The backend is Rust on Tauri 2; the UI is React 19 with TypeScript, Vite, and Tailwind CSS v4.
 
@@ -9,7 +9,7 @@ A cross-platform desktop client for managing Proxmox VE servers and clusters. Th
 - Manage multiple simultaneous connections to servers and clusters.
 - Authenticate with an API token or with a username and password. Password mode uses ticket-based auth (PVEAuthCookie plus CSRF token).
 - Credentials live in the OS keyring. API tokens never touch disk.
-- Connections persist to `{app-config-dir}/proxmoxdesktop/connections.json`. The last active connection reconnects on launch.
+- Connections persist to `{app-config-dir}/clustri/connections.json`. The last active connection reconnects on launch.
 
 ### Cluster support
 
@@ -171,7 +171,7 @@ source $HOME/.cargo/env
 
 ```bash
 git clone <repository-url>
-cd ProxmoxDesktop
+cd clustri
 npm install
 ```
 
@@ -250,7 +250,7 @@ When adding a connection you need:
 ## Project Structure
 
 ```
-ProxmoxDesktop/
+clustri/
 ├── src/                          # React frontend
 │   ├── components/
 │   │   ├── ui/                   # base components (buttons, dialogs, toasts)

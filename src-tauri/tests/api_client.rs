@@ -5,7 +5,7 @@
 //! error mapping, query parameters, and URL construction.
 
 use httpmock::prelude::*;
-use proxmox_desktop::{api_request, AuthContext, AuthMode, Error};
+use clustri::{api_request, AuthContext, AuthMode, Error};
 use reqwest::Client;
 use reqwest::Method as RMethod;
 
