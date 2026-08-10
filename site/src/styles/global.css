@@ -1,0 +1,147 @@
+@import 'tailwindcss';
+
+@theme {
+  /* ------------------------------------------------------------------
+   * Typography — offline-safe variable fonts (bundled via fontsource)
+   * ------------------------------------------------------------------ */
+  --font-sans:
+    'Geist Variable', 'Geist', ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', sans-serif;
+  --font-mono:
+    'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SF Mono',
+    Menlo, monospace;
+
+  /* ------------------------------------------------------------------
+   * Radius scale — tighter on inner elements, softer on containers
+   * ------------------------------------------------------------------ */
+  --radius: 0.625rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.75rem;
+
+  /* ------------------------------------------------------------------
+   * Dark theme — blue-black ink surfaces, cool neutrals, muted orange.
+   * The marketing site is dark-only: the app's `.dark` palette is the
+   * single theme (no light/dark toggle by design).
+   * ------------------------------------------------------------------ */
+  --color-background: oklch(0.16 0.011 250);
+  --color-foreground: oklch(0.965 0.004 250);
+  --color-card: oklch(0.19 0.012 250);
+  --color-card-foreground: oklch(0.965 0.004 250);
+  --color-popover: oklch(0.215 0.013 250);
+  --color-popover-foreground: oklch(0.965 0.004 250);
+  --color-primary: oklch(0.72 0.15 60);
+  --color-primary-foreground: oklch(0.18 0.02 50);
+  --color-secondary: oklch(0.235 0.011 250);
+  --color-secondary-foreground: oklch(0.94 0.004 250);
+  --color-muted: oklch(0.235 0.011 250);
+  --color-muted-foreground: oklch(0.655 0.012 250);
+  --color-accent: oklch(0.275 0.012 250);
+  --color-accent-foreground: oklch(0.965 0.004 250);
+  --color-destructive: oklch(0.645 0.18 25);
+  --color-destructive-foreground: oklch(0.97 0.015 25);
+  --color-border: oklch(0.255 0.012 250);
+  --color-input: oklch(0.3 0.013 250);
+  --color-ring: oklch(0.72 0.15 60);
+
+  /* Semantic status colors — data semantics, not UI accents */
+  --color-success: oklch(0.7 0.14 155);
+  --color-warning: oklch(0.76 0.13 80);
+  --color-info: oklch(0.68 0.11 245);
+
+  /* Tinted card shadow — carries the cool hue of the dark surface */
+  --shadow-card:
+    0 1px 2px 0 oklch(0.06 0.01 250 / 0.4), 0 2px 10px -2px oklch(0.06 0.01 250 / 0.35);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+
+  /* Keep native form controls and webview widgets on theme */
+  ::selection {
+    @apply bg-primary/20 text-foreground;
+  }
+
+  /* Monospace and code contexts always use tabular numerals */
+  code,
+  kbd,
+  samp,
+  pre {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Consistent focus ring everywhere, including custom elements */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Native scrollbars tuned to the surface language */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--color-border);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-muted-foreground);
+    background-clip: padding-box;
+  }
+
+  /* Very subtle fixed grain overlay to break digital flatness */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

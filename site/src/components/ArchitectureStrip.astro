@@ -1,0 +1,152 @@
+<!--
+  ArchitectureStrip — the request path from React to the Proxmox API.
+
+  Three sequential stages: React frontend → Rust backend → Proxmox API.
+  The middle stage carries the brand accent (border-primary/30,
+  bg-primary/10) so the pipeline reads left-to-right, not as three equal
+  cards. Below lg the stages stack with ↓ connectors between them.
+
+  Design constraints (see src/styles/global.css):
+  - Dark-only surfaces: bg-background / bg-card; muted-orange text-primary is
+    the single brand accent.
+  - Green / amber / red are reserved for status semantics (success /
+    warning / destructive) only.
+  - No gradients, no glows, no glassmorphism, no emoji, no fake metrics.
+-->
+
+<div class="mx-auto max-w-7xl px-6 lg:px-8">
+  <section
+    id="architecture"
+    aria-labelledby="architecture-title"
+    class="scroll-mt-24 py-16 sm:py-20"
+  >
+    <p class="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+      ARCHITECTURE
+    </p>
+    <h2
+      id="architecture-title"
+      class="mt-4 text-2xl font-semibold tracking-tighter text-foreground sm:text-3xl"
+    >
+      One proxy between you and the API.
+    </h2>
+    <p class="mt-3 max-w-[58ch] text-[15px] leading-relaxed text-muted-foreground">
+      The frontend calls Rust commands over Tauri IPC. The backend proxies them
+      to the Proxmox API over HTTPS.
+    </p>
+
+    <!--
+      3-stage pipeline: React frontend → Rust backend → Proxmox API.
+      On lg the grid is 1fr / auto / 1fr / auto / 1fr with centered arrows;
+      below lg the stages stack with ↓ connectors between them.
+    -->
+    <div class="mt-10 grid gap-3 lg:grid-cols-[1fr_auto_1fr_auto_1fr] lg:items-center">
+      <!-- Stage 01 · React frontend -->
+      <div class="rounded-lg border border-border bg-card p-5">
+        <div class="flex items-start justify-between gap-4">
+          <p class="text-sm font-semibold text-foreground">React frontend</p>
+          <span class="font-mono text-[9px] text-muted-foreground">01</span>
+        </div>
+        <div class="mt-1.5 space-y-1 font-mono text-[11px] text-muted-foreground">
+          <p>TanStack Query · Zustand</p>
+          <p>Geist · JetBrains Mono</p>
+          <p>React 19</p>
+        </div>
+      </div>
+
+      <!-- Arrow · tauri invoke -->
+      <div class="hidden flex-col items-center justify-center gap-1 lg:flex" aria-hidden="true">
+        <span class="text-xl text-primary">→</span>
+        <span class="font-mono text-[9px] text-muted-foreground">tauri invoke</span>
+      </div>
+      <div class="flex items-center justify-center gap-1.5 py-2 lg:hidden" aria-hidden="true">
+        <span class="text-xl text-primary">↓</span>
+        <span class="font-mono text-[9px] text-muted-foreground">tauri invoke</span>
+      </div>
+
+      <!-- Stage 02 · Rust backend (emphasized core) -->
+      <div class="rounded-lg border border-primary/30 bg-primary/10 p-5">
+        <div class="flex items-start justify-between gap-4">
+          <p class="text-sm font-semibold text-primary">Rust backend</p>
+          <span class="font-mono text-[9px] text-muted-foreground">02</span>
+        </div>
+        <div class="mt-1.5 space-y-1 font-mono text-[11px] text-primary/80">
+          <p>ConnectionManager</p>
+          <p>endpoint rotation · retry</p>
+          <p>TOFU cert pinning</p>
+          <p>credentials in OS keyring</p>
+        </div>
+      </div>
+
+      <!-- Arrow · HTTPS -->
+      <div class="hidden flex-col items-center justify-center gap-1 lg:flex" aria-hidden="true">
+        <span class="text-xl text-primary">→</span>
+        <span class="font-mono text-[9px] text-muted-foreground">HTTPS</span>
+      </div>
+      <div class="flex items-center justify-center gap-1.5 py-2 lg:hidden" aria-hidden="true">
+        <span class="text-xl text-primary">↓</span>
+        <span class="font-mono text-[9px] text-muted-foreground">HTTPS</span>
+      </div>
+
+      <!-- Stage 03 · Proxmox API -->
+      <div class="rounded-lg border border-border bg-card p-5">
+        <div class="flex items-start justify-between gap-4">
+          <p class="text-sm font-semibold text-foreground">Proxmox API</p>
+          <span class="font-mono text-[9px] text-muted-foreground">03</span>
+        </div>
+        <div class="mt-1.5 space-y-1 font-mono text-[11px] text-muted-foreground">
+          <p>/api2/json</p>
+          <p>nodes · cluster · vms</p>
+          <p>self-signed TLS</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Request example + auth note, and resilience note -->
+    <div class="mt-8 grid gap-6 lg:grid-cols-2 lg:items-stretch">
+      <!-- Request example -->
+      <div class="overflow-x-auto rounded-lg border border-border bg-card p-5">
+        <p class="font-mono text-[10px] text-muted-foreground">
+          POST /nodes/pve/qemu/100/status/start
+        </p>
+        <p class="mt-3 whitespace-nowrap font-mono text-[13px] tabular-nums text-foreground">
+          https://192.168.1.10:8006/api2/json/nodes/pve/qemu/100/status/start
+        </p>
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+          <span class="rounded border border-border bg-muted px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
+            PVEAPIToken
+          </span>
+          <span class="rounded border border-border bg-muted px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
+            PVEAuthCookie + CSRFPreventionToken
+          </span>
+          <span class="font-mono text-[10px] text-muted-foreground">
+            Headers injected by the backend
+          </span>
+        </div>
+      </div>
+
+      <!-- Resilience note -->
+      <div class="lg:pt-5">
+        <p class="font-mono text-[10px] text-muted-foreground">failover model</p>
+        <p class="mt-3 text-sm leading-relaxed text-muted-foreground">
+          Requests ride an ordered, deduplicated endpoint list: primary,
+          fallbacks, then discovered cluster nodes. A connect, timeout, DNS, or
+          transport failure retries on the next endpoint.
+        </p>
+        <div class="mt-4 flex flex-wrap gap-4 font-mono text-[10px]">
+          <span class="flex items-center gap-1.5">
+            <span class="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true"></span>
+            <span class="text-muted-foreground">connected</span>
+          </span>
+          <span class="flex items-center gap-1.5">
+            <span class="h-1.5 w-1.5 rounded-full bg-warning" aria-hidden="true"></span>
+            <span class="text-muted-foreground">failover</span>
+          </span>
+          <span class="flex items-center gap-1.5">
+            <span class="h-1.5 w-1.5 rounded-full bg-destructive" aria-hidden="true"></span>
+            <span class="text-muted-foreground">failed</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>

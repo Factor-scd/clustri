@@ -7,11 +7,13 @@ import { useNodes } from '@/hooks/useProxmox'
 import { NodeDetail } from '@/components/nodes/NodeDetail'
 import { formatBytes, formatUptime } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import type { ProxmoxVM } from '@/types/proxmox'
 
 interface NodesPageProps {
   connectionId: string
   initialNodeName?: string
   onNavigate?: (view: string) => void
+  onVMClick?: (vm: ProxmoxVM) => void
 }
 
 function nodePercent(used: number, total: number): number {
@@ -38,7 +40,7 @@ function MiniStat({
   )
 }
 
-export function NodesPage({ connectionId, initialNodeName }: NodesPageProps) {
+export function NodesPage({ connectionId, initialNodeName, onVMClick }: NodesPageProps) {
   const { data: nodes, isLoading, error } = useNodes(connectionId)
   const [selectedNodeName, setSelectedNodeName] = useState<string | null>(null)
 
@@ -153,7 +155,7 @@ export function NodesPage({ connectionId, initialNodeName }: NodesPageProps) {
       {/* Selected node detail */}
       <div className="flex-1 overflow-hidden">
         {selectedNode && (
-          <NodeDetail node={selectedNode} connectionId={connectionId} />
+          <NodeDetail node={selectedNode} connectionId={connectionId} onVMClick={onVMClick} />
         )}
       </div>
     </div>

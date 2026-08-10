@@ -206,6 +206,14 @@ export interface EditNICConfig {
   firewall?: boolean
 }
 
+export interface UpdateVMConfig {
+  name?: string
+  cores?: number
+  /** Memory size in MiB. */
+  memory?: number
+  description?: string
+}
+
 export interface CreateSnapshotConfig {
   name: string
   description?: string
@@ -222,6 +230,11 @@ export interface VNCProxyResponse {
 export interface TermProxyResponse {
   ticket: string
   port: number
+}
+
+export interface ConsoleProxyInfo {
+  sessionId: string
+  url: string
 }
 
 export interface WebSocketInfo {

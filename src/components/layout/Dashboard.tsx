@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNodes, useVMs, useTasks, queryKeys } from '@/hooks/useProxmox'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -31,10 +31,20 @@ export function Dashboard({ connectionId, onNavigate }: DashboardProps) {
 
   const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`
 
-  const handleRefresh = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.nodes(connectionId) })
-    queryClient.invalidateQueries({ queryKey: queryKeys.vms(connectionId) })
-    queryClient.invalidateQueries({ queryKey: queryKeys.tasks(connectionId) })
+  // Track actual refresh activity rather than piggybacking on tasksLoading,
+  // which is true whenever the tasks query is fetching (e.g. background
+  // polling) and would keep the Refresh button spinning continuously.
+  const [refreshing, setRefreshing] = useState(false)
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true)
+    try {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.nodes(connectionId) })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.vms(connectionId) })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.tasks(connectionId) })
+    } finally {
+      setRefreshing(false)
+    }
   }, [queryClient, connectionId])
 
   const handleRetry = useCallback(() => {
@@ -186,7 +196,7 @@ export function Dashboard({ connectionId, onNavigate }: DashboardProps) {
             <ActivityFeed tasks={tasks} isLoading={tasksLoading} />
           </div>
           <div>
-            <QuickActions onRefresh={handleRefresh} isRefreshing={tasksLoading} onNavigate={onNavigate} />
+            <QuickActions onRefresh={handleRefresh} isRefreshing={refreshing} onNavigate={onNavigate} />
           </div>
         </div>
       </div>

@@ -8,7 +8,7 @@
 //! called directly on an added connection without `connect()`.
 
 use httpmock::prelude::*;
-use clustri::{ConnectionConfig, ConnectionManager, EndpointConfig, Error};
+use clustri::{ConnectionConfig, ConnectionManager, EndpointConfig, Error, UpdateVMConfig};
 
 /// Builds a `ConnectionManager` with a single token-mode connection whose
 /// primary endpoint points at the mock server. `node` pins the storage node.
@@ -168,14 +168,17 @@ async fn get_storage_maps_cluster_resources() {
             .body(
             serde_json::json!({
                 "data": [
+                    // The real cluster-resource shape: usage is `disk`/`maxdisk`
+                    // and liveness is the `status` string. There are no
+                    // `used`/`total`/`avail`/`enabled`/`active` keys.
                     {"storage": "local", "node": "pve1", "type": "dir",
-                     "content": "iso,vztmpl", "enabled": 1, "shared": 0, "active": 1,
-                     "total": 858993459200u64, "used": 429496729600u64, "avail": 429496729600u64,
+                     "content": "iso,vztmpl", "shared": 0, "plugintype": "dir",
+                     "disk": 429496729600u64, "maxdisk": 858993459200u64,
                      "status": "available"},
-                    {"storage": "backup", "node": "pve1", "type": "nfs",
-                     "content": "backup", "enabled": 1, "shared": 1, "active": 1,
-                     "total": 1717986918400u64, "used": 644245094400u64,
-                     "avail": 1073741824000u64, "status": "available"}
+                    {"storage": "backup", "node": "pve2", "type": "nfs",
+                     "content": "backup", "shared": 1, "plugintype": "nfs",
+                     "disk": 644245094400u64, "maxdisk": 1717986918400u64,
+                     "status": "unavailable"}
                 ]
             })
             .to_string(),
@@ -192,14 +195,22 @@ async fn get_storage_maps_cluster_resources() {
     assert_eq!(storages[0].storage, "local");
     assert_eq!(storages[0].r#type, "dir");
     assert_eq!(storages[0].content, "iso,vztmpl");
-    assert_eq!(storages[0].active, 1);
-    assert_eq!(storages[0].enabled, 1);
-    assert_eq!(storages[0].shared, 0);
+    // `disk`/`maxdisk`/`status` map onto used/total/avail/enabled/active.
     assert_eq!(storages[0].used, 429496729600u64);
     assert_eq!(storages[0].total, 858993459200u64);
     assert_eq!(storages[0].avail, 429496729600u64);
+    assert_eq!(storages[0].enabled, 1);
+    assert_eq!(storages[0].active, 1);
+    assert_eq!(storages[0].shared, 0);
     assert_eq!(storages[0].node, "pve1");
+    // A storage whose status is not "available" reports enabled/active 0.
+    assert_eq!(storages[1].enabled, 0);
+    assert_eq!(storages[1].active, 0);
+    assert_eq!(storages[1].used, 644245094400u64);
+    assert_eq!(storages[1].total, 1717986918400u64);
+    assert_eq!(storages[1].avail, 1073741824000u64);
     assert_eq!(storages[1].shared, 1);
+    assert_eq!(storages[1].node, "pve2");
     mock.assert();
 }
 
@@ -227,7 +238,7 @@ async fn get_storage_content_uses_configured_node() {
 
     let (manager, _dir) = setup_manager(&server.base_url(), token, Some("pve1")).await;
     let contents = manager
-        .get_storage_content("conn", "local")
+        .get_storage_content("conn", "local", Some("pve1"))
         .await
         .expect("content should be fetched");
 
@@ -282,7 +293,7 @@ async fn get_storage_content_falls_back_to_online_node() {
 
     let (manager, _dir) = setup_manager(&server.base_url(), token, None).await;
     let contents = manager
-        .get_storage_content("conn", "local")
+        .get_storage_content("conn", "local", None)
         .await
         .expect("content should be fetched");
 
@@ -290,6 +301,36 @@ async fn get_storage_content_falls_back_to_online_node() {
     assert_eq!(contents[0].volid, "local:iso/debian.iso");
     nodes_mock.assert();
     content_mock.assert();
+}
+
+#[tokio::test]
+async fn get_storage_content_uses_explicit_node() {
+    let server = MockServer::start();
+    let token = "root@pam!explicit-node-token";
+    let mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api2/json/nodes/pve2/storage/local/content");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(
+                serde_json::json!({
+                    "data": [{"volid": "local:iso/explicit.iso", "content": "iso",
+                              "ctime": 1700000000}]
+                })
+                .to_string(),
+            );
+    });
+
+    // The connection pins `pve1`, but an explicitly requested node must win.
+    let (manager, _dir) = setup_manager(&server.base_url(), token, Some("pve1")).await;
+    let contents = manager
+        .get_storage_content("conn", "local", Some("pve2"))
+        .await
+        .expect("content should be fetched");
+
+    assert_eq!(contents.len(), 1);
+    assert_eq!(contents[0].volid, "local:iso/explicit.iso");
+    mock.assert();
 }
 
 #[tokio::test]
@@ -303,9 +344,11 @@ async fn get_storage_detail_maps_status() {
             .header("content-type", "application/json")
             .body(
                 serde_json::json!({
-                    "data": {"storage": "local", "type": "dir", "content": "iso,vztmpl",
+                    // The real status response has no `storage` or `node` keys;
+                    // both fields must default to empty strings.
+                    "data": {"type": "dir", "content": "iso,vztmpl",
                              "active": 1, "enabled": 1, "shared": 0, "used": 429496729600u64,
-                             "total": 858993459200u64, "avail": 429496729600u64, "node": "pve1"}
+                             "total": 858993459200u64, "avail": 429496729600u64}
                 })
                 .to_string(),
             );
@@ -317,7 +360,10 @@ async fn get_storage_detail_maps_status() {
         .await
         .expect("detail should be fetched");
 
-    assert_eq!(detail.storage, "local");
+    // The storage and node are not part of the status response, so they
+    // default to empty strings.
+    assert_eq!(detail.storage, "");
+    assert_eq!(detail.node, "");
     assert_eq!(detail.r#type, "dir");
     assert_eq!(detail.content, "iso,vztmpl");
     assert_eq!(detail.active, 1);
@@ -325,7 +371,6 @@ async fn get_storage_detail_maps_status() {
     assert_eq!(detail.used, 429496729600u64);
     assert_eq!(detail.total, 858993459200u64);
     assert_eq!(detail.avail, 429496729600u64);
-    assert_eq!(detail.node, "pve1");
     mock.assert();
 }
 
@@ -335,8 +380,7 @@ async fn get_tasks_maps_cluster_tasks() {
     let token = "root@pam!tasks-token";
     let mock = server.mock(|when, then| {
         when.method(GET)
-            .path("/api2/json/cluster/tasks")
-            .query_param("limit", "50");
+            .path("/api2/json/cluster/tasks");
         then.status(200)
             .header("content-type", "application/json")
             .body(
@@ -527,9 +571,87 @@ async fn lifecycle_with_invalid_type_errors() {
         error
     );
     assert_eq!(
-        probe.hits(),
+        probe.calls(),
         0,
         "no HTTP request should be made for an invalid vm type"
+    );
+}
+
+#[tokio::test]
+async fn update_vm_config_posts_only_present_fields() {
+    let server = MockServer::start();
+    let token = "root@pam!update-config-token";
+    let mock = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api2/json/nodes/pve1/qemu/100/config")
+            .header("Authorization", format!("PVEAPIToken={}", token))
+            // The form body carries exactly the present fields.
+            .body_includes("name=web01")
+            .body_includes("cores=4")
+            .body_includes("memory=8192")
+            .body_excludes("description");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(r#"{"data":null}"#);
+    });
+
+    let (manager, _dir) = setup_manager(&server.base_url(), token, None).await;
+    manager
+        .update_vm_config(
+            "conn",
+            "pve1",
+            100,
+            "qemu",
+            UpdateVMConfig {
+                name: Some("web01".to_string()),
+                cores: Some(4),
+                memory: Some(8192),
+                description: None,
+            },
+        )
+        .await
+        .expect("config update should succeed");
+
+    mock.assert();
+}
+
+#[tokio::test]
+async fn update_vm_config_with_all_none_errors_without_request() {
+    let server = MockServer::start();
+    let probe = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api2/json/nodes/pve1/qemu/100/config");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(r#"{"data":null}"#);
+    });
+
+    let (manager, _dir) = setup_manager(&server.base_url(), "root@pam!empty-config-token", None).await;
+    let error = manager
+        .update_vm_config(
+            "conn",
+            "pve1",
+            100,
+            "qemu",
+            UpdateVMConfig {
+                name: None,
+                cores: None,
+                memory: None,
+                description: None,
+            },
+        )
+        .await
+        .expect_err("an empty config must be rejected");
+
+    assert!(
+        matches!(error, Error::ApiError(ref message) if message == "Nothing to update"),
+        "expected ApiError 'Nothing to update', got: {}",
+        error
+    );
+    assert_eq!(
+        probe.calls(),
+        0,
+        "no HTTP request should be made for an empty config"
     );
 }
 

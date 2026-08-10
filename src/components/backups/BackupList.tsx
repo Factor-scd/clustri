@@ -42,7 +42,6 @@ function formatTimestamp(seconds: number): string {
 
 export function BackupList({ connectionId }: BackupListProps) {
   const { data: backupJobs, isLoading: jobsLoading, error: jobsError } = useBackupJobs(connectionId)
-  const { data: backups, isLoading: backupsLoading, error: backupsError } = useBackups(connectionId)
   const { data: storage } = useStorage(connectionId)
 
   const deleteBackupJob = useDeleteBackupJob()
@@ -55,6 +54,13 @@ export function BackupList({ connectionId }: BackupListProps) {
   const [restoreDialog, setRestoreDialog] = useState<ProxmoxBackup | null>(null)
   const [confirmDeleteJob, setConfirmDeleteJob] = useState<string | null>(null)
   const [confirmDeleteBackup, setConfirmDeleteBackup] = useState<string | null>(null)
+
+  // Backups are storage-scoped on the backend, so the active filter must be
+  // passed through or only the default storage would ever be listed.
+  const { data: backups, isLoading: backupsLoading, error: backupsError } = useBackups(
+    connectionId,
+    storageFilter === 'all' ? undefined : storageFilter,
+  )
 
   const storageOptions = useMemo(() => {
     if (!storage) return []
@@ -363,7 +369,12 @@ export function BackupList({ connectionId }: BackupListProps) {
         confirmLabel="Delete"
         isLoading={deleteBackupJob.isPending}
         onConfirm={() => {
-          if (confirmDeleteJob) deleteBackupJob.mutate({ id: confirmDeleteJob })
+          if (confirmDeleteJob) {
+            deleteBackupJob.mutate(
+              { id: confirmDeleteJob },
+              { onSettled: () => setConfirmDeleteJob(null) },
+            )
+          }
         }}
       />
 
@@ -377,7 +388,12 @@ export function BackupList({ connectionId }: BackupListProps) {
         confirmLabel="Delete"
         isLoading={deleteBackup.isPending}
         onConfirm={() => {
-          if (confirmDeleteBackup) deleteBackup.mutate({ volid: confirmDeleteBackup })
+          if (confirmDeleteBackup) {
+            deleteBackup.mutate(
+              { volid: confirmDeleteBackup },
+              { onSettled: () => setConfirmDeleteBackup(null) },
+            )
+          }
         }}
       />
     </div>

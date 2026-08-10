@@ -28,7 +28,10 @@ export function DisksTab({ vm, connectionId }: DisksTabProps) {
 
   const handleDelete = () => {
     if (!deleteDisk) return
-    removeDisk.mutate({ node: vm.node, vmid: vm.vmid, vmType: vm.type, disk: deleteDisk.device })
+    removeDisk.mutate(
+      { node: vm.node, vmid: vm.vmid, vmType: vm.type, disk: deleteDisk.device },
+      { onSettled: () => setDeleteDisk(null) },
+    )
   }
 
   if (isLoading) {

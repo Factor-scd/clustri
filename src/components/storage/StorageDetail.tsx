@@ -72,6 +72,7 @@ export function StorageDetail({ connectionId, storage, node, onBack }: StorageDe
   )
   const { data: contentList, isLoading: contentLoading } = useStorageContent(
     connectionId,
+    node,
     storage
   )
 
@@ -127,11 +128,11 @@ export function StorageDetail({ connectionId, storage, node, onBack }: StorageDe
           <div>
             <div className="flex items-center gap-2">
               <Icon className="h-6 w-6 text-muted-foreground" />
-              <h2 className="font-mono text-2xl font-semibold tracking-tight">{detail.storage}</h2>
+              <h2 className="font-mono text-2xl font-semibold tracking-tight">{storage}</h2>
             </div>
             <p className="text-sm text-muted-foreground">
               <span className="font-mono">{detail.type.toUpperCase()}</span> storage on{' '}
-              <span className="font-mono">{detail.node}</span>
+              <span className="font-mono">{node}</span>
             </p>
           </div>
         </div>
@@ -197,7 +198,7 @@ export function StorageDetail({ connectionId, storage, node, onBack }: StorageDe
             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-5">
               <div className="space-y-1">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Name</p>
-                <p className="font-mono text-sm font-medium">{detail.storage}</p>
+                <p className="font-mono text-sm font-medium">{storage}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Type</p>
@@ -205,7 +206,7 @@ export function StorageDetail({ connectionId, storage, node, onBack }: StorageDe
               </div>
               <div className="space-y-1">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Node</p>
-                <p className="font-mono text-sm font-medium">{detail.node}</p>
+                <p className="font-mono text-sm font-medium">{node}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Enabled</p>

@@ -17,6 +17,7 @@ use rustls::{ClientConfig, DigitallySignedStruct, SignatureScheme};
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
 use tokio::net::TcpStream;
+use tokio::time::{timeout, Duration};
 use tokio_rustls::TlsConnector;
 use url::Url;
 use x509_cert::der::Decode;
@@ -27,7 +28,7 @@ use x509_cert::der::Decode;
 /// certificate's SHA-256 fingerprint is captured on each connection and
 /// compared against the pinned value recorded on first use (TOFU).
 #[derive(Debug)]
-struct AcceptAllVerifier;
+pub(crate) struct AcceptAllVerifier;
 
 impl ServerCertVerifier for AcceptAllVerifier {
     fn verify_server_cert(
@@ -70,7 +71,7 @@ impl ServerCertVerifier for AcceptAllVerifier {
 ///
 /// `install_default` is idempotent and thread-safe; subsequent calls return
 /// `Err` with the already-installed provider, which is ignored here.
-fn ensure_crypto_provider() {
+pub(crate) fn ensure_crypto_provider() {
     let _ = rustls::crypto::ring::default_provider().install_default();
 }
 
@@ -109,8 +110,9 @@ async fn capture_leaf_certificate_der(url: &str) -> crate::Result<Vec<u8>> {
         .first()
         .ok_or_else(|| Error::InvalidUrl(format!("Cannot resolve host '{}'", addr)))?;
 
-    let tcp = TcpStream::connect(address)
+    let tcp = timeout(Duration::from_secs(10), TcpStream::connect(address))
         .await
+        .map_err(|_| Error::CertificateError(format!("Timed out connecting to '{}'", addr)))?
         .map_err(|e| Error::CertificateError(format!("Cannot connect to '{}': {}", addr, e)))?;
 
     let config = ClientConfig::builder()
@@ -119,9 +121,10 @@ async fn capture_leaf_certificate_der(url: &str) -> crate::Result<Vec<u8>> {
         .with_no_client_auth();
 
     let connector = TlsConnector::from(Arc::new(config));
-    let tls = connector.connect(server_name, tcp).await.map_err(|e| {
-        Error::CertificateError(format!("TLS handshake with '{}' failed: {}", addr, e))
-    })?;
+    let tls = timeout(Duration::from_secs(15), connector.connect(server_name, tcp))
+        .await
+        .map_err(|_| Error::CertificateError(format!("Timed out during TLS handshake with '{}'", addr)))?
+        .map_err(|e| Error::CertificateError(format!("TLS handshake with '{}' failed: {}", addr, e)))?;
 
     let (_, session) = tls.get_ref();
     let leaf = session

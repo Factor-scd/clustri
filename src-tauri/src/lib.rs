@@ -3,10 +3,11 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::TrayIconBuilder;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use tokio::sync::RwLock;
 
 mod connection;
+mod console_proxy;
 mod error;
 mod proxmox;
 pub mod tls;
@@ -15,10 +16,11 @@ mod websocket;
 pub use connection::{
     api_request, derive_node_url, AuthContext, AuthMode, ConnectionManager, LoadResult,
 };
+pub use console_proxy::ConsoleProxyInfo;
 pub use error::Error;
 pub use proxmox::{
     AddDiskConfig, AddNICConfig, BackupJobConfig, CreateSnapshotConfig, EditNICConfig,
-    RestoreConfig,
+    RestoreConfig, UpdateVMConfig,
 };
 use websocket::WebSocketManager;
 
@@ -125,6 +127,7 @@ pub struct CertificateInfo {
 struct AppState {
     connection_manager: Arc<RwLock<ConnectionManager>>,
     ws_manager: Arc<RwLock<WebSocketManager>>,
+    console_proxy: Arc<RwLock<console_proxy::ConsoleProxyManager>>,
 }
 
 /// Returns the path of the persisted connections file.
@@ -269,9 +272,12 @@ async fn get_storage_content(
     state: tauri::State<'_, AppState>,
     connection_id: String,
     storage: String,
+    node: Option<String>,
 ) -> Result<Vec<proxmox::StorageContent>> {
     let manager = state.connection_manager.read().await;
-    manager.get_storage_content(&connection_id, &storage).await
+    manager
+        .get_storage_content(&connection_id, &storage, node.as_deref())
+        .await
 }
 
 #[tauri::command]
@@ -598,6 +604,21 @@ async fn migrate_vm(
         .await
 }
 
+#[tauri::command]
+async fn update_vm_config(
+    state: tauri::State<'_, AppState>,
+    connection_id: String,
+    node: String,
+    vmid: u32,
+    vm_type: String,
+    config: proxmox::UpdateVMConfig,
+) -> Result<()> {
+    let manager = state.connection_manager.read().await;
+    manager
+        .update_vm_config(&connection_id, &node, vmid, &vm_type, config)
+        .await
+}
+
 // Authentication commands
 #[tauri::command]
 async fn login_with_password(
@@ -712,6 +733,31 @@ async fn is_websocket_connected(
 ) -> Result<bool> {
     let ws_manager = state.ws_manager.read().await;
     Ok(ws_manager.is_connected(&connection_id))
+}
+
+// Console proxy commands
+#[tauri::command]
+async fn start_console_proxy(
+    state: tauri::State<'_, AppState>,
+    connection_id: String,
+    kind: String,
+    node: String,
+    vmid: u32,
+) -> Result<ConsoleProxyInfo> {
+    let manager = state.connection_manager.read().await;
+    let mut proxy = state.console_proxy.write().await;
+    proxy
+        .start(&connection_id, &kind, &node, vmid, &manager)
+        .await
+}
+
+#[tauri::command]
+async fn stop_console_proxy(
+    state: tauri::State<'_, AppState>,
+    session_id: String,
+) -> Result<()> {
+    let mut proxy = state.console_proxy.write().await;
+    proxy.stop(&session_id).await
 }
 
 // Backup management commands
@@ -862,10 +908,10 @@ async fn update_tray_menu(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_shell::init())
         .manage(AppState {
             connection_manager: Arc::new(RwLock::new(ConnectionManager::new())),
             ws_manager: Arc::new(RwLock::new(WebSocketManager::new())),
+            console_proxy: Arc::new(RwLock::new(console_proxy::ConsoleProxyManager::new())),
         })
         .invoke_handler(tauri::generate_handler![
             load_connections,
@@ -909,12 +955,15 @@ pub fn run() {
             delete_snapshot,
             rollback_snapshot,
             migrate_vm,
+            update_vm_config,
             create_vnc_proxy,
             create_term_proxy,
             get_websocket_url,
             connect_websocket,
             disconnect_websocket,
             is_websocket_connected,
+            start_console_proxy,
+            stop_console_proxy,
             get_backup_jobs,
             get_backups,
             create_backup_job,
@@ -955,6 +1004,15 @@ pub fn run() {
                     }
                     "quit" => {
                         app.exit(0);
+                    }
+                    // Connection entries are dynamic menu items added by the
+                    // frontend via `update_tray_menu`. Clicking one switches
+                    // the active connection there, so forward the id as an
+                    // event instead of reaching into the backend state here.
+                    id if id.starts_with("connection_") => {
+                        if let Some(connection_id) = id.strip_prefix("connection_") {
+                            let _ = app.emit("tray-connection-click", connection_id.to_string());
+                        }
                     }
                     _ => {}
                 })

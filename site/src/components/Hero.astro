@@ -1,0 +1,77 @@
+---
+import AppWindowMockup from './AppWindowMockup.astro'
+---
+
+<section class="relative overflow-hidden">
+  <!-- Copy block -->
+  <div class="hero-copy mx-auto max-w-7xl px-6 pt-20 lg:px-8 lg:pt-24">
+    <p class="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+      OPS CONSOLE
+    </p>
+    <h1 class="mt-4 max-w-3xl text-4xl font-semibold leading-[1.05] tracking-tighter text-foreground sm:text-5xl lg:text-6xl">
+      One <span class="text-primary">console</span> for your Proxmox cluster.
+    </h1>
+    <p class="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+      Manage Proxmox VE nodes, VMs, storage, and backups from a desktop app that keeps working when a node goes down.
+    </p>
+    <div class="mt-8 flex flex-wrap items-center gap-3">
+      <a
+        href="#"
+        class="rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:brightness-110 active:scale-[0.98]"
+      >
+        Get Clustri
+      </a>
+      <a
+        href="#"
+        class="rounded-md border border-border bg-background px-5 py-2.5 text-sm font-semibold text-foreground transition hover:bg-accent/60 active:scale-[0.98]"
+      >
+        Read the docs
+      </a>
+    </div>
+    <p class="mt-8 font-mono text-[11px] tabular-nums text-muted-foreground">
+      <span>v0.1.0</span><span aria-hidden="true"> · </span><span>Linux</span><span aria-hidden="true"> · </span><span>macOS</span><span aria-hidden="true"> · </span><span>Windows</span>
+    </p>
+  </div>
+
+  <!-- Product mockup, full-bleed below the copy -->
+  <div class="hero-mockup mt-16 sm:mt-20">
+    <div class="mx-auto max-w-6xl px-6 lg:px-8">
+      <div class="pointer-events-none select-none [mask-image:linear-gradient(to_bottom,black_0%,black_78%,transparent_100%)]">
+        <AppWindowMockup />
+      </div>
+    </div>
+  </div>
+
+  <!-- Close the hero -->
+  <div class="mt-16 border-b border-border" aria-hidden="true"></div>
+</section>
+
+<style>
+  @keyframes hero-rise {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes hero-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .hero-copy {
+    animation: hero-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .hero-mockup {
+    animation: hero-fade 1s ease 0.15s both;
+  }
+</style>

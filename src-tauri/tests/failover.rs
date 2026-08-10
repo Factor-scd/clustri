@@ -169,7 +169,7 @@ async fn non_transport_error_does_not_rotate() {
     );
     primary_mock.assert();
     assert_eq!(
-        fallback_mock.hits(),
+        fallback_mock.calls(),
         0,
         "a non-transport error must not trigger failover"
     );
@@ -192,7 +192,7 @@ async fn request_succeeds_on_primary_again_when_it_returns() {
 
     assert!(vms.is_empty());
     primary_mock.assert();
-    assert_eq!(fallback_mock.hits(), 0);
+    assert_eq!(fallback_mock.calls(), 0);
     assert_eq!(
         manager
             .runtime_status("conn")

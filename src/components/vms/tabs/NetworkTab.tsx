@@ -26,7 +26,10 @@ export function NetworkTab({ vm, connectionId }: NetworkTabProps) {
 
   const handleDelete = () => {
     if (!deleteNic) return
-    removeNIC.mutate({ node: vm.node, vmid: vm.vmid, vmType: vm.type, nic: deleteNic.name })
+    removeNIC.mutate(
+      { node: vm.node, vmid: vm.vmid, vmType: vm.type, nic: deleteNic.name },
+      { onSettled: () => setDeleteNic(null) },
+    )
   }
 
   if (isLoading) {

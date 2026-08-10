@@ -1,0 +1,78 @@
+---
+const year = new Date().getFullYear()
+---
+
+<!--
+  Footer — minimal, one row on desktop, stacked on mobile.
+-->
+
+<footer class="border-t border-border">
+  <div class="mx-auto max-w-7xl px-6 py-10 lg:px-8">
+    <div class="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
+      <div>
+        <div class="flex items-center gap-2.5">
+          <span class="flex h-8 w-8 items-center justify-center rounded-md bg-primary/15 text-primary">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="h-4 w-4"
+              aria-hidden="true"
+            >
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+            </svg>
+          </span>
+          <span class="text-sm font-semibold tracking-tight text-foreground">Clustri</span>
+          <span class="hidden font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground sm:inline">
+            Ops Console
+          </span>
+        </div>
+        <p class="mt-3 font-mono text-[11px] text-muted-foreground">v0.1.0</p>
+      </div>
+
+      <div class="flex flex-col gap-8 sm:flex-row sm:gap-16">
+        <nav aria-label="Navigate" class="space-y-2.5">
+          <p class="text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
+            Navigate
+          </p>
+          <a href="#failover" class="block text-[13px] text-muted-foreground transition-colors hover:text-foreground">
+            Features
+          </a>
+          <a href="#security" class="block text-[13px] text-muted-foreground transition-colors hover:text-foreground">
+            Security
+          </a>
+          <a href="#console" class="block text-[13px] text-muted-foreground transition-colors hover:text-foreground">
+            Console
+          </a>
+          <a href="#architecture" class="block text-[13px] text-muted-foreground transition-colors hover:text-foreground">
+            Architecture
+          </a>
+          <a href="#download" class="block text-[13px] text-muted-foreground transition-colors hover:text-foreground">
+            Download
+          </a>
+        </nav>
+
+        <nav aria-label="Source" class="space-y-2.5">
+          <p class="text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
+            Source
+          </p>
+          <a href="#" class="block text-[13px] text-muted-foreground transition-colors hover:text-foreground">
+            GitHub
+          </a>
+          <a href="#" class="block text-[13px] text-muted-foreground transition-colors hover:text-foreground">
+            Build from source
+          </a>
+        </nav>
+      </div>
+    </div>
+
+    <div class="mt-10 flex flex-col gap-2 border-t border-border pt-6 md:flex-row md:items-center md:justify-between">
+      <p class="text-[12px] text-muted-foreground">© {year} Clustri. MIT license.</p>
+      <p class="text-[12px] text-muted-foreground">Not affiliated with Proxmox.</p>
+    </div>
+  </div>
+</footer>

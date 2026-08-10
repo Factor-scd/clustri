@@ -335,6 +335,50 @@ async fn edit_nic_preserves_model_and_mac() {
 }
 
 #[tokio::test]
+async fn edit_nic_tag_clear_preserves_other_attributes() {
+    let server = MockServer::start();
+    let token = "root@pam!edit-nic-tag-token";
+    let get_mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api2/json/nodes/pve1/qemu/100/config");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(
+                serde_json::json!({
+                    "data": {"net0": "virtio=AA:BB:CC:DD:EE:FF,bridge=vmbr0,tag=10,link_down=1"}
+                })
+                .to_string(),
+            );
+    });
+    let post_mock = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api2/json/nodes/pve1/qemu/100/config")
+            // urlencoded: `=` and `,` become `%3D` and `%2C`; the tag is gone
+            // while the unmodeled `link_down` attribute is carried over.
+            .body_includes("net0=virtio%3DAA%3ABB%3ACC%3ADD%3AEE%3AFF%2Cbridge%3Dvmbr0%2Clink_down%3D1")
+            .body_excludes("tag");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(r#"{"data":null}"#);
+    });
+
+    let (manager, _dir) = setup_manager(&server.base_url(), token, None).await;
+    let config = EditNICConfig {
+        bridge: None,
+        model: None,
+        tag: Some(0),
+        firewall: None,
+    };
+    manager
+        .edit_nic("conn", "pve1", 100, "qemu", "net0", config)
+        .await
+        .expect("nic should be edited");
+
+    get_mock.assert();
+    post_mock.assert();
+}
+
+#[tokio::test]
 async fn remove_nic_posts_delete() {
     let server = MockServer::start();
     let token = "root@pam!remove-nic-token";
@@ -388,17 +432,26 @@ async fn lxc_vm_types_use_lxc_path() {
 
     let (manager, _dir) = setup_manager(&server.base_url(), token, None).await;
 
-    // Containers use `rootfs`/`mpN` keys rather than `scsiN`/`virtioN`; they
-    // are not returned by get_disks, and network keys without an explicit
-    // model are still parsed.
+    // Containers use `rootfs`/`mpN` keys; they map onto Disk entries with the
+    // container-specific device names, and LXC network keys without an
+    // explicit model are still parsed.
     let disks = manager
         .get_disks("conn", "pve1", 201, "lxc")
         .await
         .expect("disks should be fetched");
-    assert!(
-        disks.is_empty(),
-        "container disks are not in the scsi/virtio/... key set"
-    );
+    assert_eq!(disks.len(), 2);
+    let rootfs = disks
+        .iter()
+        .find(|d| d.device == "rootfs")
+        .expect("rootfs disk should be parsed");
+    assert_eq!(rootfs.storage, "local");
+    assert_eq!(rootfs.size, 8589934592); // 8G
+    let mp0 = disks
+        .iter()
+        .find(|d| d.device == "mp0")
+        .expect("mp0 disk should be parsed");
+    assert_eq!(mp0.storage, "local");
+    assert_eq!(mp0.size, 4294967296); // 4G
 
     let nics = manager
         .get_network_interfaces("conn", "pve1", 201, "lxc")
@@ -407,6 +460,9 @@ async fn lxc_vm_types_use_lxc_path() {
     assert_eq!(nics.len(), 1);
     assert_eq!(nics[0].name, "net0");
     assert_eq!(nics[0].bridge.as_deref(), Some("vmbr0"));
+    // LXC format: `name=eth0` lead means no QEMU model=mac first segment.
+    assert_eq!(nics[0].model, "");
+    assert_eq!(nics[0].macaddr, "");
 
     manager
         .resize_disk("conn", "pve1", 201, "lxc", "rootfs", 17179869184)
@@ -415,6 +471,140 @@ async fn lxc_vm_types_use_lxc_path() {
 
     config_mock.assert_calls(2);
     resize_mock.assert();
+}
+
+#[tokio::test]
+async fn add_nic_lxc_writes_lxc_net_format() {
+    let server = MockServer::start();
+    let token = "root@pam!add-nic-lxc-token";
+    let get_mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api2/json/nodes/pve1/lxc/201/config");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(
+                serde_json::json!({
+                    "data": {"memory": 2048}
+                })
+                .to_string(),
+            );
+    });
+    let post_mock = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api2/json/nodes/pve1/lxc/201/config")
+            // urlencoded: `name=eth0,type=veth,bridge=vmbr0,hwaddr=BC:24:11:8D:DF:95,firewall=1`
+            .body_includes(
+                "net0=name%3Deth0%2Ctype%3Dveth%2Cbridge%3Dvmbr0%2Chwaddr%3DBC%3A24%3A11%3A8D%3ADF%3A95%2Cfirewall%3D1",
+            );
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(r#"{"data":null}"#);
+    });
+
+    let (manager, _dir) = setup_manager(&server.base_url(), token, None).await;
+    let config = AddNICConfig {
+        bridge: "vmbr0".to_string(),
+        // The model is ignored for LXC (containers always use veth), so an
+        // otherwise-invalid model still succeeds.
+        model: "veth".to_string(),
+        macaddr: Some("BC:24:11:8D:DF:95".to_string()),
+        tag: None,
+        firewall: Some(true),
+    };
+    manager
+        .add_nic("conn", "pve1", 201, "lxc", config)
+        .await
+        .expect("nic should be added");
+
+    get_mock.assert();
+    post_mock.assert();
+}
+
+#[tokio::test]
+async fn add_nic_lxc_random_mac_and_no_firewall_omits_hwaddr_and_firewall() {
+    let server = MockServer::start();
+    let token = "root@pam!add-nic-lxc-plain-token";
+    let get_mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api2/json/nodes/pve1/lxc/201/config");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(r#"{"data":{"memory":2048}}"#);
+    });
+    let post_mock = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api2/json/nodes/pve1/lxc/201/config")
+            .body_includes("net0=name%3Deth0%2Ctype%3Dveth%2Cbridge%3Dvmbr0")
+            .body_excludes("hwaddr")
+            .body_excludes("firewall");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(r#"{"data":null}"#);
+    });
+
+    let (manager, _dir) = setup_manager(&server.base_url(), token, None).await;
+    let config = AddNICConfig {
+        bridge: "vmbr0".to_string(),
+        model: "veth".to_string(),
+        // `random` (or a missing MAC) means "let Proxmox assign one".
+        macaddr: Some("random".to_string()),
+        tag: None,
+        firewall: None,
+    };
+    manager
+        .add_nic("conn", "pve1", 201, "lxc", config)
+        .await
+        .expect("nic should be added");
+
+    get_mock.assert();
+    post_mock.assert();
+}
+
+#[tokio::test]
+async fn edit_nic_lxc_reencodes_lxc_format() {
+    let server = MockServer::start();
+    let token = "root@pam!edit-nic-lxc-token";
+    let get_mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api2/json/nodes/pve1/lxc/201/config");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(
+                serde_json::json!({
+                    "data": {"net0": "name=eth0,type=veth,hwaddr=BC:24:11:8D:DF:95,bridge=vmbr0,ip=dhcp,firewall=0"}
+                })
+                .to_string(),
+            );
+    });
+    let post_mock = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api2/json/nodes/pve1/lxc/201/config")
+            // urlencoded; the LXC form is rebuilt (`name=eth0,type=veth,
+            // hwaddr=...`) with the new bridge/firewall and the unknown
+            // `ip=dhcp` attribute carried over, but no tag.
+            .body_includes(
+                "net0=name%3Deth0%2Ctype%3Dveth%2Chwaddr%3DBC%3A24%3A11%3A8D%3ADF%3A95%2Cbridge%3Dvmbr1%2Cfirewall%3D1%2Cip%3Ddhcp",
+            )
+            .body_excludes("tag");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(r#"{"data":null}"#);
+    });
+
+    let (manager, _dir) = setup_manager(&server.base_url(), token, None).await;
+    let config = EditNICConfig {
+        bridge: Some("vmbr1".to_string()),
+        model: None,
+        tag: None,
+        firewall: Some(true),
+    };
+    manager
+        .edit_nic("conn", "pve1", 201, "lxc", "net0", config)
+        .await
+        .expect("nic should be edited");
+
+    get_mock.assert();
+    post_mock.assert();
 }
 
 #[tokio::test]

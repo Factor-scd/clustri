@@ -1,13 +1,51 @@
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::Arc;
 use tauri::Emitter;
 use tokio::sync::mpsc;
-use tokio::time::{sleep, Duration};
-use tokio_tungstenite::connect_async;
+use tokio::time::{sleep, timeout, Duration};
+use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::Message;
+use tokio_tungstenite::Connector;
 
 use crate::error::Error;
+
+/// Connects to a Proxmox WebSocket URL, accepting self-signed certificates.
+///
+/// The regular `wss://` flow validates against the system trust store, which
+/// rejects the self-signed certificates typical of home-lab Proxmox servers.
+/// As with the HTTP transport, the application enforces trust at its own layer
+/// (TOFU pinning in `tls.rs`), so the transport here accepts any certificate.
+pub async fn connect_ws(
+    url: &str,
+) -> crate::Result<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>>
+{
+    let request = url
+        .into_client_request()
+        .map_err(|e| Error::WebSocketError(e.to_string()))?;
+    let is_wss = request.uri().scheme_str() == Some("wss");
+
+    let connector = if is_wss {
+        crate::tls::ensure_crypto_provider();
+        let config = rustls::ClientConfig::builder()
+            .dangerous()
+            .with_custom_certificate_verifier(Arc::new(crate::tls::AcceptAllVerifier))
+            .with_no_client_auth();
+        Some(Connector::Rustls(Arc::new(config)))
+    } else {
+        None
+    };
+
+    let (ws, _) = timeout(
+        Duration::from_secs(15),
+        tokio_tungstenite::connect_async_tls_with_config(request, None, false, connector),
+    )
+    .await
+    .map_err(|_| Error::WebSocketError(format!("Timed out connecting to '{}'", url)))?
+    .map_err(|e| Error::WebSocketError(e.to_string()))?;
+    Ok(ws)
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskUpdate {
@@ -60,7 +98,7 @@ impl WebSocketManager {
         app_handle: tauri::AppHandle,
     ) -> crate::Result<()> {
         // Disconnect any existing connection for this ID
-        self.disconnect(&connection_id).await;
+        let _ = self.disconnect(&connection_id).await;
 
         let (shutdown_tx, mut shutdown_rx) = mpsc::channel::<()>(1);
 
@@ -134,9 +172,7 @@ async fn connect_and_run(
     url: &str,
     app_handle: &tauri::AppHandle,
 ) -> crate::Result<()> {
-    let (ws_stream, _) = connect_async(url)
-        .await
-        .map_err(|e| Error::WebSocketError(e.to_string()))?;
+    let ws_stream = connect_ws(url).await?;
 
     let cid = connection_id.to_string();
     let (mut write, mut read) = ws_stream.split();

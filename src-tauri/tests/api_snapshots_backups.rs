@@ -211,10 +211,12 @@ async fn get_backup_jobs_maps_list() {
             .body(
                 serde_json::json!({
                     "data": [
-                        {"id": "backup-1", "store": "backup", "schedule": "0 2 * * *",
+                        // The server sends `storage` (not `store`).
+                        {"id": "backup-1", "storage": "backup", "schedule": "0 2 * * *",
                          "all": 1, "enabled": 1, "node": "pve1", "compress": "zstd",
                          "mode": "snapshot", "quiet": 0},
-                        {"id": "backup-2", "store": "local", "schedule": "30 3 * * 1",
+                        // A vmid-selected job omits `all` entirely.
+                        {"id": "backup-2", "storage": "local", "schedule": "30 3 * * 1",
                          "all": 0, "enabled": 0, "vmid": "100,101"}
                     ]
                 })
@@ -238,13 +240,81 @@ async fn get_backup_jobs_maps_list() {
     assert_eq!(jobs[0].compress.as_deref(), Some("zstd"));
     assert_eq!(jobs[0].mode.as_deref(), Some("snapshot"));
     assert_eq!(jobs[0].quiet, Some(0));
-    // Tolerance: the second job omits the optional node/mode fields.
+    // Tolerance: the second job omits the optional node/mode fields and has no
+    // `all` key, which defaults to 0.
+    assert_eq!(jobs[1].store, "local");
     assert_eq!(jobs[1].node, None);
     assert_eq!(jobs[1].compress, None);
     assert_eq!(jobs[1].mode, None);
     assert_eq!(jobs[1].quiet, None);
     assert_eq!(jobs[1].vmid.as_deref(), Some("100,101"));
     assert_eq!(jobs[1].all, 0);
+    mock.assert();
+}
+
+#[tokio::test]
+async fn backup_job_parses_realistic_pve_91_shape() {
+    let server = MockServer::start();
+    let token = "root@pam!jobs-real-token";
+    let mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api2/json/cluster/backup")
+            .header("Authorization", format!("PVEAPIToken={}", token));
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(
+                serde_json::json!({
+                    "data": [
+                        // A job as PVE 9.1 actually emits it: `storage` key,
+                        // no `all`, and a pile of fields the struct does not
+                        // model (pool, notes-template, prune-backups, fleecing,
+                        // next-run, notification-mode, ...).
+                        {
+                            "id": "backup-pve-1",
+                            "storage": "kashyyk",
+                            "schedule": "0 2 * * *",
+                            "enabled": 1,
+                            "node": "pve1",
+                            "mode": "snapshot",
+                            "compress": "zstd",
+                            "vmid": "100,101,102",
+                            "pool": "prod",
+                            "notes-template": "{{guestname}}",
+                            "prune-backups": {"keep-last": 3, "keep-daily": 7},
+                            "fleecing": {"enabled": 1, "storage": "local-lvm"},
+                            "next-run": 1760000000,
+                            "notification-mode": "auto",
+                            "bwlimit": 0,
+                            "quiet": 0,
+                            "starttime": "2026-08-01 02:00:00",
+                            "stdexcludes": 0,
+                            "remove": 0
+                        }
+                    ]
+                })
+                .to_string(),
+            );
+    });
+
+    let (manager, _dir) = setup_manager(&server.base_url(), token, None).await;
+    let jobs = manager
+        .get_backup_jobs("conn")
+        .await
+        .expect("backup jobs should be fetched");
+
+    assert_eq!(jobs.len(), 1);
+    assert_eq!(jobs[0].id, "backup-pve-1");
+    // `storage` on the wire maps onto `store`.
+    assert_eq!(jobs[0].store, "kashyyk");
+    assert_eq!(jobs[0].schedule, "0 2 * * *");
+    // `all` is never sent for a vmid-selected job and defaults to 0.
+    assert_eq!(jobs[0].all, 0);
+    assert_eq!(jobs[0].enabled, 1);
+    assert_eq!(jobs[0].node.as_deref(), Some("pve1"));
+    assert_eq!(jobs[0].mode.as_deref(), Some("snapshot"));
+    assert_eq!(jobs[0].compress.as_deref(), Some("zstd"));
+    assert_eq!(jobs[0].vmid.as_deref(), Some("100,101,102"));
+    assert_eq!(jobs[0].quiet, Some(0));
     mock.assert();
 }
 
@@ -361,10 +431,27 @@ async fn get_backups_filters_and_maps() {
 }
 
 #[tokio::test]
-async fn get_backups_defaults_to_local_storage() {
+async fn get_backups_aggregates_over_single_backup_storage() {
     let server = MockServer::start();
     let token = "root@pam!backups-default-token";
-    let mock = server.mock(|when, then| {
+    let resources_mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api2/json/cluster/resources")
+            .query_param("type", "storage");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(
+                serde_json::json!({
+                    "data": [
+                        {"storage": "local", "node": "pve1", "type": "dir",
+                         "content": "backup,iso", "shared": 0,
+                         "status": "available"}
+                    ]
+                })
+                .to_string(),
+            );
+    });
+    let content_mock = server.mock(|when, then| {
         when.method(GET)
             .path("/api2/json/nodes/pve1/storage/local/content")
             .query_param("content", "backup");
@@ -380,7 +467,228 @@ async fn get_backups_defaults_to_local_storage() {
         .expect("backups should be fetched");
 
     assert!(backups.is_empty());
-    mock.assert();
+    resources_mock.assert();
+    content_mock.assert();
+}
+
+#[tokio::test]
+async fn get_backups_aggregates_all_backup_storages_when_none_specified() {
+    let server = MockServer::start();
+    let token = "root@pam!backups-aggregate-token";
+    let resources_mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api2/json/cluster/resources")
+            .query_param("type", "storage");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(
+                serde_json::json!({
+                    "data": [
+                        {"storage": "backup1", "node": "pve1", "type": "nfs",
+                         "content": "backup", "shared": 1,
+                         "status": "available"},
+                        {"storage": "backup2", "node": "pve2", "type": "nfs",
+                         "content": "backup,iso", "shared": 1,
+                         "status": "available"},
+                        {"storage": "local", "node": "pve1", "type": "dir",
+                         "content": "iso,vztmpl", "shared": 0,
+                         "status": "available"}
+                    ]
+                })
+                .to_string(),
+            );
+    });
+    let backup1_mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api2/json/nodes/pve1/storage/backup1/content")
+            .query_param("content", "backup");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(
+                serde_json::json!({
+                    "data": [
+                        {"volid": "backup1:backup/vzdump-qemu-100-2024_01_01-00_00_00.vma.zst",
+                         "backupid": "vzdump-qemu-100-2024_01_01-00_00_00.vma.zst",
+                         "backup-type": "qemu", "backup-id": "100",
+                         "backup-time": 1700000000, "storage": "backup1",
+                         "size": 1073741824u64, "ctime": 1700000001, "content": "backup"}
+                    ]
+                })
+                .to_string(),
+            );
+    });
+    let backup2_mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api2/json/nodes/pve1/storage/backup2/content")
+            .query_param("content", "backup");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(
+                serde_json::json!({
+                    "data": [
+                        {"volid": "backup2:backup/vzdump-qemu-201-2024_01_02-00_00_00.vma.zst",
+                         "backupid": "vzdump-qemu-201-2024_01_02-00_00_00.vma.zst",
+                         "backup-type": "qemu", "backup-id": "201",
+                         "backup-time": 1700000100, "storage": "backup2",
+                         "size": 2147483648u64, "ctime": 1700000101, "content": "backup"}
+                    ]
+                })
+                .to_string(),
+            );
+    });
+    // A storage without `backup` content must never be queried.
+    let local_probe = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api2/json/nodes/pve1/storage/local/content")
+            .query_param("content", "backup");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(r#"{"data":[]}"#);
+    });
+
+    let (manager, _dir) = setup_manager(&server.base_url(), token, Some("pve1")).await;
+    let backups = manager
+        .get_backups("conn", None)
+        .await
+        .expect("backups should be aggregated");
+
+    assert_eq!(backups.len(), 2);
+    assert_eq!(
+        backups[0].volid,
+        "backup1:backup/vzdump-qemu-100-2024_01_01-00_00_00.vma.zst"
+    );
+    assert_eq!(
+        backups[1].volid,
+        "backup2:backup/vzdump-qemu-201-2024_01_02-00_00_00.vma.zst"
+    );
+    resources_mock.assert();
+    backup1_mock.assert();
+    backup2_mock.assert();
+    assert_eq!(
+        local_probe.calls(),
+        0,
+        "a storage without backup content must not be queried"
+    );
+}
+
+#[tokio::test]
+async fn get_backups_specific_storage_only() {
+    let server = MockServer::start();
+    let token = "root@pam!backups-specific-token";
+    let content_mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api2/json/nodes/pve1/storage/backup1/content")
+            .query_param("content", "backup");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(
+                serde_json::json!({
+                    "data": [
+                        {"volid": "backup1:backup/vzdump-qemu-100-2024_01_01-00_00_00.vma.zst",
+                         "backupid": "vzdump-qemu-100-2024_01_01-00_00_00.vma.zst",
+                         "backup-type": "qemu", "backup-id": "100",
+                         "backup-time": 1700000000, "storage": "backup1",
+                         "size": 1073741824u64, "ctime": 1700000001, "content": "backup"}
+                    ]
+                })
+                .to_string(),
+            );
+    });
+    // The storage list must not be consulted when a specific storage is given.
+    let resources_probe = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api2/json/cluster/resources")
+            .query_param("type", "storage");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(r#"{"data":[]}"#);
+    });
+
+    let (manager, _dir) = setup_manager(&server.base_url(), token, Some("pve1")).await;
+    let backups = manager
+        .get_backups("conn", Some("backup1"))
+        .await
+        .expect("backups should be fetched");
+
+    assert_eq!(backups.len(), 1);
+    assert_eq!(
+        backups[0].volid,
+        "backup1:backup/vzdump-qemu-100-2024_01_01-00_00_00.vma.zst"
+    );
+    content_mock.assert();
+    assert_eq!(
+        resources_probe.calls(),
+        0,
+        "the storage list must not be queried for a specific storage"
+    );
+}
+
+#[tokio::test]
+async fn get_backups_aggregation_skips_erroring_storage() {
+    let server = MockServer::start();
+    let token = "root@pam!backups-skip-token";
+    let resources_mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api2/json/cluster/resources")
+            .query_param("type", "storage");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(
+                serde_json::json!({
+                    "data": [
+                        {"storage": "bad", "node": "pve1", "type": "nfs",
+                         "content": "backup", "shared": 1,
+                         "status": "available"},
+                        {"storage": "good", "node": "pve1", "type": "nfs",
+                         "content": "backup", "shared": 1,
+                         "status": "available"}
+                    ]
+                })
+                .to_string(),
+            );
+    });
+    let bad_mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api2/json/nodes/pve1/storage/bad/content")
+            .query_param("content", "backup");
+        then.status(500)
+            .header("content-type", "application/json")
+            .body(r#"{"data":null}"#);
+    });
+    let good_mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api2/json/nodes/pve1/storage/good/content")
+            .query_param("content", "backup");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(
+                serde_json::json!({
+                    "data": [
+                        {"volid": "good:backup/vzdump-qemu-100-2024_01_01-00_00_00.vma.zst",
+                         "backupid": "vzdump-qemu-100-2024_01_01-00_00_00.vma.zst",
+                         "backup-type": "qemu", "backup-id": "100",
+                         "backup-time": 1700000000, "storage": "good",
+                         "size": 1073741824u64, "ctime": 1700000001, "content": "backup"}
+                    ]
+                })
+                .to_string(),
+            );
+    });
+
+    let (manager, _dir) = setup_manager(&server.base_url(), token, Some("pve1")).await;
+    let backups = manager
+        .get_backups("conn", None)
+        .await
+        .expect("aggregation should succeed despite one erroring storage");
+
+    assert_eq!(backups.len(), 1);
+    assert_eq!(
+        backups[0].volid,
+        "good:backup/vzdump-qemu-100-2024_01_01-00_00_00.vma.zst"
+    );
+    resources_mock.assert();
+    bad_mock.assert();
+    good_mock.assert();
 }
 
 #[tokio::test]

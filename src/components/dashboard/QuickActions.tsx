@@ -33,7 +33,7 @@ export function QuickActions({ onRefresh, isRefreshing, onNavigate }: QuickActio
           <Button
             variant="outline"
             className="flex h-auto flex-col items-center gap-1.5 px-2 py-3"
-            onClick={() => onNavigate?.('dashboard')}
+            onClick={() => onNavigate?.('nodes')}
           >
             <Server className="h-4 w-4" />
             <span className="text-xs font-medium">Nodes</span>

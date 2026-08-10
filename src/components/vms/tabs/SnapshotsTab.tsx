@@ -37,7 +37,10 @@ export function SnapshotsTab({ vm, connectionId }: SnapshotsTabProps) {
 
   const handleDelete = () => {
     if (!deleteTarget) return
-    deleteSnapshot.mutate({ node: vm.node, vmid: vm.vmid, vmType: vm.type, name: deleteTarget.name })
+    deleteSnapshot.mutate(
+      { node: vm.node, vmid: vm.vmid, vmType: vm.type, name: deleteTarget.name },
+      { onSettled: () => setDeleteTarget(null) },
+    )
   }
 
   const handleRollback = () => {

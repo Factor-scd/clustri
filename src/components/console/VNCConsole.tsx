@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react'
+import { isTauri, startConsoleProxy, stopConsoleProxy } from '@/lib/tauri'
 
 interface VNCConsoleProps {
   connectionId: string
@@ -14,8 +15,14 @@ export function VNCConsole({ connectionId, node, vmid, onError, onConnected }: V
   const containerRef = useRef<HTMLDivElement>(null)
   const rfbRef = useRef<unknown>(null)
   const stateRef = useRef<ConnectionState>('connecting')
+  const sessionRef = useRef<string | null>(null)
 
   const cleanup = useCallback(() => {
+    if (sessionRef.current) {
+      const sid = sessionRef.current
+      sessionRef.current = null
+      stopConsoleProxy(sid).catch(() => {})
+    }
     if (rfbRef.current) {
       const rfb = rfbRef.current as { disconnect: () => void }
       rfb.disconnect()
@@ -32,26 +39,17 @@ export function VNCConsole({ connectionId, node, vmid, onError, onConnected }: V
       try {
         stateRef.current = 'connecting'
 
-        // Get WebSocket URL for VNC
+        // In Tauri mode the console stream goes through a Rust-side loopback
+        // proxy so self-signed Proxmox certificates are accepted; the returned
+        // local ws:// URL is handed to noVNC.
         let wsUrl: string
-
-        try {
-          // Try real IPC first
-          const { isTauri, createVNCProxy, getWebSocketURL } = await import('@/lib/tauri')
-
-          if (isTauri()) {
-            const [proxyInfo, baseUrl] = await Promise.all([
-              createVNCProxy(connectionId, node, vmid),
-              getWebSocketURL(connectionId, node),
-            ])
-
-            wsUrl = `${baseUrl}/api2/json/nodes/${node}/qemu/${vmid}/vncwebsocket?port=${proxyInfo.port}&vncticket=${encodeURIComponent(proxyInfo.ticket)}`
-          } else {
-            // Dev mode: construct a mock URL
-            wsUrl = `wss://localhost:8006/api2/json/nodes/${node}/qemu/${vmid}/vncwebsocket?port=6000&vncticket=mock-ticket`
-          }
-        } catch {
-          // Fallback for dev mode
+        if (isTauri()) {
+          const info = await startConsoleProxy(connectionId, 'vnc', node, vmid)
+          if (cancelled) return
+          sessionRef.current = info.sessionId
+          wsUrl = info.url
+        } else {
+          // Dev mode: construct a mock URL
           wsUrl = `wss://localhost:8006/api2/json/nodes/${node}/qemu/${vmid}/vncwebsocket?port=6000&vncticket=mock-ticket`
         }
 

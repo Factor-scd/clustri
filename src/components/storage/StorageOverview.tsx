@@ -15,17 +15,28 @@ export function StorageOverview({ connectionId, onStorageClick }: StorageOvervie
   const { data: storageList, isLoading, error } = useStorage(connectionId)
   const [search, setSearch] = useState('')
 
+  // The backend returns one entry per (storage, node) pair, so shared storages
+  // appear once per node (e.g. local-lvm on each node). Dedupe by name for
+  // display, keeping the first entry's node for the click-through.
+  const dedupedStorage = useMemo(() => {
+    const seen = new Set<string>()
+    return (storageList ?? []).filter((s) => {
+      if (seen.has(s.storage)) return false
+      seen.add(s.storage)
+      return true
+    })
+  }, [storageList])
+
   const filteredStorage = useMemo(() => {
-    if (!storageList) return []
-    if (!search) return storageList
+    if (!search) return dedupedStorage
     const query = search.toLowerCase()
-    return storageList.filter(
+    return dedupedStorage.filter(
       (s) =>
         s.storage.toLowerCase().includes(query) ||
         s.type.toLowerCase().includes(query) ||
         s.node.toLowerCase().includes(query)
     )
-  }, [storageList, search])
+  }, [dedupedStorage, search])
 
   if (isLoading) {
     return (
@@ -54,7 +65,7 @@ export function StorageOverview({ connectionId, onStorageClick }: StorageOvervie
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Storage Pools</h2>
           <p className="text-muted-foreground">
-            {storageList?.length ?? 0} storage pools across the cluster
+            {dedupedStorage.length} storage pools across the cluster
           </p>
         </div>
 
@@ -71,7 +82,7 @@ export function StorageOverview({ connectionId, onStorageClick }: StorageOvervie
 
         {/* Storage Grid */}
         {filteredStorage.length === 0 ? (
-          storageList?.length === 0 ? (
+          dedupedStorage.length === 0 ? (
             <EmptyState icon={HardDrive} title="No storage pools found" />
           ) : (
             <EmptyState icon={Search} title="No storage pools match your search" />

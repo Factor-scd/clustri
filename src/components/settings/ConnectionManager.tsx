@@ -4,13 +4,16 @@ import { useToast } from '@/components/ui/toast'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { ConnectionDialog } from '@/components/connections/ConnectionDialog'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { removeConnection as removeConnectionIPC, disconnectFromServer, logout } from '@/lib/tauri'
+import { Plus, Pencil, Trash2, Unplug, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ConnectionConfig } from '@/types/connection'
 
 export function ConnectionManager() {
   const connections = useConnectionStore((s) => s.connections)
   const removeConnection = useConnectionStore((s) => s.removeConnection)
+  const setConnectionStatus = useConnectionStore((s) => s.setConnectionStatus)
+  const setAuthStatus = useConnectionStore((s) => s.setAuthStatus)
   const { addToast } = useToast()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<ConnectionConfig | null>(null)
@@ -30,10 +33,41 @@ export function ConnectionManager() {
     }
   }
 
-  const handleDelete = (id: string, name: string) => {
-    removeConnection(id)
-    addToast(`Connection "${name}" removed`, 'success')
+  const handleDelete = async (id: string, name: string) => {
+    try {
+      // Remove from the backend first so the deletion persists and the keyring
+      // credentials are cleaned up, then mirror it in the store.
+      await removeConnectionIPC(id)
+      removeConnection(id)
+      addToast(`Connection "${name}" removed`, 'success')
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to remove connection', 'error')
+    }
   }
+
+  const handleDisconnect = async (connection: ConnectionConfig) => {
+    try {
+      await disconnectFromServer(connection.id)
+      setConnectionStatus(connection.id, 'disconnected')
+      addToast(`Connection "${connection.name}" disconnected`, 'success')
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to disconnect', 'error')
+    }
+  }
+
+  const handleLogout = async (connection: ConnectionConfig) => {
+    try {
+      await logout(connection.id)
+      setAuthStatus('unauthenticated')
+      setConnectionStatus(connection.id, 'disconnected')
+      addToast(`Logged out of "${connection.name}"`, 'success')
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to log out', 'error')
+    }
+  }
+
+  const isActive = (connection: ConnectionConfig) =>
+    connection.status === 'connected' || connection.status === 'failover'
 
   const deleteTarget = connections.find((c) => c.id === deleteConfirmId) ?? null
 
@@ -75,6 +109,28 @@ export function ConnectionManager() {
                 </div>
               </div>
               <div className="flex items-center gap-1">
+                {isActive(connection) && (
+                  <>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      title="Log out"
+                      onClick={() => handleLogout(connection)}
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      title="Disconnect"
+                      onClick={() => handleDisconnect(connection)}
+                    >
+                      <Unplug className="h-3.5 w-3.5" />
+                    </Button>
+                  </>
+                )}
                 <Button
                   size="icon"
                   variant="ghost"
