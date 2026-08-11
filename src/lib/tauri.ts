@@ -32,9 +32,15 @@ import type {
   ConsoleProxyInfo,
 } from '@/types/proxmox'
 
-// Check if we're running in Tauri
+// Check if we're running inside a Tauri webview.
+//
+// Tauri v2 injects the IPC bridge as `window.__TAURI_INTERNALS__` on every
+// page it hosts (dev and prod). The old `window.__TAURI__` global was the
+// Tauri v1 convention and no longer exists by default in v2 — checking for it
+// made `isTauri()` return false inside the real app, silently falling back to
+// the browser mock data. This mirrors `isTauri()` from `@tauri-apps/api/core`.
 export const isTauri = () => {
-  return '__TAURI__' in window
+  return '__TAURI_INTERNALS__' in window
 }
 
 // Mock responses for development without Tauri
