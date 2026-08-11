@@ -7,13 +7,27 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+site/node_modules
+
+# Build output
 dist
 dist-ssr
+site/dist
+site/.astro
+out
+.output
+
+# Environment variables
+.env
+.env.*
+!.env.example
 *.local
 
 # Rust/Tauri
 src-tauri/target/
+src-tauri/.cargo/config.local.json
 
 # Editor directories and files
 .vscode/*
