@@ -659,10 +659,12 @@ async fn get_stored_credentials(
 }
 
 // Console proxy types
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VNCProxyResponse {
     pub ticket: String,
+    #[serde(deserialize_with = "proxmox::de_u32_lenient")]
     pub port: u32,
     pub cert: String,
 }
@@ -671,6 +673,7 @@ pub struct VNCProxyResponse {
 #[serde(rename_all = "camelCase")]
 pub struct TermProxyResponse {
     pub ticket: String,
+    #[serde(deserialize_with = "proxmox::de_u32_lenient")]
     pub port: u32,
 }
 

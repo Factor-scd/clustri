@@ -111,6 +111,108 @@ async fn create_term_proxy_maps_response() {
 }
 
 #[tokio::test]
+async fn create_vnc_proxy_accepts_string_port() {
+    // Some Proxmox versions report the proxy port as a JSON string.
+    let server = MockServer::start();
+    let token = "root@pam!vnc-token";
+    let mock = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api2/json/nodes/tatooine/qemu/106/vncproxy")
+            .header("Authorization", format!("PVEAPIToken={}", token));
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(
+                serde_json::json!({
+                    "data": {
+                        "ticket": "PVE:vnc:abc",
+                        "port": "5901",
+                        "cert": "MIIB..."
+                    }
+                })
+                .to_string(),
+            );
+    });
+
+    let (manager, _dir) = setup_manager(&server.base_url(), token).await;
+    let proxy = manager
+        .create_vnc_proxy("conn", "tatooine", 106)
+        .await
+        .expect("vnc proxy should be created");
+
+    assert_eq!(proxy.ticket, "PVE:vnc:abc");
+    assert_eq!(proxy.port, 5901);
+    assert_eq!(proxy.cert, "MIIB...");
+    mock.assert();
+}
+
+#[tokio::test]
+async fn create_term_proxy_accepts_string_port() {
+    let server = MockServer::start();
+    let token = "root@pam!term-token";
+    let mock = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api2/json/nodes/pve1/lxc/201/termproxy")
+            .header("Authorization", format!("PVEAPIToken={}", token));
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(
+                serde_json::json!({
+                    "data": {
+                        "ticket": "PVE:term:xyz",
+                        "port": "6100"
+                    }
+                })
+                .to_string(),
+            );
+    });
+
+    let (manager, _dir) = setup_manager(&server.base_url(), token).await;
+    let proxy = manager
+        .create_term_proxy("conn", "pve1", 201)
+        .await
+        .expect("term proxy should be created");
+
+    assert_eq!(proxy.ticket, "PVE:term:xyz");
+    assert_eq!(proxy.port, 6100);
+    mock.assert();
+}
+
+#[tokio::test]
+async fn create_vnc_proxy_rejects_invalid_port_string() {
+    let server = MockServer::start();
+    let token = "root@pam!vnc-token";
+    let mock = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api2/json/nodes/pve1/qemu/100/vncproxy")
+            .header("Authorization", format!("PVEAPIToken={}", token));
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(
+                serde_json::json!({
+                    "data": {
+                        "ticket": "PVE:vnc:abc",
+                        "port": "not-a-port",
+                        "cert": "MIIB..."
+                    }
+                })
+                .to_string(),
+            );
+    });
+
+    let (manager, _dir) = setup_manager(&server.base_url(), token).await;
+    let error = manager
+        .create_vnc_proxy("conn", "pve1", 100)
+        .await
+        .expect_err("non-numeric port string must be rejected");
+    assert!(
+        matches!(error, Error::SerializationError(ref message) if message.contains("not-a-port")),
+        "expected Serialization mentioning the port string, got: {}",
+        error
+    );
+    mock.assert();
+}
+
+#[tokio::test]
 async fn get_websocket_url_converts_https_to_wss() {
     // Explicit port on https.
     let (manager, _dir) = setup_manager("https://192.168.1.10:8006", "root@pam!ws-token").await;

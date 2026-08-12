@@ -1,5 +1,122 @@
 use serde::{Deserialize, Serialize};
 
+/// Deserializes an integer that Proxmox reports either as a JSON number
+/// (integer or integral float) or as a numeric string, inconsistently across
+/// versions and endpoints.
+pub(crate) fn de_u32_lenient<'de, D>(deserializer: D) -> std::result::Result<u32, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct U32Visitor;
+
+    impl<'de> serde::de::Visitor<'de> for U32Visitor {
+        type Value = u32;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("an integer, an integral number, or a numeric string")
+        }
+
+        fn visit_u64<E: serde::de::Error>(self, value: u64) -> std::result::Result<u32, E> {
+            u32::try_from(value).map_err(|_| E::custom(format!("value {} out of range", value)))
+        }
+
+        fn visit_i64<E: serde::de::Error>(self, value: i64) -> std::result::Result<u32, E> {
+            u32::try_from(value).map_err(|_| E::custom(format!("value {} out of range", value)))
+        }
+
+        fn visit_f64<E: serde::de::Error>(self, value: f64) -> std::result::Result<u32, E> {
+            if value.fract() == 0.0 && value >= 0.0 && value <= u32::MAX as f64 {
+                Ok(value as u32)
+            } else {
+                Err(E::custom(format!("value {} is not a valid integer", value)))
+            }
+        }
+
+        fn visit_str<E: serde::de::Error>(self, value: &str) -> std::result::Result<u32, E> {
+            value
+                .parse::<u32>()
+                .map_err(|_| E::custom(format!("invalid integer string '{}'", value)))
+        }
+    }
+
+    deserializer.deserialize_any(U32Visitor)
+}
+
+/// Deserializes a `u64` that Proxmox reports either as a JSON number (integer
+/// or integral float) or as a numeric string.
+pub(crate) fn de_u64_lenient<'de, D>(deserializer: D) -> std::result::Result<u64, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct U64Visitor;
+
+    impl<'de> serde::de::Visitor<'de> for U64Visitor {
+        type Value = u64;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("an integer, an integral number, or a numeric string")
+        }
+
+        fn visit_u64<E: serde::de::Error>(self, value: u64) -> std::result::Result<u64, E> {
+            Ok(value)
+        }
+
+        fn visit_i64<E: serde::de::Error>(self, value: i64) -> std::result::Result<u64, E> {
+            u64::try_from(value).map_err(|_| E::custom(format!("value {} out of range", value)))
+        }
+
+        fn visit_f64<E: serde::de::Error>(self, value: f64) -> std::result::Result<u64, E> {
+            if value.fract() == 0.0 && value >= 0.0 && value <= u64::MAX as f64 {
+                Ok(value as u64)
+            } else {
+                Err(E::custom(format!("value {} is not a valid integer", value)))
+            }
+        }
+
+        fn visit_str<E: serde::de::Error>(self, value: &str) -> std::result::Result<u64, E> {
+            value
+                .parse::<u64>()
+                .map_err(|_| E::custom(format!("invalid integer string '{}'", value)))
+        }
+    }
+
+    deserializer.deserialize_any(U64Visitor)
+}
+
+/// Deserializes an optional `u64` that may be absent, null, a JSON number
+/// (integer or integral float), or a numeric string.
+pub(crate) fn de_u64_opt_lenient<'de, D>(deserializer: D) -> std::result::Result<Option<u64>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct OptU64Visitor;
+
+    impl<'de> serde::de::Visitor<'de> for OptU64Visitor {
+        type Value = Option<u64>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("an integer, an integral number, a numeric string, or null")
+        }
+
+        fn visit_none<E: serde::de::Error>(self) -> std::result::Result<Option<u64>, E> {
+            Ok(None)
+        }
+
+        fn visit_unit<E: serde::de::Error>(self) -> std::result::Result<Option<u64>, E> {
+            Ok(None)
+        }
+
+        fn visit_some<D>(self, inner: D) -> std::result::Result<Option<u64>, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            de_u64_lenient(inner).map(Some)
+        }
+    }
+
+    deserializer.deserialize_option(OptU64Visitor)
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Disk {
@@ -28,7 +145,7 @@ pub struct Node {
     pub status: String,
     #[serde(default)]
     pub cpu: f64,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "de_u32_lenient")]
     pub maxcpu: u32,
     #[serde(default)]
     pub mem: u64,
@@ -63,7 +180,7 @@ pub struct VM {
     pub node: String,
     #[serde(default)]
     pub cpu: f64,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "de_u32_lenient")]
     pub cpus: u32,
     #[serde(default)]
     pub mem: u64,
@@ -315,11 +432,11 @@ pub struct RestoreConfig {
 pub struct StorageContent {
     #[serde(default)]
     pub content: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "de_u64_lenient")]
     pub ctime: u64,
     #[serde(default)]
     pub format: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "de_u64_opt_lenient")]
     pub size: Option<u64>,
     #[serde(default)]
     pub subtype: Option<String>,
@@ -334,17 +451,17 @@ pub struct StorageDetail {
     pub storage: String,
     pub r#type: String,
     pub content: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "de_u32_lenient")]
     pub active: u32,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "de_u32_lenient")]
     pub enabled: u32,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "de_u32_lenient")]
     pub shared: u32,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "de_u64_lenient")]
     pub used: u64,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "de_u64_lenient")]
     pub total: u64,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "de_u64_lenient")]
     pub avail: u64,
     #[serde(default)]
     pub node: String,
