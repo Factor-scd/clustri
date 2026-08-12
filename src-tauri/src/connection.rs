@@ -976,7 +976,7 @@ impl ConnectionManager {
 
         let client = build_client()?;
 
-        let login_url = format!("{}/access/ticket", url);
+        let login_url = format!("{}/api2/json/access/ticket", url);
 
         let params = [("username", username), ("password", password)];
 
@@ -1067,7 +1067,7 @@ impl ConnectionManager {
         let client = build_client()?;
 
         // Validate the token by making an authenticated request
-        let test_url = format!("{}/cluster/status", url);
+        let test_url = format!("{}/api2/json/cluster/status", url);
         let auth_header = format!("PVEAPIToken={}", token);
 
         let response = client
