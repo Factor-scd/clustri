@@ -14,22 +14,22 @@ interface VMListProps {
   onVMClick?: (vm: ProxmoxVM) => void
 }
 
-type VMTypeFilter = 'all' | 'qemu' | 'lxc'
 type VMStatusFilter = 'all' | ProxmoxVM['status']
 
 export function VMList({ connectionId, onVMClick }: VMListProps) {
   const { data: vms, isLoading: vmsLoading, error: vmsError } = useVMs(connectionId)
 
   const [search, setSearch] = useState('')
-  const [typeFilter, setTypeFilter] = useState<VMTypeFilter>('all')
   const [statusFilter, setStatusFilter] = useState<VMStatusFilter>('all')
   const [nodeFilter, setNodeFilter] = useState<string>('all')
 
+  // Filter to only QEMU VMs — LXC containers have their own view.
+  const vmsOnly = useMemo(() => {
+    return vms?.filter((vm) => vm.type === 'qemu') ?? []
+  }, [vms])
+
   const filteredVMs = useMemo(() => {
-    if (!vms) return []
-    return vms.filter((vm) => {
-      // Type filter
-      if (typeFilter !== 'all' && vm.type !== typeFilter) return false
+    return vmsOnly.filter((vm) => {
       // Status filter
       if (statusFilter !== 'all' && vm.status !== statusFilter) return false
       // Node filter
@@ -43,12 +43,11 @@ export function VMList({ connectionId, onVMClick }: VMListProps) {
       }
       return true
     })
-  }, [vms, typeFilter, statusFilter, nodeFilter, search])
+  }, [vmsOnly, statusFilter, nodeFilter, search])
 
   const uniqueNodes = useMemo(() => {
-    if (!vms) return []
-    return [...new Set(vms.map((vm) => vm.node))].sort()
-  }, [vms])
+    return [...new Set(vmsOnly.map((vm) => vm.node))].sort()
+  }, [vmsOnly])
 
   if (vmsLoading) {
     return (
@@ -73,7 +72,7 @@ export function VMList({ connectionId, onVMClick }: VMListProps) {
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Virtual Machines</h2>
           <p className="text-muted-foreground">
-            {vms?.length ?? 0} total VMs across the cluster
+            {vmsOnly.length} total VMs across the cluster
           </p>
         </div>
 
@@ -88,16 +87,6 @@ export function VMList({ connectionId, onVMClick }: VMListProps) {
               className="pl-9"
             />
           </div>
-
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as VMTypeFilter)}
-            className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          >
-            <option value="all">All Types</option>
-            <option value="qemu">VM (QEMU)</option>
-            <option value="lxc">Container (LXC)</option>
-          </select>
 
           <select
             value={statusFilter}
@@ -129,7 +118,7 @@ export function VMList({ connectionId, onVMClick }: VMListProps) {
         <Card>
           <CardContent className="p-0">
             {filteredVMs.length === 0 ? (
-              vms?.length === 0 ? (
+              vmsOnly.length === 0 ? (
                 <EmptyState icon={Box} title="No VMs found" />
               ) : (
                 <EmptyState icon={Search} title="No VMs match your filters" />

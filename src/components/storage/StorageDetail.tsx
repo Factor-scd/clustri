@@ -70,7 +70,7 @@ export function StorageDetail({ connectionId, storage, node, onBack }: StorageDe
     node,
     storage
   )
-  const { data: contentList, isLoading: contentLoading } = useStorageContent(
+  const { data: contentList, isLoading: contentLoading, error: contentError } = useStorageContent(
     connectionId,
     node,
     storage
@@ -237,7 +237,13 @@ export function StorageDetail({ connectionId, storage, node, onBack }: StorageDe
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {!contentList || contentList.length === 0 ? (
+            {contentError ? (
+              <EmptyState
+                icon={File}
+                title="Failed to load content"
+                description={contentError.message}
+              />
+            ) : !contentList || contentList.length === 0 ? (
               <EmptyState icon={File} title="No content found" />
             ) : (
               <div className="space-y-4">

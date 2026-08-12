@@ -156,6 +156,128 @@ async fn get_vms_uses_cluster_resources() {
 }
 
 #[tokio::test]
+async fn get_nodes_accepts_string_and_float_maxcpu() {
+    // Some Proxmox versions report maxcpu as a numeric string or an integral
+    // float instead of an integer.
+    let server = MockServer::start();
+    let token = "root@pam!nodes-token";
+    let mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api2/json/nodes")
+            .header("Authorization", format!("PVEAPIToken={}", token));
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(
+                serde_json::json!({
+                    "data": [
+                        {"node": "pve1", "status": "online", "cpu": 0.12, "maxcpu": "16",
+                         "mem": 8589934592u64, "maxmem": 68719476736u64, "disk": 214748364800u64,
+                         "maxdisk": 858993459200u64, "uptime": 123456, "level": "",
+                         "id": "node/pve1", "type": "node"},
+                        {"node": "pve2", "status": "online", "cpu": 0.0, "maxcpu": 8.0,
+                         "mem": 0, "maxmem": 34359738368u64, "disk": 0,
+                         "maxdisk": 536870912000u64, "uptime": 0, "level": "",
+                         "id": "node/pve2", "type": "node"}
+                    ]
+                })
+                .to_string(),
+            );
+    });
+
+    let (manager, _dir) = setup_manager(&server.base_url(), token, None).await;
+    let nodes = manager
+        .get_nodes("conn")
+        .await
+        .expect("nodes should be fetched");
+
+    assert_eq!(nodes[0].maxcpu, 16);
+    assert_eq!(nodes[1].maxcpu, 8);
+    mock.assert();
+}
+
+#[tokio::test]
+async fn get_vms_accepts_string_and_float_cpus() {
+    // Some Proxmox versions report cpus as a numeric string or an integral
+    // float instead of an integer.
+    let server = MockServer::start();
+    let token = "root@pam!vms-token";
+    let mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api2/json/cluster/resources")
+            .query_param("type", "vm")
+            .header("Authorization", format!("PVEAPIToken={}", token));
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(
+                serde_json::json!({
+                    "data": [
+                        {"vmid": 100, "name": "web01", "type": "qemu", "status": "running",
+                         "node": "pve1", "cpu": 0.03, "cpus": "2", "maxcpu": "2",
+                         "mem": 2147483648u64, "maxmem": 4294967296u64, "disk": 107374182400u64,
+                         "maxdisk": 34359738368u64, "uptime": 99999, "netin": 123, "netout": 456,
+                         "diskread": 789, "diskwrite": 101112, "template": 0, "tags": "prod",
+                         "pid": 1234},
+                        {"vmid": 201, "name": "ct01", "type": "lxc", "status": "running",
+                         "node": "pve2", "cpu": 0.01, "cpus": 4.0, "maxcpu": 4.0,
+                         "mem": 1073741824u64, "maxmem": 2147483648u64, "disk": 107374182400u64,
+                         "maxdisk": 34359738368u64, "uptime": 123, "netin": 1, "netout": 2,
+                         "diskread": 3, "diskwrite": 4, "template": 0, "tags": "", "pid": 5678}
+                    ]
+                })
+                .to_string(),
+            );
+    });
+
+    let (manager, _dir) = setup_manager(&server.base_url(), token, None).await;
+    let vms = manager
+        .get_vms("conn")
+        .await
+        .expect("VMs should be fetched");
+
+    assert_eq!(vms[0].cpus, 2);
+    assert_eq!(vms[1].cpus, 4);
+    mock.assert();
+}
+
+#[tokio::test]
+async fn get_vms_rejects_non_numeric_cpus() {
+    let server = MockServer::start();
+    let token = "root@pam!vms-token";
+    let mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api2/json/cluster/resources")
+            .query_param("type", "vm")
+            .header("Authorization", format!("PVEAPIToken={}", token));
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(
+                serde_json::json!({
+                    "data": [
+                        {"vmid": 100, "name": "web01", "type": "qemu", "status": "running",
+                         "node": "pve1", "cpu": 0.03, "cpus": "many", "maxcpu": 2,
+                         "mem": 2147483648u64, "maxmem": 4294967296u64, "disk": 107374182400u64,
+                         "maxdisk": 34359738368u64, "uptime": 99999, "netin": 0, "netout": 0,
+                         "diskread": 0, "diskwrite": 0, "template": 0, "tags": "prod"}
+                    ]
+                })
+                .to_string(),
+            );
+    });
+
+    let (manager, _dir) = setup_manager(&server.base_url(), token, None).await;
+    let error = manager
+        .get_vms("conn")
+        .await
+        .expect_err("non-numeric cpus must be rejected");
+    assert!(
+        matches!(error, Error::SerializationError(ref message) if message.contains("many")),
+        "expected SerializationError mentioning the cpus value, got: {}",
+        error
+    );
+    mock.assert();
+}
+
+#[tokio::test]
 async fn get_storage_maps_cluster_resources() {
     let server = MockServer::start();
     let token = "root@pam!storage-token";
@@ -250,6 +372,45 @@ async fn get_storage_content_uses_configured_node() {
     // Tolerance: optional metadata is omitted for the second entry.
     assert_eq!(contents[1].format, None);
     assert_eq!(contents[1].subtype, None);
+    mock.assert();
+}
+
+#[tokio::test]
+async fn get_storage_content_accepts_string_metadata() {
+    // Some Proxmox versions report ctime/size as numeric strings instead of
+    // integers; the list must still parse.
+    let server = MockServer::start();
+    let token = "root@pam!content-token";
+    let mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api2/json/nodes/pve1/storage/local/content");
+        then.status(200)
+            .header("content-type", "application/json")
+            .body(
+                serde_json::json!({
+                    "data": [
+                        {"volid": "local:iso/debian-12.iso", "content": "iso",
+                         "ctime": "1700000000", "format": "iso", "size": "68719476736"},
+                        {"volid": "local:vztmpl/ubuntu-22.tar.xz", "content": "vztmpl",
+                         "ctime": 1700000001.0, "format": "tgz"}
+                    ]
+                })
+                .to_string(),
+            );
+    });
+
+    let (manager, _dir) = setup_manager(&server.base_url(), token, Some("pve1")).await;
+    let contents = manager
+        .get_storage_content("conn", "local", Some("pve1"))
+        .await
+        .expect("content should be fetched");
+
+    assert_eq!(contents.len(), 2);
+    assert_eq!(contents[0].ctime, 1700000000);
+    assert_eq!(contents[0].size, Some(68719476736u64));
+    // Integral floats are accepted too; missing size stays None.
+    assert_eq!(contents[1].ctime, 1700000001);
+    assert_eq!(contents[1].size, None);
     mock.assert();
 }
 
