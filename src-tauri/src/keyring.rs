@@ -156,7 +156,7 @@ pub fn describe_error(err: &keyring::Error) -> String {
 
 /// True when a platform error is the macOS `errSecDuplicateItem` code, which
 /// the login keychain reports when an add hits an item that already exists.
-fn is_duplicate_item(err: &(dyn std::error::Error + Send + Sync)) -> bool {
+fn is_duplicate_item(err: &(dyn std::error::Error + Send + Sync + 'static)) -> bool {
     #[cfg(target_os = "macos")]
     {
         if let Some(sec_err) = err.downcast_ref::<security_framework::base::Error>() {
