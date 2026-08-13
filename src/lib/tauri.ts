@@ -8,7 +8,17 @@ import type {
   LoadConnectionsResult,
   ConnectResult,
   ConnectionStatusInfo,
+  ServerType,
 } from '@/types/connection'
+import type {
+  PbsDatastore,
+  PbsVersion,
+  PbsNodeStatus,
+  PbsBackupGroup,
+  PbsSnapshot,
+  PbsSnapshotFile,
+  PbsJob,
+} from '@/types/pbs'
 import type {
   ProxmoxNode,
   ProxmoxVM,
@@ -137,6 +147,7 @@ export const loginWithPassword = async (
 export const loginWithToken = async (
   url: string,
   token: string,
+  serverType: ServerType = 'pve',
 ): Promise<LoginResult> => {
   if (!isTauri()) {
     return mockResponse({
@@ -145,7 +156,7 @@ export const loginWithToken = async (
       csrfToken: '',
     })
   }
-  return invokeCommand<LoginResult>('login_with_token', { url, token })
+  return invokeCommand<LoginResult>('login_with_token', { url, token, serverType })
 }
 
 export const logout = async (connectionId: string): Promise<void> => {
@@ -591,4 +602,282 @@ export const updateTrayMenu = async (
 ): Promise<void> => {
   if (!isTauri()) return
   return invokeCommand<void>('update_tray_menu', { connections })
+}
+
+// Proxmox Backup Server (PBS)
+export const getPbsDatastores = async (connectionId: string): Promise<PbsDatastore[]> => {
+  if (!isTauri()) {
+    return mockResponse([
+      {
+        store: 'backup-store',
+        comment: 'Main backup store',
+        backendType: 'filesystem',
+        mountStatus: 'mounted',
+        total: 2_000_000_000_000,
+        used: 800_000_000_000,
+        avail: 1_200_000_000_000,
+      },
+    ])
+  }
+  return invokeCommand<PbsDatastore[]>('get_pbs_datastores', { connectionId })
+}
+
+export const getPbsVersion = async (connectionId: string): Promise<PbsVersion> => {
+  if (!isTauri()) {
+    return mockResponse({ version: '3.2.3', release: 'bookworm', repoid: 'dd6b00e2' })
+  }
+  return invokeCommand<PbsVersion>('get_pbs_version', { connectionId })
+}
+
+export const getPbsNodeStatus = async (connectionId: string): Promise<PbsNodeStatus> => {
+  if (!isTauri()) {
+    return mockResponse({
+      cpu: 0.15,
+      loadavg: [0.42, 0.38, 0.31],
+      uptime: 5 * 86400,
+      memory: { free: 12_000_000_000, total: 32_000_000_000, used: 20_000_000_000 },
+      root: { avail: 1_200_000_000_000, total: 2_000_000_000_000, used: 800_000_000_000 },
+      swap: { free: 4_000_000_000, total: 4_000_000_000, used: 0 },
+      cpuinfo: { cpus: 8, model: 'AMD Ryzen 7 5700G', sockets: 1 },
+      currentKernel: {
+        machine: 'x86_64',
+        release: '6.8.12-4-pve',
+        sysname: 'Linux',
+        version: '#1 SMP PREEMPT_DYNAMIC',
+      },
+    })
+  }
+  return invokeCommand<PbsNodeStatus>('get_pbs_node_status', { connectionId })
+}
+
+export const getPbsGroups = async (
+  connectionId: string,
+  store: string,
+): Promise<PbsBackupGroup[]> => {
+  if (!isTauri()) {
+    return mockResponse([
+      {
+        backupId: '100',
+        backupType: 'vm',
+        backupCount: 3,
+        lastBackup: 1_700_000_000,
+        comment: 'Web server',
+      },
+      {
+        backupId: '200',
+        backupType: 'ct',
+        backupCount: 2,
+        lastBackup: 1_690_000_000,
+        comment: 'Container host',
+      },
+    ])
+  }
+  return invokeCommand<PbsBackupGroup[]>('get_pbs_groups', { connectionId, store })
+}
+
+export const getPbsSnapshots = async (
+  connectionId: string,
+  store: string,
+  backupId: string,
+  backupType: PbsSnapshot['backupType'],
+): Promise<PbsSnapshot[]> => {
+  if (!isTauri()) {
+    return mockResponse([
+      {
+        backupId,
+        backupType,
+        backupTime: 1_700_000_000,
+        size: 1_500_000_000,
+        protected: true,
+        comment: 'Full backup',
+        verification: { state: 'ok' },
+      },
+      {
+        backupId,
+        backupType,
+        backupTime: 1_700_086_400,
+        size: 900_000_000,
+        comment: 'Incremental backup',
+      },
+    ])
+  }
+  return invokeCommand<PbsSnapshot[]>('get_pbs_snapshots', { connectionId, store, backupId, backupType })
+}
+
+export const getPbsSnapshotFiles = async (
+  connectionId: string,
+  store: string,
+  backupId: string,
+  backupType: PbsSnapshot['backupType'],
+  backupTime: number,
+): Promise<PbsSnapshotFile[]> => {
+  if (!isTauri()) {
+    return mockResponse([
+      { filename: 'client.conf', size: 1024 },
+      { filename: 'drive-scsi0.img.fidx', size: 64 * 1024 * 1024 * 1024, cryptMode: 'none' },
+      { filename: 'index.json.blob', size: 2048 },
+    ])
+  }
+  return invokeCommand<PbsSnapshotFile[]>('get_pbs_snapshot_files', {
+    connectionId,
+    store,
+    backupId,
+    backupType,
+    backupTime,
+  })
+}
+
+export const downloadPbsSnapshotFile = async (
+  connectionId: string,
+  store: string,
+  backupId: string,
+  backupType: PbsSnapshot['backupType'],
+  backupTime: number,
+  fileName: string,
+  decoded: boolean,
+  savePath: string,
+): Promise<string> => {
+  if (!isTauri()) return mockResponse(savePath)
+  return invokeCommand<string>('download_pbs_snapshot_file', {
+    connectionId,
+    store,
+    backupId,
+    backupType,
+    backupTime,
+    fileName,
+    decoded,
+    savePath,
+  })
+}
+
+export const deletePbsSnapshot = async (
+  connectionId: string,
+  store: string,
+  backupId: string,
+  backupType: PbsSnapshot['backupType'],
+  backupTime: number,
+): Promise<void> => {
+  if (!isTauri()) return mockResponse(undefined)
+  return invokeCommand<void>('delete_pbs_snapshot', {
+    connectionId,
+    store,
+    backupId,
+    backupType,
+    backupTime,
+  })
+}
+
+export const deletePbsGroup = async (
+  connectionId: string,
+  store: string,
+  backupId: string,
+  backupType: PbsSnapshot['backupType'],
+): Promise<void> => {
+  if (!isTauri()) return mockResponse(undefined)
+  return invokeCommand<void>('delete_pbs_group', { connectionId, store, backupId, backupType })
+}
+
+export const runPbsVerify = async (connectionId: string, store: string): Promise<string> => {
+  if (!isTauri()) {
+    return mockResponse(`UPID:mock:00000000:00000000:00000000:verify:${store}::`)
+  }
+  return invokeCommand<string>('run_pbs_verify', { connectionId, store })
+}
+
+export const runPbsPrune = async (
+  connectionId: string,
+  store: string,
+  keepLast?: number,
+  keepDaily?: number,
+  keepWeekly?: number,
+  keepMonthly?: number,
+  keepYearly?: number,
+  dryRun?: boolean,
+): Promise<string> => {
+  if (!isTauri()) {
+    return mockResponse(`UPID:mock:00000000:00000000:00000000:prune:${store}::`)
+  }
+  return invokeCommand<string>('run_pbs_prune', {
+    connectionId,
+    store,
+    keepLast,
+    keepDaily,
+    keepWeekly,
+    keepMonthly,
+    keepYearly,
+    dryRun,
+  })
+}
+
+export const runPbsGc = async (connectionId: string, store: string): Promise<string> => {
+  if (!isTauri()) {
+    return mockResponse(`UPID:mock:00000000:00000000:00000000:gc:${store}::`)
+  }
+  return invokeCommand<string>('run_pbs_gc', { connectionId, store })
+}
+
+export const getPbsVerifyJobs = async (
+  connectionId: string,
+  store?: string,
+): Promise<PbsJob[]> => {
+  if (!isTauri()) {
+    return mockResponse([
+      {
+        id: 'verify-1',
+        store: 'backup-store',
+        schedule: 'sun 01:00',
+        comment: 'Weekly verification',
+        lastRunState: 'OK',
+        lastRunEndtime: 1_700_000_000,
+        nextRun: 1_700_600_000,
+        maxDepth: 5,
+      },
+    ])
+  }
+  return invokeCommand<PbsJob[]>('get_pbs_verify_jobs', { connectionId, store })
+}
+
+export const getPbsPruneJobs = async (
+  connectionId: string,
+  store?: string,
+): Promise<PbsJob[]> => {
+  if (!isTauri()) {
+    return mockResponse([
+      {
+        id: 'prune-1',
+        store: 'backup-store',
+        schedule: 'sat 02:00',
+        comment: 'Weekly pruning',
+        lastRunState: 'OK',
+        lastRunEndtime: 1_690_000_000,
+        nextRun: 1_700_000_000,
+        keepLast: 7,
+        keepDaily: 14,
+        keepWeekly: 8,
+        keepMonthly: 6,
+        keepYearly: 2,
+      },
+    ])
+  }
+  return invokeCommand<PbsJob[]>('get_pbs_prune_jobs', { connectionId, store })
+}
+
+export const getPbsGcJobs = async (
+  connectionId: string,
+  store?: string,
+): Promise<PbsJob[]> => {
+  if (!isTauri()) {
+    return mockResponse([
+      {
+        id: 'gc-1',
+        store: 'backup-store',
+        schedule: 'mon 03:00',
+        comment: 'Weekly garbage collection',
+        lastRunState: 'OK',
+        lastRunEndtime: 1_690_000_000,
+        nextRun: 1_700_000_000,
+      },
+    ])
+  }
+  return invokeCommand<PbsJob[]>('get_pbs_gc_jobs', { connectionId, store })
 }

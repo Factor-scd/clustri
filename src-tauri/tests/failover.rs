@@ -10,6 +10,7 @@ use httpmock::prelude::*;
 use httpmock::Mock;
 use clustri::{
     api_request, AuthContext, AuthMode, ConnectionConfig, ConnectionManager, EndpointConfig, Error,
+    ServerType,
 };
 use reqwest::Client;
 use reqwest::Method as RMethod;
@@ -32,6 +33,7 @@ fn token_auth() -> AuthContext {
         token: Some(TOKEN.to_string()),
         ticket: None,
         csrf_token: None,
+        server_type: ServerType::Pve,
     }
 }
 
@@ -70,6 +72,7 @@ async fn setup_manager_with_fallbacks(
         username: None,
         nodes: vec![],
         cluster_id: None,
+        server_type: "pve".to_string(),
     };
     manager
         .add_connection(config, &path)

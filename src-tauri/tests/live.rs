@@ -25,7 +25,7 @@ use std::time::Duration;
 
 use clustri::{
     api_request, derive_node_url, AuthContext, AuthMode, ConnectionConfig, ConnectionManager,
-    EndpointConfig,
+    EndpointConfig, ServerType,
 };
 use reqwest::Method;
 
@@ -136,6 +136,7 @@ async fn manager_with_session(
         username: Some(user.to_string()),
         nodes: vec![],
         cluster_id: None,
+        server_type: "pve".to_string(),
     };
     manager
         .add_connection(config, &path)
@@ -155,6 +156,7 @@ fn ticket_auth(ticket: &str) -> AuthContext {
         token: None,
         ticket: Some(ticket.to_string()),
         csrf_token: None,
+        server_type: ServerType::Pve,
     }
 }
 
@@ -909,6 +911,7 @@ async fn live_failover_to_fallback() {
         username: Some(user.to_string()),
         nodes: vec![],
         cluster_id: None,
+        server_type: "pve".to_string(),
     };
     manager
         .add_connection(config, &path)
@@ -993,6 +996,7 @@ async fn live_cluster_identity_consistent_across_nodes() {
             username: Some(user.to_string()),
             nodes: vec![],
             cluster_id: None,
+            server_type: "pve".to_string(),
         };
         manager
             .add_connection(config, &path)

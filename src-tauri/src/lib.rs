@@ -9,15 +9,20 @@ use tokio::sync::RwLock;
 mod connection;
 mod console_proxy;
 mod error;
+mod keyring;
+mod pbs;
 mod proxmox;
 pub mod tls;
 mod websocket;
 
 pub use connection::{
-    api_request, derive_node_url, AuthContext, AuthMode, ConnectionManager, LoadResult,
+    api_request, derive_node_url, AuthContext, AuthMode, ConnectionManager, LoadResult, ServerType,
 };
 pub use console_proxy::ConsoleProxyInfo;
 pub use error::Error;
+pub use pbs::{
+    PbsBackupGroup, PbsDatastore, PbsJob, PbsNodeStatus, PbsSnapshot, PbsSnapshotFile, PbsVersion,
+};
 pub use proxmox::{
     AddDiskConfig, AddNICConfig, BackupJobConfig, CreateSnapshotConfig, EditNICConfig,
     RestoreConfig, UpdateVMConfig,
@@ -48,6 +53,23 @@ pub struct ConnectionConfig {
     pub nodes: Vec<DiscoveredNode>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cluster_id: Option<String>,
+    #[serde(default = "default_server_type")]
+    pub server_type: String, // "pve" | "pbs"
+}
+
+/// Default server type for connections added without an explicit value. PVE is
+/// the historical behavior and remains the default so older persisted configs
+/// (which have no `serverType` field) keep working.
+fn default_server_type() -> String {
+    "pve".to_string()
+}
+
+impl ConnectionConfig {
+    /// True when this connection targets a Proxmox Backup Server (PBS) instead
+    /// of a Proxmox VE cluster.
+    pub fn is_pbs(&self) -> bool {
+        self.server_type == "pbs"
+    }
 }
 
 /// A node discovered in the cluster connected through a
@@ -299,7 +321,14 @@ async fn get_tasks(
     connection_id: String,
 ) -> Result<Vec<proxmox::Task>> {
     let manager = state.connection_manager.read().await;
-    manager.get_tasks(&connection_id).await
+    // PBS exposes its task list under `/nodes/localhost/tasks` with a
+    // different payload shape than the PVE `/cluster/tasks` endpoint, so the
+    // server type selects the backing method.
+    if manager.is_pbs(&connection_id)? {
+        manager.pbs_get_tasks(&connection_id).await
+    } else {
+        manager.get_tasks(&connection_id).await
+    }
 }
 
 #[tauri::command]
@@ -638,9 +667,10 @@ async fn login_with_token(
     state: tauri::State<'_, AppState>,
     url: String,
     token: String,
+    server_type: String,
 ) -> Result<LoginResult> {
     let manager = state.connection_manager.read().await;
-    manager.login_with_token(&url, &token).await
+    manager.login_with_token(&url, &token, &server_type).await
 }
 
 #[tauri::command]
@@ -716,8 +746,18 @@ async fn connect_websocket(
     url: String,
     app_handle: tauri::AppHandle,
 ) -> Result<()> {
+    // Resolve the auth header server-side from the connection's stored
+    // credentials (token from config/keyring, ticket from session/keyring) so
+    // the frontend never has to hold secrets. A connection with no resolvable
+    // secret connects without an auth header.
+    let auth_header = {
+        let manager = state.connection_manager.read().await;
+        manager.auth_header_for(&connection_id).ok().flatten()
+    };
     let mut ws_manager = state.ws_manager.write().await;
-    ws_manager.connect(connection_id, url, app_handle).await
+    ws_manager
+        .connect(connection_id, url, auth_header, app_handle)
+        .await
 }
 
 #[tauri::command]
@@ -845,6 +885,222 @@ async fn delete_backup(
 ) -> Result<()> {
     let manager = state.connection_manager.read().await;
     manager.delete_backup(&connection_id, &volid).await
+}
+
+// Proxmox Backup Server (PBS) commands
+#[tauri::command]
+async fn get_pbs_datastores(
+    state: tauri::State<'_, AppState>,
+    connection_id: String,
+) -> Result<Vec<pbs::PbsDatastore>> {
+    let manager = state.connection_manager.read().await;
+    manager.pbs_get_datastores(&connection_id).await
+}
+
+#[tauri::command]
+async fn get_pbs_version(
+    state: tauri::State<'_, AppState>,
+    connection_id: String,
+) -> Result<pbs::PbsVersion> {
+    let manager = state.connection_manager.read().await;
+    manager.pbs_get_version(&connection_id).await
+}
+
+#[tauri::command]
+async fn get_pbs_node_status(
+    state: tauri::State<'_, AppState>,
+    connection_id: String,
+) -> Result<pbs::PbsNodeStatus> {
+    let manager = state.connection_manager.read().await;
+    manager.pbs_get_node_status(&connection_id).await
+}
+
+#[tauri::command]
+async fn get_pbs_groups(
+    state: tauri::State<'_, AppState>,
+    connection_id: String,
+    store: String,
+) -> Result<Vec<pbs::PbsBackupGroup>> {
+    let manager = state.connection_manager.read().await;
+    manager.pbs_get_groups(&connection_id, &store).await
+}
+
+#[tauri::command]
+async fn get_pbs_snapshots(
+    state: tauri::State<'_, AppState>,
+    connection_id: String,
+    store: String,
+    backup_id: String,
+    backup_type: String,
+) -> Result<Vec<pbs::PbsSnapshot>> {
+    let manager = state.connection_manager.read().await;
+    manager
+        .pbs_get_snapshots(&connection_id, &store, &backup_id, &backup_type)
+        .await
+}
+
+#[tauri::command]
+async fn get_pbs_snapshot_files(
+    state: tauri::State<'_, AppState>,
+    connection_id: String,
+    store: String,
+    backup_id: String,
+    backup_type: String,
+    backup_time: i64,
+) -> Result<Vec<pbs::PbsSnapshotFile>> {
+    let manager = state.connection_manager.read().await;
+    manager
+        .pbs_get_snapshot_files(&connection_id, &store, &backup_id, &backup_type, backup_time)
+        .await
+}
+
+#[tauri::command]
+//
+// The parameter list is the Tauri invoke IPC contract with the frontend
+// (`downloadPbsSnapshotFile` in src/lib/tauri.ts), so the args cannot be
+// grouped without changing the frontend call site.
+#[allow(clippy::too_many_arguments)]
+async fn download_pbs_snapshot_file(
+    state: tauri::State<'_, AppState>,
+    connection_id: String,
+    store: String,
+    backup_id: String,
+    backup_type: String,
+    backup_time: i64,
+    file_name: String,
+    decoded: bool,
+    save_path: String,
+) -> Result<String> {
+    let manager = state.connection_manager.read().await;
+    manager
+        .pbs_download_snapshot_file(
+            &connection_id,
+            &store,
+            &backup_id,
+            &backup_type,
+            backup_time,
+            &file_name,
+            decoded,
+            &save_path,
+        )
+        .await
+}
+
+#[tauri::command]
+async fn delete_pbs_snapshot(
+    state: tauri::State<'_, AppState>,
+    connection_id: String,
+    store: String,
+    backup_id: String,
+    backup_type: String,
+    backup_time: i64,
+) -> Result<()> {
+    let manager = state.connection_manager.read().await;
+    manager
+        .pbs_delete_snapshot(&connection_id, &store, &backup_id, &backup_type, backup_time)
+        .await
+}
+
+#[tauri::command]
+async fn delete_pbs_group(
+    state: tauri::State<'_, AppState>,
+    connection_id: String,
+    store: String,
+    backup_id: String,
+    backup_type: String,
+) -> Result<()> {
+    let manager = state.connection_manager.read().await;
+    manager
+        .pbs_delete_group(&connection_id, &store, &backup_id, &backup_type)
+        .await
+}
+
+#[tauri::command]
+async fn run_pbs_verify(
+    state: tauri::State<'_, AppState>,
+    connection_id: String,
+    store: String,
+) -> Result<String> {
+    let manager = state.connection_manager.read().await;
+    manager.pbs_run_verify(&connection_id, &store).await
+}
+
+#[tauri::command]
+//
+// The parameter list is the Tauri invoke IPC contract with the frontend
+// (`runPbsPrune` in src/lib/tauri.ts), so the args cannot be grouped without
+// changing the frontend call site.
+#[allow(clippy::too_many_arguments)]
+async fn run_pbs_prune(
+    state: tauri::State<'_, AppState>,
+    connection_id: String,
+    store: String,
+    keep_last: Option<u32>,
+    keep_daily: Option<u32>,
+    keep_weekly: Option<u32>,
+    keep_monthly: Option<u32>,
+    keep_yearly: Option<u32>,
+    dry_run: bool,
+) -> Result<String> {
+    let manager = state.connection_manager.read().await;
+    manager
+        .pbs_run_prune(
+            &connection_id,
+            &store,
+            keep_last,
+            keep_daily,
+            keep_weekly,
+            keep_monthly,
+            keep_yearly,
+            dry_run,
+        )
+        .await
+}
+
+#[tauri::command]
+async fn run_pbs_gc(
+    state: tauri::State<'_, AppState>,
+    connection_id: String,
+    store: String,
+) -> Result<String> {
+    let manager = state.connection_manager.read().await;
+    manager.pbs_run_gc(&connection_id, &store).await
+}
+
+#[tauri::command]
+async fn get_pbs_verify_jobs(
+    state: tauri::State<'_, AppState>,
+    connection_id: String,
+    store: Option<String>,
+) -> Result<Vec<pbs::PbsJob>> {
+    let manager = state.connection_manager.read().await;
+    manager
+        .pbs_get_verify_jobs(&connection_id, store.as_deref())
+        .await
+}
+
+#[tauri::command]
+async fn get_pbs_prune_jobs(
+    state: tauri::State<'_, AppState>,
+    connection_id: String,
+    store: Option<String>,
+) -> Result<Vec<pbs::PbsJob>> {
+    let manager = state.connection_manager.read().await;
+    manager
+        .pbs_get_prune_jobs(&connection_id, store.as_deref())
+        .await
+}
+
+#[tauri::command]
+async fn get_pbs_gc_jobs(
+    state: tauri::State<'_, AppState>,
+    connection_id: String,
+    store: Option<String>,
+) -> Result<Vec<pbs::PbsJob>> {
+    let manager = state.connection_manager.read().await;
+    manager
+        .pbs_get_gc_jobs(&connection_id, store.as_deref())
+        .await
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -975,8 +1231,24 @@ pub fn run() {
             run_backup,
             restore_backup,
             delete_backup,
+            get_pbs_datastores,
+            get_pbs_version,
+            get_pbs_node_status,
+            get_pbs_groups,
+            get_pbs_snapshots,
+            get_pbs_snapshot_files,
+            download_pbs_snapshot_file,
+            delete_pbs_snapshot,
+            delete_pbs_group,
+            run_pbs_verify,
+            run_pbs_prune,
+            run_pbs_gc,
+            get_pbs_verify_jobs,
+            get_pbs_prune_jobs,
+            get_pbs_gc_jobs,
             update_tray_menu,
         ])
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Build the system tray menu
             let show_hide = MenuItemBuilder::new("Show / Hide")

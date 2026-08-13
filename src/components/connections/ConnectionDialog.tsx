@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ShieldAlert, Loader2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useConnectionStore } from '@/stores/connectionStore'
 import { useToast } from '@/components/ui/toast'
 import {
@@ -30,6 +31,7 @@ import type {
   AuthMode,
   CertificateInfo,
   LoginResult,
+  ServerType,
 } from '@/types/connection'
 
 interface ConnectionDialogProps {
@@ -51,6 +53,7 @@ export function ConnectionDialog({ open, onOpenChange, editing }: ConnectionDial
 
   const [step, setStep] = useState<DialogStep>('credentials')
   const [authMode, setAuthMode] = useState<AuthMode>('password')
+  const [serverType, setServerType] = useState<ServerType>('pve')
   const [name, setName] = useState('')
   const [url, setUrl] = useState('')
   const [username, setUsername] = useState('')
@@ -63,6 +66,7 @@ export function ConnectionDialog({ open, onOpenChange, editing }: ConnectionDial
 
   const resetForm = () => {
     setStep('credentials')
+    setServerType('pve')
     setName('')
     setUrl('')
     setUsername('')
@@ -130,7 +134,7 @@ export function ConnectionDialog({ open, onOpenChange, editing }: ConnectionDial
           await loginWithPassword(cleanUrl, username, password)
         }
       } else if (apiToken) {
-        await loginWithToken(cleanUrl, apiToken)
+        await loginWithToken(cleanUrl, apiToken, editing.serverType ?? 'pve')
       }
 
       const config: ConnectionConfig = {
@@ -148,6 +152,7 @@ export function ConnectionDialog({ open, onOpenChange, editing }: ConnectionDial
         isCluster: editing.isCluster,
         authMode,
         username: authMode === 'password' ? username : undefined,
+        serverType: editing.serverType ?? 'pve',
         nodes: editing.nodes,
         clusterId: editing.clusterId,
       }
@@ -191,7 +196,7 @@ export function ConnectionDialog({ open, onOpenChange, editing }: ConnectionDial
         if (!apiToken) {
           throw new Error('API token is required')
         }
-        result = await loginWithToken(cleanUrl, apiToken)
+        result = await loginWithToken(cleanUrl, apiToken, serverType)
       }
 
       if (!isTauri()) {
@@ -211,6 +216,7 @@ export function ConnectionDialog({ open, onOpenChange, editing }: ConnectionDial
           isCluster: false,
           authMode,
           username: authMode === 'password' ? username : undefined,
+          serverType,
         }
 
         await addConnection(config)
@@ -260,6 +266,7 @@ export function ConnectionDialog({ open, onOpenChange, editing }: ConnectionDial
         isCluster: false,
         authMode,
         username: authMode === 'password' ? username : undefined,
+        serverType,
       }
 
       // The backend requires the connection to exist before pinning its
@@ -316,13 +323,57 @@ export function ConnectionDialog({ open, onOpenChange, editing }: ConnectionDial
         {step === 'credentials' && (
           <>
             <DialogHeader>
-              <DialogTitle>{editing ? 'Edit Connection' : 'Connect to Proxmox'}</DialogTitle>
+              <DialogTitle>
+                {editing
+                  ? 'Edit Connection'
+                  : serverType === 'pbs'
+                    ? 'Connect to Proxmox Backup Server'
+                    : 'Connect to Proxmox'}
+              </DialogTitle>
               <DialogDescription>
                 {editing
                   ? 'Update this connection. The server URL cannot be changed; add a new connection to target a different server.'
-                  : 'Sign in with your Proxmox credentials or API token'}
+                  : serverType === 'pbs'
+                    ? 'Sign in with your Proxmox Backup Server credentials or API token'
+                    : 'Sign in with your Proxmox credentials or API token'}
               </DialogDescription>
             </DialogHeader>
+
+            {!editing && (
+              <div className="space-y-2">
+                <Label htmlFor="server-type">Server Type</Label>
+                <div
+                  id="server-type"
+                  role="group"
+                  className="inline-flex h-9 w-full items-center justify-center rounded-md bg-secondary p-1 text-muted-foreground"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setServerType('pve')}
+                    className={cn(
+                      'inline-flex flex-1 items-center justify-center whitespace-nowrap rounded-sm px-3 py-1 text-sm font-medium ring-offset-background transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                      serverType === 'pve'
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'hover:text-foreground',
+                    )}
+                  >
+                    Proxmox VE
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setServerType('pbs')}
+                    className={cn(
+                      'inline-flex flex-1 items-center justify-center whitespace-nowrap rounded-sm px-3 py-1 text-sm font-medium ring-offset-background transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                      serverType === 'pbs'
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'hover:text-foreground',
+                    )}
+                  >
+                    Proxmox Backup Server
+                  </button>
+                </div>
+              </div>
+            )}
 
             <Tabs value={authMode} onValueChange={(v) => { setAuthMode(v as AuthMode); setError(null) }}>
               <TabsList className="w-full">
@@ -335,7 +386,7 @@ export function ConnectionDialog({ open, onOpenChange, editing }: ConnectionDial
                   <Label htmlFor="url">Server URL</Label>
                   <Input
                     id="url"
-                    placeholder="https://192.168.1.10:8006"
+                    placeholder={serverType === 'pbs' ? 'https://192.168.1.10:8007' : 'https://192.168.1.10:8006'}
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     required
@@ -345,7 +396,9 @@ export function ConnectionDialog({ open, onOpenChange, editing }: ConnectionDial
                   <p className="text-xs text-muted-foreground">
                     {editing
                       ? 'Server URL cannot be changed while editing'
-                      : 'The URL of your Proxmox server (must use HTTPS)'}
+                      : serverType === 'pbs'
+                        ? 'The URL of your Proxmox Backup Server (must use HTTPS)'
+                        : 'The URL of your Proxmox server (must use HTTPS)'}
                   </p>
                 </div>
 
@@ -447,7 +500,7 @@ export function ConnectionDialog({ open, onOpenChange, editing }: ConnectionDial
                     <ShieldAlert className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                     <p className="text-sm text-destructive">
                       This is a self-signed or untrusted certificate. Verify the fingerprint
-                      against your Proxmox server&apos;s SSL certificate before trusting.
+                      against your server&apos;s SSL certificate before trusting.
                     </p>
                   </div>
 

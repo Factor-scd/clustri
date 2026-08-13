@@ -41,6 +41,9 @@ pub enum Error {
 
     #[error("Tauri error: {0}")]
     TauriError(#[from] tauri::Error),
+
+    #[error("I/O error: {0}")]
+    IoError(#[from] std::io::Error),
 }
 
 impl Serialize for Error {

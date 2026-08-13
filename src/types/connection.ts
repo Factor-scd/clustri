@@ -2,6 +2,10 @@
 
 export type AuthMode = 'password' | 'token'
 
+/** The kind of server a connection targets. Absent on persisted old
+ * connections, where it is treated as 'pve'. */
+export type ServerType = 'pve' | 'pbs'
+
 export interface ConnectionConfig {
   id: string
   name: string
@@ -16,6 +20,8 @@ export interface ConnectionConfig {
   isCluster: boolean
   authMode: AuthMode
   username?: string
+  /** The kind of server this connection targets ('pve' when absent). */
+  serverType?: ServerType
   /** Nodes discovered in the cluster this connection is anchored on. */
   nodes?: DiscoveredNode[]
   /** The endpoint currently serving this connection (after failover). */
