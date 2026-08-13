@@ -40,6 +40,9 @@ type View =
   | { type: 'backups' }
   | { type: 'storage' }
   | { type: 'storage-detail'; storage: string; node: string }
+  | { type: 'pbs-overview' }
+  | { type: 'pbs-datastores' }
+  | { type: 'pbs-datastore-detail'; store: string }
   | { type: 'settings' }
 
 type CommandCategory = 'recent' | 'vms' | 'actions' | 'navigation' | 'connections'
@@ -194,8 +197,9 @@ export function CommandPalette({
   const activeConnectionId = useConnectionStore((s) => s.activeConnectionId)
   const connections = useConnectionStore((s) => s.connections)
   const setActiveConnection = useConnectionStore((s) => s.setActiveConnection)
+  const serverType = connections.find((c) => c.id === activeConnectionId)?.serverType ?? 'pve'
 
-  const { data: vms = [] } = useVMs(activeConnectionId)
+  const { data: vms = [] } = useVMs(serverType === 'pbs' ? null : activeConnectionId)
 
   // VM mutation hooks
   const startVM = useStartVM()
@@ -210,127 +214,178 @@ export function CommandPalette({
     const items: CommandItem[] = []
 
     // -- Navigation --
-    items.push(
-      {
-        id: 'nav-dashboard',
-        label: 'Go to Dashboard',
-        icon: LayoutDashboard,
-        category: 'navigation',
-        shortcut: '⌘1',
-        keywords: ['dashboard', 'home', 'overview'],
-        onExecute: () => onNavigate({ type: 'dashboard' }),
-      },
-      {
-        id: 'nav-vms',
-        label: 'Go to VMs',
-        icon: Box,
-        category: 'navigation',
-        shortcut: '⌘2',
-        keywords: ['vm', 'vms', 'virtual machines', 'containers'],
-        onExecute: () => onNavigate({ type: 'vms' }),
-      },
-      {
-        id: 'nav-tasks',
-        label: 'Go to Tasks',
-        icon: ListTodo,
-        category: 'navigation',
-        shortcut: '⌘3',
-        keywords: ['tasks', 'jobs', 'queue'],
-        onExecute: () => onNavigate({ type: 'tasks' }),
-      },
-      {
-        id: 'nav-backups',
-        label: 'Go to Backups',
-        icon: Shield,
-        category: 'navigation',
-        shortcut: '⌘4',
-        keywords: ['backups', 'restore', 'backup'],
-        onExecute: () => onNavigate({ type: 'backups' }),
-      },
-      {
-        id: 'nav-storage',
-        label: 'Go to Storage',
-        icon: HardDrive,
-        category: 'navigation',
-        shortcut: '⌘5',
-        keywords: ['storage', 'disks', 'volumes'],
-        onExecute: () => onNavigate({ type: 'storage' }),
-      },
-      {
-        id: 'nav-settings',
-        label: 'Go to Settings',
-        icon: Settings,
-        category: 'navigation',
-        shortcut: '⌘6',
-        keywords: ['settings', 'preferences', 'configuration'],
-        onExecute: () => onNavigate({ type: 'settings' }),
-      },
-      {
-        id: 'nav-add-connection',
-        label: 'Add Connection',
-        icon: Plus,
-        category: 'navigation',
-        keywords: ['add', 'connection', 'server', 'proxmox', 'new'],
-        onExecute: () => onAddConnection(),
-      },
-    )
-
-    // -- VMs --
-    for (const vm of vms) {
-      items.push({
-        id: `vm-detail-${vm.vmid}`,
-        label: vm.name,
-        description: `${vm.type.toUpperCase()} · VMID ${vm.vmid} · ${vm.node} · ${vm.status}`,
-        icon: Server,
-        category: 'vms',
-        keywords: [vm.name, String(vm.vmid), vm.node, vm.type, vm.status],
-        onExecute: () => onNavigate({ type: 'vm-detail', vm }),
-      })
+    if (serverType === 'pbs') {
+      items.push(
+        {
+          id: 'nav-pbs-overview',
+          label: 'Go to PBS Overview',
+          icon: LayoutDashboard,
+          category: 'navigation',
+          shortcut: '⌘1',
+          keywords: ['overview', 'pbs', 'backup server', 'dashboard', 'home'],
+          onExecute: () => onNavigate({ type: 'pbs-overview' }),
+        },
+        {
+          id: 'nav-pbs-datastores',
+          label: 'Go to Datastores',
+          icon: HardDrive,
+          category: 'navigation',
+          shortcut: '⌘2',
+          keywords: ['datastores', 'datastore', 'storage', 'backups'],
+          onExecute: () => onNavigate({ type: 'pbs-datastores' }),
+        },
+        {
+          id: 'nav-tasks',
+          label: 'Go to Tasks',
+          icon: ListTodo,
+          category: 'navigation',
+          shortcut: '⌘3',
+          keywords: ['tasks', 'jobs', 'queue'],
+          onExecute: () => onNavigate({ type: 'tasks' }),
+        },
+        {
+          id: 'nav-settings',
+          label: 'Go to Settings',
+          icon: Settings,
+          category: 'navigation',
+          shortcut: '⌘6',
+          keywords: ['settings', 'preferences', 'configuration'],
+          onExecute: () => onNavigate({ type: 'settings' }),
+        },
+        {
+          id: 'nav-add-connection',
+          label: 'Add Connection',
+          icon: Plus,
+          category: 'navigation',
+          keywords: ['add', 'connection', 'server', 'proxmox', 'pbs', 'new'],
+          onExecute: () => onAddConnection(),
+        },
+      )
+    } else {
+      items.push(
+        {
+          id: 'nav-dashboard',
+          label: 'Go to Dashboard',
+          icon: LayoutDashboard,
+          category: 'navigation',
+          shortcut: '⌘1',
+          keywords: ['dashboard', 'home', 'overview'],
+          onExecute: () => onNavigate({ type: 'dashboard' }),
+        },
+        {
+          id: 'nav-vms',
+          label: 'Go to VMs',
+          icon: Box,
+          category: 'navigation',
+          shortcut: '⌘2',
+          keywords: ['vm', 'vms', 'virtual machines', 'containers'],
+          onExecute: () => onNavigate({ type: 'vms' }),
+        },
+        {
+          id: 'nav-tasks',
+          label: 'Go to Tasks',
+          icon: ListTodo,
+          category: 'navigation',
+          shortcut: '⌘3',
+          keywords: ['tasks', 'jobs', 'queue'],
+          onExecute: () => onNavigate({ type: 'tasks' }),
+        },
+        {
+          id: 'nav-backups',
+          label: 'Go to Backups',
+          icon: Shield,
+          category: 'navigation',
+          shortcut: '⌘4',
+          keywords: ['backups', 'restore', 'backup'],
+          onExecute: () => onNavigate({ type: 'backups' }),
+        },
+        {
+          id: 'nav-storage',
+          label: 'Go to Storage',
+          icon: HardDrive,
+          category: 'navigation',
+          shortcut: '⌘5',
+          keywords: ['storage', 'disks', 'volumes'],
+          onExecute: () => onNavigate({ type: 'storage' }),
+        },
+        {
+          id: 'nav-settings',
+          label: 'Go to Settings',
+          icon: Settings,
+          category: 'navigation',
+          shortcut: '⌘6',
+          keywords: ['settings', 'preferences', 'configuration'],
+          onExecute: () => onNavigate({ type: 'settings' }),
+        },
+        {
+          id: 'nav-add-connection',
+          label: 'Add Connection',
+          icon: Plus,
+          category: 'navigation',
+          keywords: ['add', 'connection', 'server', 'proxmox', 'new'],
+          onExecute: () => onAddConnection(),
+        },
+      )
     }
 
-    // -- VM Actions --
-    for (const vm of vms) {
-      if (vm.status === 'running') {
-        items.push(
-          {
-            id: `action-stop-${vm.vmid}`,
-            label: `Stop ${vm.name}`,
-            description: `Force stop ${vm.type.toUpperCase()} VMID ${vm.vmid}`,
-            icon: Square,
-            category: 'actions',
-            keywords: ['stop', 'halt', 'power off', vm.name, String(vm.vmid)],
-            onExecute: () => stopVM.mutate({ node: vm.node, vmid: vm.vmid, vmType: vm.type }),
-          },
-          {
-            id: `action-shutdown-${vm.vmid}`,
-            label: `Shutdown ${vm.name}`,
-            description: `Gracefully shutdown ${vm.type.toUpperCase()} VMID ${vm.vmid}`,
-            icon: Power,
-            category: 'actions',
-            keywords: ['shutdown', 'graceful', 'power', vm.name, String(vm.vmid)],
-            onExecute: () => shutdownVM.mutate({ node: vm.node, vmid: vm.vmid, vmType: vm.type }),
-          },
-          {
-            id: `action-reboot-${vm.vmid}`,
-            label: `Reboot ${vm.name}`,
-            description: `Reboot ${vm.type.toUpperCase()} VMID ${vm.vmid}`,
-            icon: RotateCw,
-            category: 'actions',
-            keywords: ['reboot', 'restart', vm.name, String(vm.vmid)],
-            onExecute: () => rebootVM.mutate({ node: vm.node, vmid: vm.vmid, vmType: vm.type }),
-          },
-        )
-      }
-      if (vm.status === 'stopped' || vm.status === 'paused' || vm.status === 'suspended') {
+    // -- VMs (not applicable to PBS servers) --
+    if (serverType !== 'pbs') {
+      for (const vm of vms) {
         items.push({
-          id: `action-start-${vm.vmid}`,
-          label: `Start ${vm.name}`,
-          description: `Start ${vm.type.toUpperCase()} VMID ${vm.vmid}`,
-          icon: Play,
-          category: 'actions',
-          keywords: ['start', 'boot', 'power on', vm.name, String(vm.vmid)],
-          onExecute: () => startVM.mutate({ node: vm.node, vmid: vm.vmid, vmType: vm.type }),
+          id: `vm-detail-${vm.vmid}`,
+          label: vm.name,
+          description: `${vm.type.toUpperCase()} · VMID ${vm.vmid} · ${vm.node} · ${vm.status}`,
+          icon: Server,
+          category: 'vms',
+          keywords: [vm.name, String(vm.vmid), vm.node, vm.type, vm.status],
+          onExecute: () => onNavigate({ type: 'vm-detail', vm }),
         })
+      }
+
+      // -- VM Actions --
+      for (const vm of vms) {
+        if (vm.status === 'running') {
+          items.push(
+            {
+              id: `action-stop-${vm.vmid}`,
+              label: `Stop ${vm.name}`,
+              description: `Force stop ${vm.type.toUpperCase()} VMID ${vm.vmid}`,
+              icon: Square,
+              category: 'actions',
+              keywords: ['stop', 'halt', 'power off', vm.name, String(vm.vmid)],
+              onExecute: () => stopVM.mutate({ node: vm.node, vmid: vm.vmid, vmType: vm.type }),
+            },
+            {
+              id: `action-shutdown-${vm.vmid}`,
+              label: `Shutdown ${vm.name}`,
+              description: `Gracefully shutdown ${vm.type.toUpperCase()} VMID ${vm.vmid}`,
+              icon: Power,
+              category: 'actions',
+              keywords: ['shutdown', 'graceful', 'power', vm.name, String(vm.vmid)],
+              onExecute: () => shutdownVM.mutate({ node: vm.node, vmid: vm.vmid, vmType: vm.type }),
+            },
+            {
+              id: `action-reboot-${vm.vmid}`,
+              label: `Reboot ${vm.name}`,
+              description: `Reboot ${vm.type.toUpperCase()} VMID ${vm.vmid}`,
+              icon: RotateCw,
+              category: 'actions',
+              keywords: ['reboot', 'restart', vm.name, String(vm.vmid)],
+              onExecute: () => rebootVM.mutate({ node: vm.node, vmid: vm.vmid, vmType: vm.type }),
+            },
+          )
+        }
+        if (vm.status === 'stopped' || vm.status === 'paused' || vm.status === 'suspended') {
+          items.push({
+            id: `action-start-${vm.vmid}`,
+            label: `Start ${vm.name}`,
+            description: `Start ${vm.type.toUpperCase()} VMID ${vm.vmid}`,
+            icon: Play,
+            category: 'actions',
+            keywords: ['start', 'boot', 'power on', vm.name, String(vm.vmid)],
+            onExecute: () => startVM.mutate({ node: vm.node, vmid: vm.vmid, vmType: vm.type }),
+          })
+        }
       }
     }
 
@@ -351,6 +406,7 @@ export function CommandPalette({
   }, [
     vms,
     connections,
+    serverType,
     onNavigate,
     onAddConnection,
     startVM,

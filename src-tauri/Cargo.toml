@@ -10,12 +10,13 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
 tokio = { version = "1", features = ["full"] }
 thiserror = "2"
-keyring = { version = "3", features = ["apple-native", "windows-native", "linux-native"] }
+keyring-core = "1"
 uuid = { version = "1", features = ["v4"] }
 rustls = "0.23"
 rustls-pemfile = "2"
@@ -24,6 +25,7 @@ x509-cert = "0.2"
 sha2 = "0.10"
 hex = "0.4"
 tokio-tungstenite = { version = "0.24", features = ["rustls-tls-webpki-roots"] }
+http = "1"
 futures-util = "0.3"
 url = "2"
 percent-encoding = "2"
@@ -32,6 +34,16 @@ percent-encoding = "2"
 httpmock = "0.8"
 rcgen = "0.13"
 tempfile = "3"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+apple-native-keyring-store = { version = "1", features = ["keychain"] }
+security-framework = "3"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-native-keyring-store = "1"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+linux-keyutils-keyring-store = "1"
 
 [features]
 default = ["custom-protocol"]

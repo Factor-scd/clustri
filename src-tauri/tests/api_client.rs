@@ -5,7 +5,7 @@
 //! error mapping, query parameters, and URL construction.
 
 use httpmock::prelude::*;
-use clustri::{api_request, AuthContext, AuthMode, Error};
+use clustri::{api_request, AuthContext, AuthMode, Error, ServerType};
 use reqwest::Client;
 use reqwest::Method as RMethod;
 
@@ -18,6 +18,7 @@ fn token_auth() -> AuthContext {
         token: Some("root@pam!test-token".to_string()),
         ticket: None,
         csrf_token: None,
+        server_type: ServerType::Pve,
     }
 }
 
@@ -27,6 +28,7 @@ fn password_auth() -> AuthContext {
         token: None,
         ticket: Some(TICKET.to_string()),
         csrf_token: Some(CSRF_TOKEN.to_string()),
+        server_type: ServerType::Pve,
     }
 }
 

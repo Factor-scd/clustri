@@ -103,8 +103,10 @@ impl ConsoleProxyManager {
         let ws_url = format!("{}{}", origin, path);
 
         // Connect to Proxmox first so an unreachable server fails the command
-        // instead of leaving a dangling local listener.
-        let server = timeout(Duration::from_secs(20), connect_ws(&ws_url))
+        // instead of leaving a dangling local listener. The console websocket
+        // authenticates via the ticket in the URL query, so no auth header is
+        // sent.
+        let server = timeout(Duration::from_secs(20), connect_ws(&ws_url, None))
             .await
             .map_err(|_| Error::WebSocketError("Timed out opening console proxy".to_string()))?
             .map_err(|e| Error::WebSocketError(format!("Cannot open console proxy: {}", e)))?;

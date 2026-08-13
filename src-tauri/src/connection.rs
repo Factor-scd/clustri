@@ -1,4 +1,8 @@
 use crate::error::Error;
+use crate::keyring::{
+    delete_credential as keyring_delete_credential, describe_error as keyring_describe_error,
+    entry as keyring_entry, keyring, set_password as keyring_set_password,
+};
 use crate::proxmox::{
     AddDiskConfig, AddNICConfig, Backup, BackupJob, BackupJobConfig, ClusterNode, ClusterStatus,
     CreateSnapshotConfig, Disk, EditNICConfig, NetworkInterface, Node, RestoreConfig, Snapshot,
@@ -75,16 +79,57 @@ pub enum AuthMode {
     Password,
 }
 
+/// The kind of Proxmox server a connection targets. The two platforms share
+/// the JSON API shape and the ticket/token authentication model but use
+/// different header names and login endpoints.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ServerType {
+    Pve,
+    Pbs,
+}
+
+impl ServerType {
+    /// Maps a connection's `serverType` string to a [`ServerType`]. Any value
+    /// other than `"pbs"` is treated as PVE.
+    pub(crate) fn from_config(s: &str) -> ServerType {
+        if s == "pbs" {
+            ServerType::Pbs
+        } else {
+            ServerType::Pve
+        }
+    }
+
+    /// The `Authorization` header value prefix for token authentication
+    /// (`PVEAPIToken` for VE, `PBSAPIToken` for PBS).
+    pub(crate) fn token_header_name(self) -> &'static str {
+        match self {
+            ServerType::Pve => "PVEAPIToken",
+            ServerType::Pbs => "PBSAPIToken",
+        }
+    }
+
+    /// The `Cookie` header value prefix for ticket authentication
+    /// (`PVEAuthCookie` for VE, `PBSAuthCookie` for PBS).
+    pub(crate) fn cookie_header_name(self) -> &'static str {
+        match self {
+            ServerType::Pve => "PVEAuthCookie",
+            ServerType::Pbs => "PBSAuthCookie",
+        }
+    }
+}
+
 /// Authentication material for a Proxmox API request.
 ///
-/// Token mode uses `token` as a `PVEAPIToken` header; password mode uses
-/// `ticket` as a `PVEAuthCookie` (plus `csrf_token` for non-GET requests).
+/// Token mode uses `token` as a `PVEAPIToken`/`PBSAPIToken` header; password
+/// mode uses `ticket` as a `PVEAuthCookie`/`PBSAuthCookie` (plus `csrf_token`
+/// for non-GET requests). The header names are chosen from `server_type`.
 #[derive(Debug, Clone)]
 pub struct AuthContext {
     pub mode: AuthMode,
     pub token: Option<String>,
     pub ticket: Option<String>,
     pub csrf_token: Option<String>,
+    pub server_type: ServerType,
 }
 
 /// Builds the full Proxmox API URL for a request.
@@ -101,7 +146,7 @@ fn build_api_url(base_url: &str, path: &str) -> crate::Result<Url> {
 /// Deserializes an API response payload into `T`, mapping a parse failure to a
 /// [`crate::Error::SerializationError`] that names the endpoint so the
 /// mismatch is easy to diagnose.
-fn parse_api<T>(endpoint: &str, data: serde_json::Value) -> crate::Result<T>
+pub(crate) fn parse_api<T>(endpoint: &str, data: serde_json::Value) -> crate::Result<T>
 where
     T: serde::de::DeserializeOwned,
 {
@@ -160,29 +205,7 @@ pub async fn api_request(
     }
 
     let mut request = client.request(method, url);
-    match auth.mode {
-        AuthMode::Token => {
-            let token = auth
-                .token
-                .as_deref()
-                .ok_or_else(|| Error::InvalidCredentials("No API token configured".to_string()))?;
-            request = request.header("Authorization", format!("PVEAPIToken={}", token));
-        }
-        AuthMode::Password => {
-            let ticket = auth
-                .ticket
-                .as_deref()
-                .ok_or_else(|| Error::AuthError("Not logged in: no session ticket".to_string()))?;
-            request = request.header("Cookie", format!("PVEAuthCookie={}", ticket));
-            if needs_csrf {
-                let csrf = auth
-                    .csrf_token
-                    .as_deref()
-                    .ok_or_else(|| Error::AuthError("Not logged in: no CSRF token".to_string()))?;
-                request = request.header("CSRFPreventionToken", csrf);
-            }
-        }
-    }
+    request = apply_auth_headers(request, auth, needs_csrf)?;
 
     if let Some(fields) = form {
         request = request.form(fields);
@@ -202,13 +225,7 @@ pub async fn api_request(
 
     let status = response.status();
     let text = response.text().await.map_err(Error::HttpError)?;
-    let body: serde_json::Value = serde_json::from_str(&text).unwrap_or_else(|_| {
-        if text.is_empty() {
-            serde_json::Value::Null
-        } else {
-            serde_json::Value::String(text)
-        }
-    });
+    let body = parse_body_text(&text);
 
     if !status.is_success() {
         let message = error_message_from_body(&body, status.as_u16());
@@ -216,6 +233,63 @@ pub async fn api_request(
     }
 
     Ok(body.get("data").cloned().unwrap_or(body))
+}
+
+/// Parses a raw response body into a JSON value, treating an empty body as
+/// `Null` and a non-JSON body as a plain string. The standard
+/// `{ "data": ... }` envelope is left intact; callers decide whether to
+/// unwrap it.
+fn parse_body_text(text: &str) -> serde_json::Value {
+    match serde_json::from_str(text) {
+        Ok(value) => value,
+        Err(_) if text.is_empty() => serde_json::Value::Null,
+        Err(_) => serde_json::Value::String(text.to_string()),
+    }
+}
+
+/// Applies the authentication headers from `auth` to a request builder.
+///
+/// Token mode sets an `Authorization` header whose value prefix depends on the
+/// server type (`PVEAPIToken`/`PBSAPIToken`). Password mode sets a `Cookie`
+/// header (`PVEAuthCookie`/`PBSAuthCookie`) and, for non-GET requests, the
+/// `CSRFPreventionToken` header. Missing secrets surface as
+/// [`Error::InvalidCredentials`]/[`Error::AuthError`], matching the behavior
+/// of the pre-refactor inline injection in `api_request`.
+fn apply_auth_headers(
+    mut request: reqwest::RequestBuilder,
+    auth: &AuthContext,
+    needs_csrf: bool,
+) -> crate::Result<reqwest::RequestBuilder> {
+    match auth.mode {
+        AuthMode::Token => {
+            let token = auth
+                .token
+                .as_deref()
+                .ok_or_else(|| Error::InvalidCredentials("No API token configured".to_string()))?;
+            request = request.header(
+                "Authorization",
+                format!("{}={}", auth.server_type.token_header_name(), token),
+            );
+        }
+        AuthMode::Password => {
+            let ticket = auth
+                .ticket
+                .as_deref()
+                .ok_or_else(|| Error::AuthError("Not logged in: no session ticket".to_string()))?;
+            request = request.header(
+                "Cookie",
+                format!("{}={}", auth.server_type.cookie_header_name(), ticket),
+            );
+            if needs_csrf {
+                let csrf = auth
+                    .csrf_token
+                    .as_deref()
+                    .ok_or_else(|| Error::AuthError("Not logged in: no CSRF token".to_string()))?;
+                request = request.header("CSRFPreventionToken", csrf);
+            }
+        }
+    }
+    Ok(request)
 }
 
 /// Builds the error message surfaced for a non-success API response.
@@ -267,9 +341,9 @@ fn error_message_from_body(body: &serde_json::Value, status: u16) -> String {
     format!("Proxmox API error (HTTP {})", status)
 }
 
-struct Connection {
-    config: ConnectionConfig,
-    client: Client,
+pub(crate) struct Connection {
+    pub(crate) config: ConnectionConfig,
+    pub(crate) client: Client,
     ticket: Mutex<Option<String>>,
     csrf_token: Mutex<Option<String>>,
     current_endpoint_index: Mutex<usize>,
@@ -293,7 +367,8 @@ impl Connection {
     /// Token mode reads the token from the connection config, falling back to
     /// the keyring. Password mode uses the in-memory session, loading the
     /// ticket/CSRF token from the keyring and caching them if absent.
-    fn auth_context(&self) -> crate::Result<AuthContext> {
+    pub(crate) fn auth_context(&self) -> crate::Result<AuthContext> {
+        let server_type = ServerType::from_config(&self.config.server_type);
         if self.config.auth_mode == "token" {
             let token = match self.config.primary.token.as_deref() {
                 Some(token) if !token.is_empty() => Some(token.to_string()),
@@ -304,6 +379,7 @@ impl Connection {
                 token,
                 ticket: None,
                 csrf_token: None,
+                server_type,
             })
         } else {
             let ticket = self
@@ -315,6 +391,7 @@ impl Connection {
                 token: None,
                 ticket: Some(ticket),
                 csrf_token,
+                server_type,
             })
         }
     }
@@ -326,7 +403,7 @@ impl Connection {
             Ok(entry) => match entry.get_password() {
                 Ok(value) => Ok(Some(value)),
                 Err(keyring::Error::NoEntry) => Ok(None),
-                Err(e) => Err(Error::KeyringError(e.to_string())),
+                Err(e) => Err(Error::KeyringError(keyring_describe_error(&e))),
             },
             Err(_) => Ok(None),
         }
@@ -357,7 +434,7 @@ impl Connection {
     /// Returns the ordered, deduplicated candidate endpoint URLs for failover:
     /// the primary first, followed by each configured fallback. Empty URLs are
     /// dropped and duplicates are collapsed, preserving order.
-    fn endpoint_urls(&self) -> Vec<String> {
+    pub(crate) fn endpoint_urls(&self) -> Vec<String> {
         let mut urls: Vec<String> = Vec::new();
         let primary = self.config.primary.url.clone();
         let fallbacks = self
@@ -376,7 +453,7 @@ impl Connection {
 
     /// Remembers the endpoint that last served a request, so the next request
     /// resumes rotation there instead of re-testing a down primary.
-    fn set_endpoint_index(&self, idx: usize) {
+    pub(crate) fn set_endpoint_index(&self, idx: usize) {
         if let Ok(mut guard) = self.current_endpoint_index.lock() {
             *guard = idx;
         }
@@ -384,7 +461,7 @@ impl Connection {
 
     /// Records the runtime status of the last request: `"connected"`,
     /// `"failover"`, or `"failed"`.
-    fn set_runtime_status(&self, status: &str) {
+    pub(crate) fn set_runtime_status(&self, status: &str) {
         if let Ok(mut guard) = self.runtime_status.lock() {
             *guard = status.to_string();
         }
@@ -406,7 +483,7 @@ impl Connection {
     /// (connection refused, timeouts, DNS resolution) trigger failover to the
     /// next candidate; authentication and API errors are returned immediately
     /// without rotating.
-    async fn request(
+    pub(crate) async fn request(
         &self,
         method: Method,
         path: &str,
@@ -439,15 +516,95 @@ impl Connection {
         Err(last_transport_err
             .unwrap_or_else(|| Error::ConnectionFailed("no endpoints available".to_string())))
     }
-}
 
-fn keyring_service() -> &'static str {
-    "clustri"
-}
+    /// Streams a GET response body (binary, no `{data}` envelope unwrap) to
+    /// `dest`.
+    ///
+    /// Uses the same endpoint rotation and auth as `request()`: transport
+    /// failures rotate to the next candidate endpoint, while auth/API/other
+    /// errors propagate immediately. Returns the number of bytes written.
+    ///
+    /// Used by the PBS backup-download endpoints, which stream raw archive
+    /// bytes rather than a JSON envelope.
+    pub(crate) async fn download_to_file(
+        &self,
+        path: &str,
+        query: &[(&str, String)],
+        dest: &std::path::Path,
+    ) -> crate::Result<u64> {
+        let auth = self.auth_context()?;
+        let candidates = self.endpoint_urls();
+        let start = *self
+            .current_endpoint_index
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let mut last_transport_err = None;
+        for offset in 0..candidates.len() {
+            let idx = (start + offset) % candidates.len();
+            let url = &candidates[idx];
+            match self
+                .download_from_endpoint(url, path, query, &auth, dest)
+                .await
+            {
+                Ok(bytes) => {
+                    self.set_endpoint_index(idx);
+                    self.set_runtime_status(if idx == 0 { "connected" } else { "failover" });
+                    return Ok(bytes);
+                }
+                Err(Error::ConnectionFailed(message)) => {
+                    last_transport_err = Some(Error::ConnectionFailed(message));
+                }
+                Err(error) => return Err(error),
+            }
+        }
+        self.set_runtime_status("failed");
+        Err(last_transport_err
+            .unwrap_or_else(|| Error::ConnectionFailed("no endpoints available".to_string())))
+    }
 
-fn keyring_entry(connection_id: &str, field: &str) -> crate::Result<keyring::Entry> {
-    let key = format!("{}:{}", connection_id, field);
-    keyring::Entry::new(keyring_service(), &key).map_err(|e| Error::KeyringError(e.to_string()))
+    /// Performs a single raw GET download against `base_url` and writes the
+    /// response body to `dest`. Auth headers mirror `api_request` (a GET needs
+    /// no CSRF header, but the cookie/authorization header is always set); a
+    /// non-success status is surfaced as [`Error::ApiError`].
+    async fn download_from_endpoint(
+        &self,
+        base_url: &str,
+        path: &str,
+        query: &[(&str, String)],
+        auth: &AuthContext,
+        dest: &std::path::Path,
+    ) -> crate::Result<u64> {
+        let mut url = build_api_url(base_url, path)?;
+        {
+            let mut pairs = url.query_pairs_mut();
+            for (key, value) in query {
+                pairs.append_pair(key, value);
+            }
+        }
+
+        let request = apply_auth_headers(self.client.get(url), auth, false)?;
+        let response = request.send().await.map_err(|e| {
+            if e.is_connect() || e.is_timeout() || e.is_request() {
+                // Transport-level failures are surfaced as `ConnectionFailed`
+                // so the caller can fail over to another endpoint.
+                Error::ConnectionFailed(format!("Cannot connect to server: {}", e))
+            } else {
+                Error::HttpError(e)
+            }
+        })?;
+
+        let status = response.status();
+        if !status.is_success() {
+            let text = response.text().await.map_err(Error::HttpError)?;
+            let body = parse_body_text(&text);
+            let message = error_message_from_body(&body, status.as_u16());
+            return Err(Error::ApiError(message));
+        }
+
+        let bytes = response.bytes().await.map_err(Error::HttpError)?;
+        tokio::fs::write(dest, &bytes).await?;
+        Ok(bytes.len() as u64)
+    }
 }
 
 pub struct ConnectionManager {
@@ -534,22 +691,10 @@ impl ConnectionManager {
     pub async fn remove_connection(&mut self, id: &str, path: &Path) -> crate::Result<()> {
         self.connections.remove(id);
         // Clear stored credentials from keyring
-        let _ = keyring_entry(id, "ticket").and_then(|e| {
-            e.delete_credential()
-                .map_err(|e| Error::KeyringError(e.to_string()))
-        });
-        let _ = keyring_entry(id, "csrf_token").and_then(|e| {
-            e.delete_credential()
-                .map_err(|e| Error::KeyringError(e.to_string()))
-        });
-        let _ = keyring_entry(id, "password").and_then(|e| {
-            e.delete_credential()
-                .map_err(|e| Error::KeyringError(e.to_string()))
-        });
-        let _ = keyring_entry(id, "token").and_then(|e| {
-            e.delete_credential()
-                .map_err(|e| Error::KeyringError(e.to_string()))
-        });
+        let _ = keyring_delete_credential(id, "ticket");
+        let _ = keyring_delete_credential(id, "csrf_token");
+        let _ = keyring_delete_credential(id, "password");
+        let _ = keyring_delete_credential(id, "token");
         if self.active_connection_id.as_deref() == Some(id) {
             self.active_connection_id = None;
         }
@@ -655,110 +800,116 @@ impl ConnectionManager {
 
         // Same-cluster merge: when this connection belongs to the same cluster
         // as an existing one, fold its endpoint and node list into the
-        // existing connection and drop it.
-        let cluster_id = {
+        // existing connection and drop it. PBS connections are single-host and
+        // never participate in cluster merging.
+        let (cluster_id, server_type) = {
             let conn = self
                 .connections
                 .get(id)
                 .expect("connection existence was checked above");
-            conn.config.cluster_id.clone()
+            (
+                conn.config.cluster_id.clone(),
+                conn.config.server_type.clone(),
+            )
         };
 
-        if let Some(cid) = cluster_id.filter(|cid| !cid.is_empty()) {
-            let other_id = self
-                .connections
-                .iter()
-                .find(|(other_id, conn)| {
-                    other_id.as_str() != id
-                        && conn.config.cluster_id.as_deref() == Some(cid.as_str())
-                })
-                .map(|(other_id, _)| other_id.clone());
+        if server_type != "pbs" {
+            if let Some(cid) = cluster_id.filter(|cid| !cid.is_empty()) {
+                let other_id = self
+                    .connections
+                    .iter()
+                    .find(|(other_id, conn)| {
+                        other_id.as_str() != id
+                            && conn.config.cluster_id.as_deref() == Some(cid.as_str())
+                    })
+                    .map(|(other_id, _)| other_id.clone());
 
-            if let Some(other_id) = other_id {
-                let (this_primary_url, this_primary_node, this_nodes) = {
-                    let conn = self
-                        .connections
-                        .get(id)
-                        .expect("connection existence was checked above");
-                    (
-                        conn.config.primary.url.clone(),
-                        conn.config.primary.node.clone(),
-                        conn.config.nodes.clone(),
-                    )
-                };
+                if let Some(other_id) = other_id {
+                    let (this_primary_url, this_primary_node, this_nodes) = {
+                        let conn = self
+                            .connections
+                            .get(id)
+                            .expect("connection existence was checked above");
+                        (
+                            conn.config.primary.url.clone(),
+                            conn.config.primary.node.clone(),
+                            conn.config.nodes.clone(),
+                        )
+                    };
 
-                {
-                    let other = self
-                        .connections
-                        .get_mut(&other_id)
-                        .expect("merge target was located above");
-                    // This connection's primary endpoint becomes a fallback on
-                    // the surviving connection, deduplicated case-insensitively.
-                    let url_known = other
-                        .config
-                        .fallbacks
-                        .iter()
-                        .any(|endpoint| endpoint.url.eq_ignore_ascii_case(&this_primary_url));
-                    if !url_known {
-                        other.config.fallbacks.push(EndpointConfig {
-                            url: this_primary_url.clone(),
-                            node: this_primary_node.clone(),
-                            token: None,
-                        });
-                    }
-                    // Adopt the merging connection's primary node only when the
-                    // surviving connection has none yet.
-                    if other
-                        .config
-                        .primary
-                        .node
-                        .as_deref()
-                        .map_or(true, str::is_empty)
                     {
-                        other.config.primary.node = this_primary_node;
-                    }
-                    // Merge the node lists (dedup by URL), then re-derive each
-                    // node's primary marker against the surviving connection's
-                    // primary URL.
-                    let other_primary_url = other.config.primary.url.clone();
-                    for node in this_nodes {
-                        if !other
+                        let other = self
+                            .connections
+                            .get_mut(&other_id)
+                            .expect("merge target was located above");
+                        // This connection's primary endpoint becomes a fallback on
+                        // the surviving connection, deduplicated case-insensitively.
+                        let url_known = other
                             .config
-                            .nodes
+                            .fallbacks
                             .iter()
-                            .any(|existing| existing.url.eq_ignore_ascii_case(&node.url))
+                            .any(|endpoint| endpoint.url.eq_ignore_ascii_case(&this_primary_url));
+                        if !url_known {
+                            other.config.fallbacks.push(EndpointConfig {
+                                url: this_primary_url.clone(),
+                                node: this_primary_node.clone(),
+                                token: None,
+                            });
+                        }
+                        // Adopt the merging connection's primary node only when the
+                        // surviving connection has none yet.
+                        if other
+                            .config
+                            .primary
+                            .node
+                            .as_deref()
+                            .map_or(true, str::is_empty)
                         {
-                            other.config.nodes.push(node);
+                            other.config.primary.node = this_primary_node;
+                        }
+                        // Merge the node lists (dedup by URL), then re-derive each
+                        // node's primary marker against the surviving connection's
+                        // primary URL.
+                        let other_primary_url = other.config.primary.url.clone();
+                        for node in this_nodes {
+                            if !other
+                                .config
+                                .nodes
+                                .iter()
+                                .any(|existing| existing.url.eq_ignore_ascii_case(&node.url))
+                            {
+                                other.config.nodes.push(node);
+                            }
+                        }
+                        for node in &mut other.config.nodes {
+                            node.is_primary = node.url.eq_ignore_ascii_case(&other_primary_url);
+                        }
+                        if other
+                            .config
+                            .primary
+                            .node
+                            .as_deref()
+                            .map_or(true, str::is_empty)
+                        {
+                            if let Some(primary) =
+                                other.config.nodes.iter().find(|node| node.is_primary)
+                            {
+                                other.config.primary.node = Some(primary.name.clone());
+                            }
                         }
                     }
-                    for node in &mut other.config.nodes {
-                        node.is_primary = node.url.eq_ignore_ascii_case(&other_primary_url);
-                    }
-                    if other
-                        .config
-                        .primary
-                        .node
-                        .as_deref()
-                        .map_or(true, str::is_empty)
-                    {
-                        if let Some(primary) =
-                            other.config.nodes.iter().find(|node| node.is_primary)
-                        {
-                            other.config.primary.node = Some(primary.name.clone());
-                        }
-                    }
-                }
 
-                self.connections.remove(id);
-                if self.active_connection_id.as_deref() == Some(id) {
-                    self.active_connection_id = Some(other_id.clone());
+                    self.connections.remove(id);
+                    if self.active_connection_id.as_deref() == Some(id) {
+                        self.active_connection_id = Some(other_id.clone());
+                    }
+                    self.persist(path)?;
+                    return Ok(ConnectResult {
+                        connection_id: other_id.clone(),
+                        merged_into: Some(other_id),
+                        status: "connected".to_string(),
+                    });
                 }
-                self.persist(path)?;
-                return Ok(ConnectResult {
-                    connection_id: other_id.clone(),
-                    merged_into: Some(other_id),
-                    status: "connected".to_string(),
-                });
             }
         }
 
@@ -800,7 +951,11 @@ impl ConnectionManager {
         let conn = self.connection(id)?;
         conn.set_endpoint_index(0);
         conn.set_runtime_status("connected");
-        self.discover_nodes(id).await?;
+        // PBS is single-host: there is no node list or cluster identity to
+        // discover, so the discovery pass is skipped entirely.
+        if !conn.config.is_pbs() {
+            self.discover_nodes(id).await?;
+        }
         Ok(())
     }
 
@@ -872,10 +1027,17 @@ impl ConnectionManager {
             });
         }
 
-        let transport_failed = match self.discover_nodes(connection_id).await {
-            Ok(_) => false,
-            Err(Error::ConnectionFailed(_)) => true,
-            Err(_) => false,
+        // PBS connections have no discoverable node list, so the status poll
+        // reports the snapshot and the current runtime status without any
+        // discovery request.
+        let transport_failed = if self.connection(connection_id)?.config.is_pbs() {
+            false
+        } else {
+            match self.discover_nodes(connection_id).await {
+                Ok(_) => false,
+                Err(Error::ConnectionFailed(_)) => true,
+                Err(_) => false,
+            }
         };
 
         let (primary_url, current_endpoint_url, nodes) = self.status_snapshot(connection_id)?;
@@ -1024,22 +1186,10 @@ impl ConnectionManager {
         };
 
         // Store credentials in keyring for later use
-        keyring_entry(&connection_id, "ticket").and_then(|e| {
-            e.set_password(&ticket)
-                .map_err(|e| Error::KeyringError(e.to_string()))
-        })?;
-        keyring_entry(&connection_id, "csrf_token").and_then(|e| {
-            e.set_password(&csrf_token)
-                .map_err(|e| Error::KeyringError(e.to_string()))
-        })?;
-        keyring_entry(&connection_id, "username").and_then(|e| {
-            e.set_password(username)
-                .map_err(|e| Error::KeyringError(e.to_string()))
-        })?;
-        keyring_entry(&connection_id, "password").and_then(|e| {
-            e.set_password(password)
-                .map_err(|e| Error::KeyringError(e.to_string()))
-        })?;
+        keyring_set_password(&connection_id, "ticket", &ticket)?;
+        keyring_set_password(&connection_id, "csrf_token", &csrf_token)?;
+        keyring_set_password(&connection_id, "username", username)?;
+        keyring_set_password(&connection_id, "password", password)?;
 
         // Keep the in-memory session of an already-added connection in sync so
         // requests made right after login have auth available.
@@ -1054,7 +1204,12 @@ impl ConnectionManager {
         })
     }
 
-    pub async fn login_with_token(&self, url: &str, token: &str) -> crate::Result<LoginResult> {
+    pub async fn login_with_token(
+        &self,
+        url: &str,
+        token: &str,
+        server_type: &str,
+    ) -> crate::Result<LoginResult> {
         if url.is_empty() {
             return Err(Error::InvalidUrl("URL cannot be empty".to_string()));
         }
@@ -1066,9 +1221,16 @@ impl ConnectionManager {
 
         let client = build_client()?;
 
-        // Validate the token by making an authenticated request
-        let test_url = format!("{}/api2/json/cluster/status", url);
-        let auth_header = format!("PVEAPIToken={}", token);
+        // Validate the token by making an authenticated request. PVE exposes
+        // `/cluster/status`; PBS (which has no cluster concept) validates
+        // against `/version` instead. The header prefix follows the server
+        // type (`PVEAPIToken` vs `PBSAPIToken`).
+        let server_type = ServerType::from_config(server_type);
+        let test_url = match server_type {
+            ServerType::Pbs => format!("{}/api2/json/version", url),
+            ServerType::Pve => format!("{}/api2/json/cluster/status", url),
+        };
+        let auth_header = format!("{}={}", server_type.token_header_name(), token);
 
         let response = client
             .get(&test_url)
@@ -1097,10 +1259,7 @@ impl ConnectionManager {
         };
 
         // Store token in keyring for later use
-        keyring_entry(&connection_id, "token").and_then(|e| {
-            e.set_password(token)
-                .map_err(|e| Error::KeyringError(e.to_string()))
-        })?;
+        keyring_set_password(&connection_id, "token", token)?;
 
         Ok(LoginResult {
             connection_id,
@@ -1110,26 +1269,11 @@ impl ConnectionManager {
     }
 
     pub async fn logout(&self, connection_id: &str) -> crate::Result<()> {
-        let _ = keyring_entry(connection_id, "ticket").and_then(|e| {
-            e.delete_credential()
-                .map_err(|e| Error::KeyringError(e.to_string()))
-        });
-        let _ = keyring_entry(connection_id, "csrf_token").and_then(|e| {
-            e.delete_credential()
-                .map_err(|e| Error::KeyringError(e.to_string()))
-        });
-        let _ = keyring_entry(connection_id, "password").and_then(|e| {
-            e.delete_credential()
-                .map_err(|e| Error::KeyringError(e.to_string()))
-        });
-        let _ = keyring_entry(connection_id, "token").and_then(|e| {
-            e.delete_credential()
-                .map_err(|e| Error::KeyringError(e.to_string()))
-        });
-        let _ = keyring_entry(connection_id, "username").and_then(|e| {
-            e.delete_credential()
-                .map_err(|e| Error::KeyringError(e.to_string()))
-        });
+        let _ = keyring_delete_credential(connection_id, "ticket");
+        let _ = keyring_delete_credential(connection_id, "csrf_token");
+        let _ = keyring_delete_credential(connection_id, "password");
+        let _ = keyring_delete_credential(connection_id, "token");
+        let _ = keyring_delete_credential(connection_id, "username");
         Ok(())
     }
 
@@ -1144,7 +1288,7 @@ impl ConnectionManager {
         match entry.get_password() {
             Ok(ticket) => Ok(Some(ticket)),
             Err(keyring::Error::NoEntry) => Ok(None),
-            Err(e) => Err(Error::KeyringError(e.to_string())),
+            Err(e) => Err(Error::KeyringError(keyring_describe_error(&e))),
         }
     }
 
@@ -1156,25 +1300,13 @@ impl ConnectionManager {
         password: Option<&str>,
         api_token: Option<&str>,
     ) -> crate::Result<()> {
-        keyring_entry(connection_id, "ticket").and_then(|e| {
-            e.set_password(ticket)
-                .map_err(|e| Error::KeyringError(e.to_string()))
-        })?;
-        keyring_entry(connection_id, "csrf_token").and_then(|e| {
-            e.set_password(csrf_token)
-                .map_err(|e| Error::KeyringError(e.to_string()))
-        })?;
+        keyring_set_password(connection_id, "ticket", ticket)?;
+        keyring_set_password(connection_id, "csrf_token", csrf_token)?;
         if let Some(pw) = password {
-            keyring_entry(connection_id, "password").and_then(|e| {
-                e.set_password(pw)
-                    .map_err(|e| Error::KeyringError(e.to_string()))
-            })?;
+            keyring_set_password(connection_id, "password", pw)?;
         }
         if let Some(tok) = api_token {
-            keyring_entry(connection_id, "token").and_then(|e| {
-                e.set_password(tok)
-                    .map_err(|e| Error::KeyringError(e.to_string()))
-            })?;
+            keyring_set_password(connection_id, "token", tok)?;
         }
         Ok(())
     }
@@ -1215,7 +1347,7 @@ impl ConnectionManager {
                 Err(keyring::Error::NoEntry) => Err(Error::AuthError(
                     "No stored credentials for re-authentication".to_string(),
                 )),
-                Err(e) => Err(Error::KeyringError(e.to_string())),
+                Err(e) => Err(Error::KeyringError(keyring_describe_error(&e))),
             },
             Err(_) => Err(Error::AuthError(
                 "No stored credentials for re-authentication".to_string(),
@@ -1244,7 +1376,7 @@ impl ConnectionManager {
 
     /// Looks up a connection by id, mapping a missing id to
     /// [`Error::ConnectionNotFound`].
-    fn connection(&self, id: &str) -> crate::Result<&Connection> {
+    pub(crate) fn connection(&self, id: &str) -> crate::Result<&Connection> {
         self.connections
             .get(id)
             .ok_or_else(|| Error::ConnectionNotFound(id.to_string()))
@@ -1264,6 +1396,43 @@ impl ConnectionManager {
     pub fn connection_config(&self, connection_id: &str) -> crate::Result<ConnectionConfig> {
         let conn = self.connection(connection_id)?;
         Ok(conn.config.clone())
+    }
+
+    /// Resolves the auth header to send alongside a WebSocket handshake for
+    /// `connection_id`, using the same secret resolution as `auth_context()`
+    /// (token from config/keyring; ticket from session/keyring).
+    ///
+    /// Returns `Some((header_name, header_value))` when a secret is available
+    /// — `Authorization: {PVE|PBS}APIToken=...` for token mode, or
+    /// `Cookie: {PVE|PBS}AuthCookie=...` for password mode — and `None` when
+    /// no secret can be resolved.
+    pub fn auth_header_for(&self, connection_id: &str) -> crate::Result<Option<(String, String)>> {
+        let conn = self.connection(connection_id)?;
+        let auth = conn.auth_context()?;
+        match auth.mode {
+            AuthMode::Token => {
+                Ok(auth
+                    .token
+                    .as_deref()
+                    .filter(|token| !token.is_empty())
+                    .map(|token| {
+                        (
+                            "Authorization".to_string(),
+                            format!("{}={}", auth.server_type.token_header_name(), token),
+                        )
+                    }))
+            }
+            AuthMode::Password => Ok(auth
+                .ticket
+                .as_deref()
+                .filter(|ticket| !ticket.is_empty())
+                .map(|ticket| {
+                    (
+                        "Cookie".to_string(),
+                        format!("{}={}", auth.server_type.cookie_header_name(), ticket),
+                    )
+                })),
+        }
     }
 
     /// Validates that `vm_type` is one of the Proxmox VM type path segments

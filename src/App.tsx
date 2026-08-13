@@ -12,6 +12,9 @@ import { BackupList } from '@/components/backups/BackupList'
 import { CommandPalette } from '@/components/command/CommandPalette'
 import { StorageOverview } from '@/components/storage/StorageOverview'
 import { StorageDetail } from '@/components/storage/StorageDetail'
+import { PbsOverview } from '@/components/pbs/PbsOverview'
+import { PbsDatastores } from '@/components/pbs/PbsDatastores'
+import { PbsDatastoreDetail } from '@/components/pbs/PbsDatastoreDetail'
 import { SettingsPage } from '@/components/settings/SettingsPage'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ToastProvider, useToast } from '@/components/ui/toast'
@@ -43,6 +46,9 @@ type View =
   | { type: 'backups' }
   | { type: 'storage' }
   | { type: 'storage-detail'; storage: string; node: string }
+  | { type: 'pbs-overview' }
+  | { type: 'pbs-datastores' }
+  | { type: 'pbs-datastore-detail'; store: string }
   | { type: 'settings' }
 
 function AppContent() {
@@ -317,6 +323,23 @@ function AppContent() {
             onBack={() => handleNavigate({ type: 'storage' })}
           />
         )
+      case 'pbs-overview':
+        return <PbsOverview connectionId={activeConnectionId} />
+      case 'pbs-datastores':
+        return (
+          <PbsDatastores
+            connectionId={activeConnectionId}
+            onDatastoreClick={(store) => handleNavigate({ type: 'pbs-datastore-detail', store })}
+          />
+        )
+      case 'pbs-datastore-detail':
+        return (
+          <PbsDatastoreDetail
+            connectionId={activeConnectionId}
+            store={view.store}
+            onBack={() => handleNavigate({ type: 'pbs-datastores' })}
+          />
+        )
       default:
         return (
           <div className="flex h-full items-center justify-center">
@@ -327,6 +350,28 @@ function AppContent() {
   }
 
   const activeConnection = connections.find((c) => c.id === activeConnectionId)
+
+  // When the active connection switches to a PBS server, leave any VE-only
+  // view behind and land on the PBS overview. Shared views (tasks, settings)
+  // and PBS views are left untouched.
+  const activeServerType = activeConnection?.serverType ?? 'pve'
+  useEffect(() => {
+    if (activeServerType !== 'pbs') return
+    const veOnlyViews = new Set([
+      'dashboard',
+      'vms',
+      'vm-detail',
+      'nodes',
+      'node-detail',
+      'containers',
+      'backups',
+      'storage',
+      'storage-detail',
+    ])
+    if (veOnlyViews.has(view.type)) {
+      setView({ type: 'pbs-overview' })
+    }
+  }, [activeConnectionId, activeServerType, view.type])
 
   return (
     <div className="flex h-screen flex-col bg-background">

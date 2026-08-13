@@ -41,6 +41,7 @@ async fn setup_manager(
         username: None,
         nodes: vec![],
         cluster_id: None,
+        server_type: "pve".to_string(),
     };
     manager
         .add_connection(config, &path)

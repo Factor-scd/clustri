@@ -17,13 +17,26 @@ use crate::error::Error;
 /// rejects the self-signed certificates typical of home-lab Proxmox servers.
 /// As with the HTTP transport, the application enforces trust at its own layer
 /// (TOFU pinning in `tls.rs`), so the transport here accepts any certificate.
+///
+/// When `auth_header` is `Some((name, value))` the header is attached to the
+/// handshake request (e.g. `("Cookie", "PVEAuthCookie=...")` or
+/// `("Authorization", "PVEAPIToken=...")`). Unparseable header names/values
+/// are silently ignored so a bad secret never breaks the connection outright.
 pub async fn connect_ws(
     url: &str,
+    auth_header: Option<(String, String)>,
 ) -> crate::Result<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>>
 {
-    let request = url
+    let mut request = url
         .into_client_request()
         .map_err(|e| Error::WebSocketError(e.to_string()))?;
+    if let Some((name, value)) = auth_header {
+        if let Ok(name) = http::HeaderName::from_bytes(name.as_bytes()) {
+            if let Ok(value) = http::HeaderValue::from_str(&value) {
+                request.headers_mut().insert(name, value);
+            }
+        }
+    }
     let is_wss = request.uri().scheme_str() == Some("wss");
 
     let connector = if is_wss {
@@ -90,11 +103,13 @@ impl WebSocketManager {
     /// Connect to a Proxmox WebSocket URL for the given connection ID.
     ///
     /// Messages are forwarded as Tauri events via `app_handle`. If a connection
-    /// already exists for this ID, it is disconnected first.
+    /// already exists for this ID, it is disconnected first. `auth_header`
+    /// (when present) is attached to every connection attempt's handshake.
     pub async fn connect(
         &mut self,
         connection_id: String,
         url: String,
+        auth_header: Option<(String, String)>,
         app_handle: tauri::AppHandle,
     ) -> crate::Result<()> {
         // Disconnect any existing connection for this ID
@@ -116,7 +131,7 @@ impl WebSocketManager {
                     _ = shutdown_rx.recv() => {
                         break;
                     }
-                    result = connect_and_run(&cid, &ws_url, &app_handle) => {
+                    result = connect_and_run(&cid, &ws_url, auth_header.clone(), &app_handle) => {
                         match result {
                             Ok(()) => {
                                 reconnect_delay = Duration::from_secs(1);
@@ -170,9 +185,10 @@ impl WebSocketManager {
 async fn connect_and_run(
     connection_id: &str,
     url: &str,
+    auth_header: Option<(String, String)>,
     app_handle: &tauri::AppHandle,
 ) -> crate::Result<()> {
-    let ws_stream = connect_ws(url).await?;
+    let ws_stream = connect_ws(url, auth_header).await?;
 
     let cid = connection_id.to_string();
     let (mut write, mut read) = ws_stream.split();

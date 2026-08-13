@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Plus, Server, LayoutDashboard, HardDrive, Box, ListTodo, Shield, Settings, Hexagon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-type ViewType = 'dashboard' | 'vms' | 'vm-detail' | 'nodes' | 'node-detail' | 'containers' | 'tasks' | 'backups' | 'storage' | 'storage-detail' | 'settings'
+type ViewType = 'dashboard' | 'vms' | 'vm-detail' | 'nodes' | 'node-detail' | 'containers' | 'tasks' | 'backups' | 'storage' | 'storage-detail' | 'settings' | 'pbs-overview' | 'pbs-datastores' | 'pbs-datastore-detail'
 
 type NavigationTarget =
   | { type: ViewType }
@@ -77,34 +77,54 @@ export function Sidebar({ onAddConnection, activeView, onNavigate }: SidebarProp
                     <p className="ml-7 mt-1 text-[10px] text-muted-foreground">Offline</p>
                   )}
                   <div className="ml-4 mt-1 space-y-0.5">
-                    <SidebarItem
-                      icon={LayoutDashboard}
-                      label="Dashboard"
-                      active={activeView === 'dashboard'}
-                      onClick={() => onNavigate?.({ type: 'dashboard' })}
-                    />
-                    <SidebarItem
-                      icon={Server}
-                      label="Nodes"
-                      active={activeView === 'nodes'}
-                      onClick={() => onNavigate?.({ type: 'nodes' })}
-                    />
-                    <SidebarItem
-                      icon={Box}
-                      label="VMs"
-                      active={activeView === 'vms' || activeView === 'vm-detail'}
-                      onClick={() => onNavigate?.({ type: 'vms' })}
-                    />
-                    <SidebarItem
-                      icon={Box}
-                      label="Containers"
-                      active={activeView === 'containers'}
-                      onClick={() => onNavigate?.({ type: 'containers' })}
-                    />
-                    <SidebarItem icon={HardDrive} label="Storage" active={activeView === 'storage' || activeView === 'storage-detail'} onClick={() => onNavigate?.({ type: 'storage' })} />
-                    <SidebarItem icon={ListTodo} label="Tasks" active={activeView === 'tasks'} onClick={() => onNavigate?.({ type: 'tasks' })} />
-                    <SidebarItem icon={Shield} label="Backups" active={activeView === 'backups'} onClick={() => onNavigate?.({ type: 'backups' })} />
-                    {connection.nodes && connection.nodes.length > 0 && (
+                    {connection.serverType === 'pbs' ? (
+                      <>
+                        <SidebarItem
+                          icon={LayoutDashboard}
+                          label="Overview"
+                          active={activeView === 'pbs-overview'}
+                          onClick={() => onNavigate?.({ type: 'pbs-overview' })}
+                        />
+                        <SidebarItem
+                          icon={HardDrive}
+                          label="Datastores"
+                          active={activeView === 'pbs-datastores' || activeView === 'pbs-datastore-detail'}
+                          onClick={() => onNavigate?.({ type: 'pbs-datastores' })}
+                        />
+                        <SidebarItem icon={ListTodo} label="Tasks" active={activeView === 'tasks'} onClick={() => onNavigate?.({ type: 'tasks' })} />
+                      </>
+                    ) : (
+                      <>
+                        <SidebarItem
+                          icon={LayoutDashboard}
+                          label="Dashboard"
+                          active={activeView === 'dashboard'}
+                          onClick={() => onNavigate?.({ type: 'dashboard' })}
+                        />
+                        <SidebarItem
+                          icon={Server}
+                          label="Nodes"
+                          active={activeView === 'nodes'}
+                          onClick={() => onNavigate?.({ type: 'nodes' })}
+                        />
+                        <SidebarItem
+                          icon={Box}
+                          label="VMs"
+                          active={activeView === 'vms' || activeView === 'vm-detail'}
+                          onClick={() => onNavigate?.({ type: 'vms' })}
+                        />
+                        <SidebarItem
+                          icon={Box}
+                          label="Containers"
+                          active={activeView === 'containers'}
+                          onClick={() => onNavigate?.({ type: 'containers' })}
+                        />
+                        <SidebarItem icon={HardDrive} label="Storage" active={activeView === 'storage' || activeView === 'storage-detail'} onClick={() => onNavigate?.({ type: 'storage' })} />
+                        <SidebarItem icon={ListTodo} label="Tasks" active={activeView === 'tasks'} onClick={() => onNavigate?.({ type: 'tasks' })} />
+                        <SidebarItem icon={Shield} label="Backups" active={activeView === 'backups'} onClick={() => onNavigate?.({ type: 'backups' })} />
+                      </>
+                    )}
+                    {connection.serverType !== 'pbs' && connection.nodes && connection.nodes.length > 0 && (
                       <>
                         <p className="px-3 pb-1 pt-3 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                           Cluster nodes

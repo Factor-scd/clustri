@@ -124,6 +124,7 @@ fn token_config(id: &str, url: &str, fallbacks: Vec<EndpointConfig>) -> Connecti
         username: None,
         nodes: vec![],
         cluster_id: None,
+        server_type: "pve".to_string(),
     }
 }
 

@@ -29,6 +29,7 @@ fn token_config(id: &str, url: &str, token: &str, accept_untrusted: bool) -> Con
         username: None,
         nodes: vec![],
         cluster_id: None,
+        server_type: "pve".to_string(),
     }
 }
 
@@ -61,6 +62,7 @@ async fn persisted_configs_round_trip_without_secrets() {
         username: None,
         nodes: vec![],
         cluster_id: None,
+        server_type: "pve".to_string(),
     };
     manager
         .add_connection(config, &path)
@@ -216,6 +218,7 @@ async fn update_connection_preserves_cert_settings_and_replaces_config() {
         username: None,
         nodes: vec![],
         cluster_id: None,
+        server_type: "pve".to_string(),
     };
     manager
         .update_connection(updated, &path)

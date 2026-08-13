@@ -1,6 +1,6 @@
 # Clustri
 
-A cross-platform desktop client for managing Proxmox VE servers and clusters. The backend is Rust on Tauri 2; the UI is React 19 with TypeScript, Vite, and Tailwind CSS v4.
+A cross-platform desktop client for managing Proxmox VE servers and clusters, and Proxmox Backup Server. The backend is Rust on Tauri 2; the UI is React 19 with TypeScript, Vite, and Tailwind CSS v4.
 
 ## Features
 
@@ -44,6 +44,15 @@ A cross-platform desktop client for managing Proxmox VE servers and clusters. Th
 
 - Snapshot list, create, delete, rollback.
 - Backup jobs: list, create, edit, delete, run now. Restore or delete existing backups.
+
+### Backup server (PBS)
+
+- Connect to a Proxmox Backup Server (port 8007) as its own connection type.
+- Datastore overview with usage, and a backup groups → snapshot drill-down.
+- Download individual snapshot archives (raw or decoded) via the OS save dialog; delete snapshots and backup groups.
+- One-shot verify, prune (retention rules plus dry-run), and garbage collection.
+- Read-only lists of scheduled verify, prune, and garbage-collection jobs, plus the task list.
+- Whole-VM/CT restore is performed through Proxmox VE, not PBS.
 
 ### Console
 
@@ -102,6 +111,10 @@ A Rust `ConnectionManager` owns one HTTP client per connection. A shared `api_re
 The same core routes each request through an ordered, deduplicated endpoint list: the primary endpoint, configured fallbacks, then the discovered cluster nodes. On a connect, timeout, DNS, or transport failure it retries on the next endpoint, and the connection's runtime status tracks whether the primary (`connected`), a fallback (`failover`), or no endpoint (`failed`) served the last request.
 
 Tauri commands cover: connection add/remove/update/load, connect/disconnect, set active; password and token login, logout, stored credentials; certificate info and trust; nodes, VMs, storage, storage content and detail, tasks, cluster status; QEMU and LXC lifecycle and migration; disks, NICs, snapshots; VNC and terminal proxies; websocket URL; backup jobs and restore; and the tray menu.
+
+### Backup server (PBS)
+
+PBS connections reuse the same ConnectionManager/request core with server-type-aware auth headers (`PBSAPIToken`/`PBSAuthCookie` vs `PVEAPIToken`/`PVEAuthCookie`). PBS is single-host — there is no node discovery or cluster merge. The PBS module lives in `src-tauri/src/pbs.rs`. Tasks flow through the shared task list via `GET /nodes/localhost/tasks`, and snapshot archives download through the raw `/download` and `/download-decoded` endpoints.
 
 ### TLS
 
@@ -238,6 +251,12 @@ Cluster discovery, failover, and same-cluster merging are covered by Rust tests 
 4. Enter a token ID (for example, `desktop`).
 5. Uncheck Privilege Separation for full access.
 6. Copy the token. It looks like `user@realm!tokenid=secret`.
+
+### Proxmox Backup Server API token
+
+1. In the PBS web UI, go to Server Administrator → Access Control → API Tokens and create a token.
+2. It uses the same `user@realm!tokenid=secret` format as the Proxmox VE token.
+3. Connect to the PBS server as `https://host:8007`.
 
 ### Connection settings
 

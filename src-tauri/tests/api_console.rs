@@ -36,6 +36,7 @@ async fn setup_manager(url: &str, token: &str) -> (ConnectionManager, tempfile::
         username: None,
         nodes: vec![],
         cluster_id: None,
+        server_type: "pve".to_string(),
     };
     manager
         .add_connection(config, &path)
