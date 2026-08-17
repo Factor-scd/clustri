@@ -1,7 +1,7 @@
 import { useConnectionStore } from '@/stores/connectionStore'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
-import { Plus, Server, LayoutDashboard, HardDrive, Box, ListTodo, Shield, Settings, Hexagon } from 'lucide-react'
+import { Plus, Server, LayoutDashboard, HardDrive, Box, ListTodo, Shield, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type ViewType = 'dashboard' | 'vms' | 'vm-detail' | 'nodes' | 'node-detail' | 'containers' | 'tasks' | 'backups' | 'storage' | 'storage-detail' | 'settings' | 'pbs-overview' | 'pbs-datastores' | 'pbs-datastore-detail'
@@ -38,9 +38,7 @@ export function Sidebar({ onAddConnection, activeView, onNavigate }: SidebarProp
   return (
     <div className="flex w-64 flex-col border-r border-border bg-card">
       <div className="flex h-14 shrink-0 items-center gap-2.5 border-b border-border px-4">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/15 text-primary">
-          <Hexagon className="h-4 w-4" />
-        </div>
+        <img src="/icon.png" alt="Clustri" className="h-7 w-7 rounded-md" />
         <div className="min-w-0 leading-tight">
           <h1 className="truncate text-sm font-semibold tracking-tight text-foreground">
             Clustri
