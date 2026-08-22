@@ -1,52 +1,37 @@
-<!--
-  Nav — sticky site header. Renders on a single line at lg, height capped at
-  64px (h-16). Links point at in-page feature anchors.
--->
-
-<header class="sticky top-0 z-50 border-b border-border bg-background/85 backdrop-blur-sm">
-  <nav class="mx-auto flex h-16 max-w-7xl items-center justify-between gap-6 px-6 lg:px-8" aria-label="Primary">
+<header class="nav-header fixed top-0 left-0 right-0 z-50 px-4 pt-4">
+  <nav
+    class="nav-pill mx-auto flex h-[46px] max-w-6xl items-center justify-between gap-6 rounded-[12px] border border-white/[0.07] bg-[#0f0f14]/70 px-4 backdrop-blur-xl transition-all duration-400"
+    aria-label="Primary"
+  >
     <a href="#" class="flex items-center gap-2.5">
-      <span class="flex h-8 w-8 items-center justify-center rounded-md bg-primary/15 text-primary">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          class="h-4 w-4"
-          aria-hidden="true"
-        >
+      <span class="flex h-7 w-7 items-center justify-center rounded-[8px] bg-primary text-primary-foreground">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5" aria-hidden="true">
           <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
         </svg>
       </span>
       <span class="text-sm font-semibold tracking-tight text-foreground">Clustri</span>
-      <span class="hidden font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground sm:inline">
-        Ops Console
-      </span>
+      <span class="hidden font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground sm:inline">Ops Console</span>
     </a>
 
-    <div class="hidden items-center gap-6 md:flex">
-      <a href="#failover" class="text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground">
-        Features
-      </a>
-      <a href="#security" class="text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground">
-        Security
-      </a>
-      <a href="#console" class="text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground">
-        Console
-      </a>
-      <a href="#architecture" class="text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground">
-        Architecture
-      </a>
+    <div class="hidden items-center gap-5 md:flex">
+      <a href="#failover-playground" class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:text-foreground">Failover</a>
+      <a href="#security" class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:text-foreground">Security</a>
+      <a href="#tour" class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:text-foreground">Tour</a>
+      <a href="#architecture" class="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:text-foreground">Architecture</a>
     </div>
 
-    <a
-      href="#"
-      class="rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-foreground transition hover:brightness-110 active:scale-[0.98]"
-    >
-      Get Clustri
-    </a>
+    <div class="flex items-center gap-2">
+      <button data-cmdk-trigger class="hidden sm:flex items-center gap-1.5 rounded-md border border-white/[0.06] bg-white/[0.04] px-2.5 py-1.5 font-mono text-[11px] text-muted-foreground transition-colors hover:border-white/10 hover:text-foreground" aria-label="Open command palette">
+        <span>⌘K</span>
+      </button>
+      <a href="#download" class="rounded-[10px] bg-primary px-4 py-2 text-[13px] font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]">Get Clustri</a>
+    </div>
   </nav>
 </header>
+
+<style>
+  .nav-scrolled .nav-pill {
+    border-color: rgba(255, 255, 255, 0.08);
+    background-color: oklch(0.11 0.008 275 / 0.85);
+  }
+</style>

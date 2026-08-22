@@ -1,0 +1,281 @@
+<section id="failover-playground" aria-labelledby="fp-title" class="relative overflow-hidden border-y border-white/[0.06] bg-card/40">
+  <div class="pointer-events-none absolute inset-0 grid-bg opacity-[0.18]" aria-hidden="true"></div>
+
+  <div class="relative mx-auto max-w-7xl px-6 py-20 lg:px-8 lg:py-28">
+    <div class="grid gap-10 lg:grid-cols-12 lg:items-start">
+      <!-- Copy + controls -->
+      <div class="lg:col-span-5">
+        <p class="font-mono text-[11px] uppercase tracking-[0.18em] text-primary" data-reveal>Failover — try it</p>
+        <h2 id="fp-title" class="mt-4 text-3xl font-semibold tracking-[-0.03em] text-foreground sm:text-4xl" data-reveal data-reveal-delay="80">
+          One node dies.<br /><span class="text-muted-foreground">You don't notice.</span>
+        </h2>
+        <p class="mt-4 max-w-[42ch] text-[15px] leading-relaxed text-muted-foreground" data-reveal data-reveal-delay="140">
+          Requests ride an ordered endpoint list: primary, fallbacks, then discovered cluster nodes. Kill a node on the right — watch the packets reroute and the status flip.
+        </p>
+
+        <div class="mt-8 flex flex-wrap gap-2" data-reveal data-reveal-delay="180">
+          <button id="fp-kill-pve1" type="button" class="rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-2 font-mono text-[11px] font-medium text-foreground transition hover:border-white/15 hover:bg-white/[0.07]">Kill pve1</button>
+          <button id="fp-kill-pve2" type="button" class="rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-2 font-mono text-[11px] font-medium text-foreground transition hover:border-white/15 hover:bg-white/[0.07]">Kill pve2</button>
+          <button id="fp-kill-pve3" type="button" class="rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-2 font-mono text-[11px] font-medium text-foreground transition hover:border-white/15 hover:bg-white/[0.07]">Kill pve3</button>
+          <button id="fp-heal" type="button" class="rounded-md bg-primary px-3 py-2 font-mono text-[11px] font-semibold text-primary-foreground transition hover:bg-primary/90">Heal all</button>
+        </div>
+
+        <div class="mt-6 flex flex-wrap gap-3 font-mono text-[10px]" data-reveal data-reveal-delay="220">
+          <span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full bg-success"></span> connected</span>
+          <span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full bg-warning"></span> failover</span>
+          <span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full bg-destructive"></span> failed</span>
+          <span class="ml-1 text-muted-foreground">— tap a node or use the buttons</span>
+        </div>
+
+        <div class="mt-6 rounded-md border border-white/[0.06] bg-background px-3 py-2.5 font-mono text-[11px] leading-relaxed text-muted-foreground" data-reveal data-reveal-delay="260">
+          <span class="text-foreground">How it works:</span> deduped order <span class="text-foreground">primary → fallbacks → discovered</span>. On connect / timeout / DNS / transport failure, retry the next endpoint. Status reflects which endpoint actually answered.
+        </div>
+      </div>
+
+      <!-- Diagram -->
+      <div class="lg:col-span-7" data-reveal data-reveal-delay="120">
+        <div class="relative overflow-hidden rounded-xl border border-white/[0.07] bg-card shadow-card">
+          <!-- top rule -->
+          <div id="fp-top-rule" class="h-px w-full bg-primary/30 transition-colors" aria-hidden="true"></div>
+
+          <!-- header -->
+          <div class="flex items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-3">
+            <p class="font-mono text-[10px] tracking-[0.06em] text-muted-foreground">request → endpoints[0] → retry on failure</p>
+            <span id="fp-status-chip" class="rounded border border-success/25 bg-success/10 px-1.5 py-0.5 font-mono text-[10px] uppercase text-success">Connected</span>
+          </div>
+
+          <!-- body: rail + nodes -->
+          <div class="relative flex gap-0">
+            <!-- packet rail -->
+            <div class="relative w-[36px] shrink-0 border-r border-white/[0.04] bg-background/40">
+              <div class="absolute left-1/2 top-3 bottom-3 w-px -translate-x-1/2 bg-white/[0.08]" aria-hidden="true"></div>
+              <!-- dots injected by JS -->
+              <div id="fp-rail" class="absolute inset-0 overflow-hidden" aria-hidden="true"></div>
+              <div class="absolute left-1/2 top-2 h-2 w-2 -translate-x-1/2 rounded-full bg-primary shadow-[0_0_8px] shadow-primary/60" aria-hidden="true"></div>
+            </div>
+
+            <!-- node list -->
+            <div class="min-w-0 flex-1">
+              <button id="fp-node-0" type="button" class="flex w-full items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-3.5 text-left transition hover:bg-white/[0.02]">
+                <span class="min-w-0">
+                  <span class="flex items-center gap-2">
+                    <span id="fp-dot-0" class="h-1.5 w-1.5 shrink-0 rounded-full bg-success shadow-[0_0_6px] shadow-success/50"></span>
+                    <span class="truncate font-mono text-[13px] font-medium tabular-nums text-foreground">192.168.1.10:8006</span>
+                  </span>
+                  <span class="mt-1 block font-mono text-[10px] text-muted-foreground">pve1 · primary</span>
+                </span>
+                <span class="shrink-0 rounded border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] uppercase text-primary">Primary</span>
+              </button>
+              <button id="fp-node-1" type="button" class="flex w-full items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-3.5 text-left transition hover:bg-white/[0.02]">
+                <span class="min-w-0">
+                  <span class="flex items-center gap-2">
+                    <span id="fp-dot-1" class="h-1.5 w-1.5 shrink-0 rounded-full bg-success"></span>
+                    <span class="truncate font-mono text-[13px] font-medium tabular-nums text-foreground">192.168.1.11:8006</span>
+                  </span>
+                  <span class="mt-1 block font-mono text-[10px] text-muted-foreground">pve2 · fallback</span>
+                </span>
+                <span class="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted-foreground">Fallback</span>
+              </button>
+              <button id="fp-node-2" type="button" class="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-white/[0.02]">
+                <span class="min-w-0">
+                  <span class="flex items-center gap-2">
+                    <span id="fp-dot-2" class="h-1.5 w-1.5 shrink-0 rounded-full bg-success"></span>
+                    <span class="truncate font-mono text-[13px] font-medium tabular-nums text-foreground">pve3.discovery</span>
+                  </span>
+                  <span class="mt-1 block font-mono text-[10px] text-muted-foreground">pve3 · cluster</span>
+                </span>
+                <span class="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted-foreground">Cluster</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- status bar -->
+          <div class="border-t border-white/[0.06] bg-background px-4 py-3">
+            <div class="flex items-center justify-between gap-3">
+              <span id="fp-status-text" class="font-mono text-[11px] tabular-nums text-muted-foreground">status: connected — pve1 answered</span>
+              <span id="fp-latency" class="font-mono text-[10px] tabular-nums text-muted-foreground">~18 ms</span>
+            </div>
+            <div class="mt-2 h-1 overflow-hidden rounded-full bg-muted">
+              <div id="fp-bar" class="h-full rounded-full bg-primary transition-all duration-500" style="width: 18%"></div>
+            </div>
+          </div>
+        </div>
+
+        <p class="mt-3 text-center font-mono text-[10px] text-muted-foreground/60">Click a node row to kill / heal it. Packets reroute automatically.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  const alive = [true, true, true]
+  const nodes = [
+    document.getElementById('fp-node-0'),
+    document.getElementById('fp-node-1'),
+    document.getElementById('fp-node-2'),
+  ]
+  const dots = [
+    document.getElementById('fp-dot-0'),
+    document.getElementById('fp-dot-1'),
+    document.getElementById('fp-dot-2'),
+  ]
+  const chip = document.getElementById('fp-status-chip')
+  const statusText = document.getElementById('fp-status-text')
+  const topRule = document.getElementById('fp-top-rule')
+  const bar = document.getElementById('fp-bar')
+  const latency = document.getElementById('fp-latency')
+  const rail = document.getElementById('fp-rail')
+
+  const names = ['pve1', 'pve2', 'pve3']
+  const addrs = ['192.168.1.10:8006', '192.168.1.11:8006', 'pve3.discovery']
+
+  let dotEls = []
+  let raf = 0
+  let t = 0
+
+  function activeIndex() {
+    for (let i = 0; i < alive.length; i++) if (alive[i]) return i
+    return -1
+  }
+
+  function render() {
+    const ai = activeIndex()
+    const failed = ai === -1
+    const failover = ai > 0
+
+    nodes.forEach((node, i) => {
+      if (!node) return
+      const dead = !alive[i]
+      node.classList.toggle('opacity-40', dead)
+      node.classList.toggle('bg-destructive/5', dead)
+      const isActive = i === ai && !failed
+      node.setAttribute('aria-pressed', dead ? 'true' : 'false')
+    })
+
+    dots.forEach((d, i) => {
+      if (!d) return
+      if (!alive[i]) {
+        d.className = 'h-1.5 w-1.5 shrink-0 rounded-full bg-destructive shadow-[0_0_6px] shadow-destructive/40'
+      } else if (i === ai) {
+        d.className = 'h-1.5 w-1.5 shrink-0 rounded-full bg-success shadow-[0_0_6px] shadow-success/50'
+      } else {
+        d.className = 'h-1.5 w-1.5 shrink-0 rounded-full bg-white/20'
+      }
+    })
+
+    if (!chip || !statusText || !topRule || !bar || !latency) return
+
+    if (failed) {
+      chip.textContent = 'Failed'
+      chip.className = 'rounded border border-destructive/30 bg-destructive/10 px-1.5 py-0.5 font-mono text-[10px] uppercase text-destructive'
+      statusText.textContent = 'status: failed — no endpoint reachable'
+      statusText.className = 'font-mono text-[11px] tabular-nums text-destructive'
+      topRule.className = 'h-px w-full bg-destructive/40'
+      bar.style.width = '100%'
+      bar.className = 'h-full rounded-full bg-destructive transition-all duration-500'
+      latency.textContent = 'timeout'
+    } else if (failover) {
+      chip.textContent = 'Failover'
+      chip.className = 'rounded border border-warning/30 bg-warning/10 px-1.5 py-0.5 font-mono text-[10px] uppercase text-warning'
+      statusText.textContent = `status: failover — ${names[ai]} answered (${addrs[ai]})`
+      statusText.className = 'font-mono text-[11px] tabular-nums text-warning'
+      topRule.className = 'h-px w-full bg-warning/40'
+      bar.style.width = ai === 1 ? '56%' : '88%'
+      bar.className = 'h-full rounded-full bg-warning transition-all duration-500'
+      latency.textContent = ai === 1 ? '~42 ms' : '~78 ms'
+    } else {
+      chip.textContent = 'Connected'
+      chip.className = 'rounded border border-success/25 bg-success/10 px-1.5 py-0.5 font-mono text-[10px] uppercase text-success'
+      statusText.textContent = `status: connected — ${names[0]} answered`
+      statusText.className = 'font-mono text-[11px] tabular-nums text-success'
+      topRule.className = 'h-px w-full bg-primary/30'
+      bar.style.width = '18%'
+      bar.className = 'h-full rounded-full bg-primary transition-all duration-500'
+      latency.textContent = '~18 ms'
+    }
+  }
+
+  function kill(i) {
+    alive[i] = !alive[i]
+    render()
+    restartDots()
+  }
+  function healAll() {
+    alive[0] = true; alive[1] = true; alive[2] = true
+    render()
+    restartDots()
+  }
+
+  document.getElementById('fp-kill-pve1')?.addEventListener('click', () => kill(0))
+  document.getElementById('fp-kill-pve2')?.addEventListener('click', () => kill(1))
+  document.getElementById('fp-kill-pve3')?.addEventListener('click', () => kill(2))
+  document.getElementById('fp-heal')?.addEventListener('click', healAll)
+  nodes.forEach((n, i) => n?.addEventListener('click', () => kill(i)))
+
+  function createDots() {
+    if (!rail) return
+    rail.innerHTML = ''
+    dotEls = []
+    for (let k = 0; k < 2; k++) {
+      const d = document.createElement('div')
+      d.className = 'absolute left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-primary shadow-[0_0_8px] shadow-primary/60'
+      d.style.top = '8px'
+      // @ts-ignore
+      d._offset = k * 0.5
+      rail.appendChild(d)
+      dotEls.push(d)
+    }
+  }
+
+  function restartDots() {
+    if (prefersReduced) return
+    cancelAnimationFrame(raf)
+    t = 0
+    createDots()
+    animate()
+  }
+
+  function targetYs() {
+    const ai = activeIndex()
+    if (ai === -1) return [0.88]
+    // map active index to rail progress (0..1): pve1 ~0.26, pve2 ~0.55, pve3 ~0.84
+    const map = [0.28, 0.56, 0.86]
+    return [map[ai]]
+  }
+
+  function animate() {
+    if (prefersReduced || !rail) return
+    t += 0.018
+    const h = rail.clientHeight || 160
+    const targets = targetYs()
+    dotEls.forEach((el) => {
+      const phase = (t + el._offset) % 1
+      // ease: move from 0 to target, then fade and reset
+      const ty = phase * (targets[0] * h)
+      const visible = phase < 0.92
+      el.style.transform = `translate(-50%, ${ty}px)`
+      el.style.opacity = visible ? '1' : '0'
+      // if failed, make dot red and slower
+      const ai = activeIndex()
+      if (ai === -1) {
+        el.style.background = 'var(--color-destructive)'
+        // @ts-ignore
+        el.style.boxShadow = '0 0 8px oklch(0.62 0.18 25 / 0.5)'
+      } else if (ai > 0) {
+        el.style.background = 'var(--color-warning)'
+        // @ts-ignore
+        el.style.boxShadow = '0 0 8px oklch(0.76 0.13 80 / 0.5)'
+      } else {
+        el.style.background = 'var(--color-primary)'
+        // @ts-ignore
+        el.style.boxShadow = '0 0 8px oklch(0.72 0.16 52 / 0.6)'
+      }
+    })
+    raf = requestAnimationFrame(animate)
+  }
+
+  render()
+  if (!prefersReduced) { createDots(); animate() }
+</script>

@@ -2,76 +2,73 @@
 import AppWindowMockup from './AppWindowMockup.astro'
 ---
 
-<section class="relative overflow-hidden">
-  <!-- Copy block -->
-  <div class="hero-copy mx-auto max-w-7xl px-6 pt-20 lg:px-8 lg:pt-24">
-    <p class="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-      OPS CONSOLE
-    </p>
-    <h1 class="mt-4 max-w-3xl text-4xl font-semibold leading-[1.05] tracking-tighter text-foreground sm:text-5xl lg:text-6xl">
-      One <span class="text-primary">console</span> for your Proxmox cluster.
-    </h1>
-    <p class="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-      Manage Proxmox VE nodes, VMs, storage, and backups from a desktop app that keeps working when a node goes down.
-    </p>
-    <div class="mt-8 flex flex-wrap items-center gap-3">
-      <a
-        href="#"
-        class="rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:brightness-110 active:scale-[0.98]"
-      >
-        Get Clustri
-      </a>
-      <a
-        href="#"
-        class="rounded-md border border-border bg-background px-5 py-2.5 text-sm font-semibold text-foreground transition hover:bg-accent/60 active:scale-[0.98]"
-      >
-        Read the docs
-      </a>
-    </div>
-    <p class="mt-8 font-mono text-[11px] tabular-nums text-muted-foreground">
-      <span>v0.1.0</span><span aria-hidden="true"> · </span><span>Linux</span><span aria-hidden="true"> · </span><span>macOS</span><span aria-hidden="true"> · </span><span>Windows</span>
-    </p>
-  </div>
+<section class="relative overflow-hidden border-b border-white/[0.06]">
+  <!-- Subtle grid -->
+  <div class="pointer-events-none absolute inset-0 grid-bg opacity-[0.35] [mask-image:radial-gradient(ellipse_80%_60%_at_50%_0%,black_40%,transparent_85%)]" aria-hidden="true"></div>
 
-  <!-- Product mockup, full-bleed below the copy -->
-  <div class="hero-mockup mt-16 sm:mt-20">
-    <div class="mx-auto max-w-6xl px-6 lg:px-8">
-      <div class="pointer-events-none select-none [mask-image:linear-gradient(to_bottom,black_0%,black_78%,transparent_100%)]">
-        <AppWindowMockup />
+  <!-- Faint topology lines top-right -->
+  <svg class="pointer-events-none absolute right-0 top-0 hidden h-[520px] w-[700px] opacity-[0.07] lg:block" viewBox="0 0 700 520" fill="none" aria-hidden="true">
+    <circle cx="520" cy="120" r="3" fill="white" /><circle cx="620" cy="200" r="3" fill="white" /><circle cx="480" cy="260" r="3" fill="white" />
+    <path d="M520 120 L620 200 M520 120 L480 260 M620 200 L480 260" stroke="white" stroke-width="1" stroke-dasharray="6 6" />
+    <circle cx="520" cy="120" r="18" stroke="white" stroke-width="0.7" opacity="0.5" />
+    <circle cx="620" cy="200" r="18" stroke="white" stroke-width="0.7" opacity="0.5" />
+    <circle cx="480" cy="260" r="18" stroke="white" stroke-width="0.7" opacity="0.5" />
+  </svg>
+
+  <div class="relative mx-auto max-w-7xl px-6 lg:px-8">
+    <!-- Copy -->
+    <div class="pt-28 sm:pt-36 lg:pt-40">
+      <div class="flex flex-wrap items-center gap-3 font-mono text-[11px]">
+        <span class="inline-flex items-center gap-1.5 rounded-full border border-success/20 bg-success/10 px-2.5 py-1 text-success">
+          <span class="h-1.5 w-1.5 rounded-full bg-success shadow-[0_0_6px] shadow-success/60"></span>
+          Live
+        </span>
+        <span class="text-muted-foreground">v0.1.0</span>
+        <span class="text-white/20">·</span>
+        <span class="text-muted-foreground">Linux · macOS · Windows</span>
+        <span class="hidden items-center gap-1.5 text-muted-foreground/60 sm:inline-flex">
+          <span class="text-white/10">—</span>
+          <button data-cmdk-trigger class="rounded border border-white/10 px-1.5 py-0.5 text-[10px] hover:border-white/15 hover:text-foreground">⌘K</button>
+          <span>to jump</span>
+        </span>
+      </div>
+
+      <h1 class="mt-6 max-w-[14ch] text-[2.6rem] font-semibold leading-[0.92] tracking-[-0.04em] text-foreground sm:text-[3.5rem] lg:text-[4.6rem]">
+        Your cluster,<br />
+        <span class="text-muted-foreground">not your problem.</span>
+      </h1>
+
+      <p class="mt-5 max-w-[52ch] text-[15px] leading-relaxed text-muted-foreground sm:text-[16px]">
+        Clustri is a cross-platform desktop console for Proxmox VE. Manage nodes, VMs, storage and backups — and keep working when a node goes down.
+      </p>
+
+      <div class="mt-8 flex flex-wrap items-center gap-3">
+        <a href="#download" class="rounded-[10px] bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 active:scale-[0.98]">Get Clustri</a>
+        <a href="#failover-playground" class="rounded-[10px] border border-white/[0.08] bg-white/[0.04] px-6 py-3 text-sm font-semibold text-foreground transition hover:border-white/15 hover:bg-white/[0.06] active:scale-[0.98]">Try the failover demo ↓</a>
+      </div>
+
+      <div class="mt-6 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground/70">
+        <span>Rust · Tauri 2</span><span class="text-white/10">/</span><span>React 19 · Tailwind v4</span><span class="text-white/10">/</span><span>MIT licensed</span>
       </div>
     </div>
-  </div>
 
-  <!-- Close the hero -->
-  <div class="mt-16 border-b border-border" aria-hidden="true"></div>
+    <!-- Mockup -->
+    <div class="mt-12 sm:mt-16">
+      <div class="relative overflow-hidden rounded-xl border border-white/[0.08] bg-card shadow-card" data-parallax="0.06">
+        <!-- thin orange top rule -->
+        <div class="h-px w-full bg-primary/40" aria-hidden="true"></div>
+        <div class="p-2 sm:p-3">
+          <AppWindowMockup />
+        </div>
+      </div>
+      <p class="mt-3 text-center font-mono text-[10px] text-muted-foreground/60">Live demo — values tick, tasks stream. The real app looks like this.</p>
+    </div>
+  </div>
 </section>
 
 <style>
-  @keyframes hero-rise {
-    from {
-      opacity: 0;
-      transform: translateY(12px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  @keyframes hero-fade {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-
-  .hero-copy {
-    animation: hero-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-
-  .hero-mockup {
-    animation: hero-fade 1s ease 0.15s both;
+  @keyframes hero-in {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 </style>

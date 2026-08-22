@@ -23,7 +23,7 @@ import { useConnectionStore } from '@/stores/connectionStore'
 import { useUIStore } from '@/stores/uiStore'
 import { useWebSocket } from '@/hooks/useWebSocket'
 import { isTauri, loadConnections, connectToServer, getConnectionStatus, getWebSocketURL, updateTrayMenu } from '@/lib/tauri'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ProxmoxVM } from '@/types/proxmox'
 
 const queryClient = new QueryClient({
@@ -68,13 +68,14 @@ function AppContent() {
   // In browser mock mode there is nothing to load, so the app is ready
   // immediately. In Tauri mode the persisted connections load on mount.
   const [connectionsLoaded, setConnectionsLoaded] = useState(!isTauri())
-  const bootRan = useRef(false)
 
-  // Startup: load persisted connections and auto-reconnect the active one
+  // Startup: load persisted connections and auto-reconnect the active one.
+  // React StrictMode mounts this effect twice in development (setup, cleanup,
+  // setup): the first boot is cancelled by the cleanup, and the second setup
+  // runs the load again and completes it. Guarding against a double run with
+  // a ref would cancel the first boot and suppress the second, so the
+  // persisted connections would never hydrate.
   useEffect(() => {
-    if (bootRan.current) return
-    bootRan.current = true
-
     if (!isTauri()) return
 
     let cancelled = false
