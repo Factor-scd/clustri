@@ -207,12 +207,65 @@ export const getNodes = async (connectionId: string): Promise<ProxmoxNode[]> => 
 }
 
 export const getVMs = async (connectionId: string): Promise<ProxmoxVM[]> => {
-  if (!isTauri()) return mockResponse([])
+  if (!isTauri()) {
+    return mockResponse([
+      {
+        vmid: 100, name: 'web-01', status: 'running', type: 'qemu', node: 'pve1',
+        cpu: 0.12, cpus: 4, mem: 4.2 * 1024 ** 3, maxmem: 8 * 1024 ** 3,
+        disk: 22 * 1024 ** 3, maxdisk: 64 * 1024 ** 3, uptime: 86400 * 9 + 4210,
+        netin: 1.2 * 1024 ** 3, netout: 3.4 * 1024 ** 3,
+        diskread: 12 * 1024 ** 3, diskwrite: 8.7 * 1024 ** 3, pid: 1024,
+        tags: 'web;production',
+      },
+      {
+        vmid: 101, name: 'db-01', status: 'running', type: 'qemu', node: 'pve2',
+        cpu: 0.38, cpus: 8, mem: 21.5 * 1024 ** 3, maxmem: 32 * 1024 ** 3,
+        disk: 148 * 1024 ** 3, maxdisk: 512 * 1024 ** 3, uptime: 86400 * 23 + 1102,
+        netin: 18.2 * 1024 ** 3, netout: 9.1 * 1024 ** 3,
+        diskread: 220 * 1024 ** 3, diskwrite: 190 * 1024 ** 3, pid: 2048,
+        tags: 'database;production',
+      },
+      {
+        vmid: 102, name: 'worker-01', status: 'stopped', type: 'qemu', node: 'pve1',
+        cpu: 0, cpus: 4, mem: 0, maxmem: 16 * 1024 ** 3,
+        disk: 30 * 1024 ** 3, maxdisk: 128 * 1024 ** 3, uptime: 0,
+        netin: 0, netout: 0, diskread: 40 * 1024 ** 3, diskwrite: 22 * 1024 ** 3,
+      },
+      {
+        vmid: 103, name: 'monitoring', status: 'running', type: 'lxc', node: 'pve3',
+        cpu: 0.06, cpus: 2, mem: 1.1 * 1024 ** 3, maxmem: 4 * 1024 ** 3,
+        disk: 9 * 1024 ** 3, maxdisk: 32 * 1024 ** 3, uptime: 86400 * 41 + 300,
+        netin: 6.2 * 1024 ** 3, netout: 4.8 * 1024 ** 3,
+        diskread: 15 * 1024 ** 3, diskwrite: 11 * 1024 ** 3, pid: 3072,
+      },
+      {
+        vmid: 104, name: 'ci-runner', status: 'running', type: 'qemu', node: 'pve3',
+        cpu: 0.71, cpus: 8, mem: 12.4 * 1024 ** 3, maxmem: 16 * 1024 ** 3,
+        disk: 61 * 1024 ** 3, maxdisk: 128 * 1024 ** 3, uptime: 86400 * 2 + 18700,
+        netin: 44 * 1024 ** 3, netout: 31 * 1024 ** 3,
+        diskread: 90 * 1024 ** 3, diskwrite: 120 * 1024 ** 3, pid: 4096,
+        tags: 'ci',
+      },
+      {
+        vmid: 105, name: 'home-assistant', status: 'running', type: 'lxc', node: 'pve1',
+        cpu: 0.03, cpus: 2, mem: 0.8 * 1024 ** 3, maxmem: 2 * 1024 ** 3,
+        disk: 6 * 1024 ** 3, maxdisk: 16 * 1024 ** 3, uptime: 86400 * 66 + 500,
+        netin: 2.1 * 1024 ** 3, netout: 1.7 * 1024 ** 3,
+        diskread: 4 * 1024 ** 3, diskwrite: 9 * 1024 ** 3, pid: 5120,
+      },
+    ])
+  }
   return invokeCommand<ProxmoxVM[]>('get_vms', { connectionId })
 }
 
 export const getStorage = async (connectionId: string): Promise<ProxmoxStorage[]> => {
-  if (!isTauri()) return mockResponse([])
+  if (!isTauri()) {
+    return mockResponse([
+      { storage: 'local', type: 'dir', content: 'iso,vztmpl,backup', active: 1, enabled: 1, shared: 0, used: 18 * 1024 ** 3, total: 94 * 1024 ** 3, avail: 76 * 1024 ** 3, node: 'pve1' },
+      { storage: 'local-lvm', type: 'lvmthin', content: 'images,rootdir', active: 1, enabled: 1, shared: 0, used: 96 * 1024 ** 3, total: 200 * 1024 ** 3, avail: 104 * 1024 ** 3, node: 'pve1' },
+      { storage: 'nas-backup', type: 'nfs', content: 'backup', active: 1, enabled: 1, shared: 1, used: 410 * 1024 ** 3, total: 1024 * 1024 ** 3, avail: 614 * 1024 ** 3, node: 'pve2' },
+    ])
+  }
   return invokeCommand<ProxmoxStorage[]>('get_storage', { connectionId })
 }
 
@@ -255,7 +308,37 @@ export const getStorageDetail = async (
 }
 
 export const getTasks = async (connectionId: string): Promise<ProxmoxTask[]> => {
-  if (!isTauri()) return mockResponse([])
+  if (!isTauri()) {
+    const now = Date.now() / 1000
+    const task = (
+      type: string,
+      id: string,
+      node: string,
+      minutesAgo: number,
+      status: string | undefined,
+      user = 'root@pam',
+    ): ProxmoxTask => ({
+      upid: `UPID:${node}:0000${minutesAgo}:${type}:${id}:${user}:`,
+      node,
+      pid: 1000 + minutesAgo,
+      pstart: minutesAgo * 10,
+      starttime: now - minutesAgo * 60,
+      endtime: status ? now - minutesAgo * 60 + 45 : undefined,
+      type,
+      id,
+      user,
+      status,
+      exitstatus: status === 'OK' ? 'OK' : undefined,
+    })
+    return mockResponse([
+      { ...task('qmstart', '100', 'pve1', 0.2, undefined), status: undefined },
+      task('vzdump', '101', 'pve2', 3, 'OK'),
+      task('qmmigrate', '102', 'pve1', 18, 'OK'),
+      task('aptupdate', '', 'pve3', 61, 'OK'),
+      task('vzdump', '104', 'pve3', 240, 'OK'),
+      task('cefsync', '', 'pve1', 610, 'OK'),
+    ])
+  }
   return invokeCommand<ProxmoxTask[]>('get_tasks', { connectionId })
 }
 
@@ -420,7 +503,23 @@ export const getSnapshots = async (
   vmid: number,
   vmType: string,
 ): Promise<ProxmoxSnapshot[]> => {
-  if (!isTauri()) return mockResponse([])
+  if (!isTauri()) {
+    const now = Date.now() / 1000
+    return mockResponse([
+      {
+        name: 'pre-upgrade',
+        description: 'Before PostgreSQL 16 upgrade',
+        snaptime: Math.floor(now - 3 * 86400),
+        vmstate: 1,
+      },
+      {
+        name: 'weekly-auto',
+        description: '',
+        snaptime: Math.floor(now - 86400),
+        vmstate: 0,
+      },
+    ])
+  }
   return invokeCommand<ProxmoxSnapshot[]>('get_snapshots', { connectionId, node, vmid, vmType })
 }
 
@@ -548,7 +647,34 @@ export const getBackups = async (
   connectionId: string,
   storage?: string,
 ): Promise<ProxmoxBackup[]> => {
-  if (!isTauri()) return mockResponse([])
+  if (!isTauri()) {
+    const now = Date.now() / 1000
+    const day = 86400
+    const backup = (
+      vmid: number,
+      daysAgo: number,
+      sizeGb: number,
+      store = 'nas-backup',
+    ): ProxmoxBackup => ({
+      volid: `${store}:backup/vzdump-qemu-${vmid}-${new Date(now - daysAgo * day * 1000).toISOString().slice(0, 10)}_${String(Math.floor((now % 86400) / 3600)).padStart(2, '0')}0000.vma.zst`,
+      backupid: String(vmid),
+      'backup-type': 'qemu',
+      'backup-id': String(vmid),
+      'backup-time': Math.floor(now - daysAgo * day),
+      storage: store,
+      size: sizeGb * 1024 ** 3,
+      ctime: now - daysAgo * day,
+    })
+    void name
+    return mockResponse([
+      backup(101, 1, 148),
+      backup(101, 2, 147),
+      backup(100, 1, 22),
+      backup(104, 3, 61),
+      backup(105, 1, 6),
+      backup(102, 5, 30),
+    ])
+  }
   return invokeCommand<ProxmoxBackup[]>('get_backups', { connectionId, storage })
 }
 

@@ -2,10 +2,14 @@
 import Base from '../layouts/Base.astro'
 import Nav from '../components/Nav.astro'
 import Hero from '../components/Hero.astro'
+import FailoverPlayground from '../components/FailoverPlayground.astro'
 import FeatureBlocks from '../components/FeatureBlocks.astro'
+import ScreenshotTour from '../components/ScreenshotTour.astro'
 import ArchitectureStrip from '../components/ArchitectureStrip.astro'
+import StatsStrip from '../components/StatsStrip.astro'
 import DownloadCta from '../components/DownloadCta.astro'
 import Footer from '../components/Footer.astro'
+import CommandPalette from '../components/CommandPalette.astro'
 ---
 
 <Base
@@ -15,9 +19,13 @@ import Footer from '../components/Footer.astro'
   <Nav />
   <main>
     <Hero />
+    <FailoverPlayground />
     <FeatureBlocks />
+    <ScreenshotTour />
     <ArchitectureStrip />
+    <StatsStrip />
     <DownloadCta />
   </main>
   <Footer />
+  <CommandPalette />
 </Base>

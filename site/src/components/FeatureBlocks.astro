@@ -1,336 +1,144 @@
-<!--
-  FeatureBlocks — the five feature sections of the Clustri marketing site.
+<!-- Security -->
+<section id="security" aria-labelledby="sec-title" class="scroll-mt-24 py-20 sm:py-28">
+  <div class="mx-auto max-w-7xl px-6 lg:px-8">
+    <div class="grid gap-10 lg:grid-cols-12 lg:items-start">
+      <div class="lg:col-span-6" data-reveal>
+        <p class="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">Security</p>
+        <h2 id="sec-title" class="mt-4 text-3xl font-semibold tracking-[-0.03em] text-foreground sm:text-4xl">
+          Your keys stay<br /><span class="text-muted-foreground">in your pocket.</span>
+        </h2>
+        <p class="mt-4 max-w-[44ch] text-[15px] leading-relaxed text-muted-foreground">
+          API tokens live in the OS keyring — never on disk. Self-signed certs are pinned by SHA-256 on first connect and verified every time after.
+        </p>
+        <div class="mt-6 space-y-3 font-mono text-[11px] leading-relaxed">
+          <div class="flex gap-2"><span class="text-primary">—</span><span class="text-muted-foreground">Token mode: <span class="text-foreground">PVEAPIToken / PBSAPIToken</span> header</span></div>
+          <div class="flex gap-2"><span class="text-primary">—</span><span class="text-muted-foreground">Password mode: ticket auth + <span class="text-foreground">CSRFPreventionToken</span></span></div>
+          <div class="flex gap-2"><span class="text-primary">—</span><span class="text-muted-foreground">Fallbacks skip TOFU — intentional for home-lab failover; primary is always pinned.</span></div>
+        </div>
+      </div>
 
-  Design constraints (see src/styles/global.css):
-  - Dark-only surfaces: bg-background / bg-card; muted-orange text-primary is
-    the single brand accent.
-  - Green / amber are reserved for status semantics (success / warning) only.
-  - No gradients, no glows, no glassmorphism, no emoji, no fake metrics.
-  - No uppercase eyebrows: section identity is the mono index (01–05) beside
-    each heading.
-  All visuals are hand-built schematic markup, never screenshots.
--->
+      <div class="lg:col-span-6" data-reveal data-reveal-delay="120">
+        <div class="rounded-xl border border-white/[0.07] bg-card p-5 shadow-card">
+          <div class="flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-success shadow-[0_0_6px] shadow-success/60" aria-hidden="true"></span>
+            <span class="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">SHA-256 fingerprint — pinned</span>
+            <span class="ml-auto rounded border border-success/20 bg-success/10 px-1.5 py-0.5 font-mono text-[10px] uppercase text-success">Pinned</span>
+          </div>
+          <p class="mt-4 overflow-x-auto whitespace-nowrap font-mono text-[13px] tracking-[0.12em] text-foreground">A3:0F:71:C9:52:B8:4D:E0:11:2A:7F:9C:63:D4:18:0B</p>
+          <div class="mt-4 flex flex-wrap gap-2 border-t border-white/[0.06] pt-4 font-mono text-[10px]">
+            <span class="rounded bg-white/[0.04] px-2 py-1 text-muted-foreground">OS keyring</span>
+            <span class="rounded bg-white/[0.04] px-2 py-1 text-muted-foreground">rustls · sha2 · x509-cert</span>
+            <span class="rounded bg-white/[0.04] px-2 py-1 text-muted-foreground">no telemetry</span>
+          </div>
+          <p class="mt-3 font-mono text-[10px] text-muted-foreground">Captured on first connect. Verified on every connect after. “Accept anyway” per-connection when you rotate certs.</p>
+        </div>
 
-<div id="features" class="mx-auto max-w-7xl px-6 lg:px-8">
-  <!--
-    01 · FAILOVER — split text/diagram.
-    Below lg the grid collapses to a single column (copy first, stack after).
-  -->
-  <section
-    id="failover"
-    aria-labelledby="features-failover-title"
-    class="scroll-mt-24 py-16 sm:py-20"
-  >
-    <div class="grid gap-10 lg:grid-cols-2 lg:items-center">
+        <div class="mt-4 grid grid-cols-3 gap-3">
+          <div class="rounded-lg border border-white/[0.06] bg-background p-3 text-center">
+            <p class="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Tokens</p>
+            <p class="mt-1 font-mono text-[11px] font-medium text-foreground">Keyring only</p>
+          </div>
+          <div class="rounded-lg border border-white/[0.06] bg-background p-3 text-center">
+            <p class="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Certs</p>
+            <p class="mt-1 font-mono text-[11px] font-medium text-foreground">TOFU SHA-256</p>
+          </div>
+          <div class="rounded-lg border border-white/[0.06] bg-background p-3 text-center">
+            <p class="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Transport</p>
+            <p class="mt-1 font-mono text-[11px] font-medium text-foreground">rustls</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Bold statement — full bleed -->
+<section class="relative overflow-hidden border-y border-white/[0.06] bg-[#08080a]">
+  <div class="pointer-events-none absolute inset-0 grid-bg opacity-[0.22]" aria-hidden="true"></div>
+  <div class="relative mx-auto max-w-7xl px-6 py-20 sm:py-28 lg:px-8">
+    <div class="max-w-4xl" data-reveal>
+      <p class="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">The idea</p>
+      <p class="mt-6 text-3xl font-semibold leading-[0.95] tracking-[-0.04em] text-foreground sm:text-5xl lg:text-[3.4rem]">
+        Proxmox is powerful.<br />
+        <span class="text-muted-foreground">The web UI is not the point of failure.</span>
+      </p>
+      <p class="mt-6 max-w-[52ch] text-[15px] leading-relaxed text-muted-foreground sm:text-[16px]">
+        Clustri sits between you and the API. When a node drops, the app retries the next one. You keep working. The cluster keeps running.
+      </p>
+      <div class="mt-8 h-px w-12 bg-primary/60" aria-hidden="true"></div>
+    </div>
+  </div>
+</section>
+
+<!-- Console -->
+<section id="console" aria-labelledby="console-title" class="scroll-mt-24 py-20 sm:py-28">
+  <div class="mx-auto max-w-7xl px-6 lg:px-8">
+    <div class="grid gap-10 lg:grid-cols-12">
+      <div class="lg:col-span-5" data-reveal>
+        <p class="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">Console</p>
+        <h2 id="console-title" class="mt-4 text-3xl font-semibold tracking-[-0.03em] text-foreground sm:text-4xl">Type like you're there.</h2>
+        <p class="mt-4 max-w-[44ch] text-[15px] leading-relaxed text-muted-foreground">
+          noVNC for VMs, xterm.js for containers. Fullscreen, keyboard passthrough, and Ctrl+Alt+Del where you expect it.
+        </p>
+        <div class="mt-6 inline-flex gap-2">
+          <span class="rounded border border-white/[0.06] bg-card px-2.5 py-1 font-mono text-[11px] text-muted-foreground">Fullscreen</span>
+          <span class="rounded border border-white/[0.06] bg-card px-2.5 py-1 font-mono text-[11px] text-muted-foreground">Ctrl+Alt+Del</span>
+        </div>
+      </div>
+
+      <div class="lg:col-span-7" data-reveal data-reveal-delay="120">
+        <div class="overflow-hidden rounded-xl border border-white/[0.07] bg-card shadow-card">
+          <div class="flex items-center justify-between border-b border-white/[0.06] bg-background px-4 py-2.5">
+            <div class="flex items-center gap-1.5" aria-hidden="true">
+              <span class="h-2.5 w-2.5 rounded-full border border-white/[0.06] bg-white/10"></span>
+              <span class="h-2.5 w-2.5 rounded-full border border-white/[0.06] bg-white/10"></span>
+              <span class="h-2.5 w-2.5 rounded-full border border-white/[0.06] bg-white/10"></span>
+            </div>
+            <p class="font-mono text-[10px] text-muted-foreground">root@pve1 · xterm</p>
+            <kbd class="rounded border border-white/[0.08] bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">Ctrl+Alt+Del</kbd>
+          </div>
+          <div class="bg-[#0a0a0a] px-4 py-4 font-mono text-[12px] leading-relaxed" data-terminal>
+            <div data-line><span class="text-primary">root@pve1:~#</span> <span class="text-foreground">pct enter 101</span></div>
+            <div data-line><span class="text-primary">root@db-01:~#</span> <span class="text-foreground">uptime</span></div>
+            <div data-line><span data-output class="whitespace-pre text-muted-foreground">  23:41:05 up 9 days,  4:21,  1 user,  load average: 0.42, 0.38, 0.35</span></div>
+            <div data-line><span class="text-primary">root@db-01:~#</span> <span class="animate-pulse text-foreground">█</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Power user -->
+<section id="power-user" aria-labelledby="power-title" class="scroll-mt-24 border-t border-white/[0.06] py-20 sm:py-28">
+  <div class="mx-auto max-w-7xl px-6 lg:px-8">
+    <div class="flex flex-wrap items-end justify-between gap-6" data-reveal>
       <div>
-        <div class="flex items-baseline gap-3">
-          <span class="shrink-0 font-mono text-sm text-primary">01</span>
-          <h2
-            id="features-failover-title"
-            class="text-2xl font-semibold tracking-tighter text-foreground sm:text-3xl"
-          >
-            Failover that happens on its own
-          </h2>
-        </div>
-        <p class="mt-3 max-w-[58ch] text-[15px] leading-relaxed text-muted-foreground">
-          Requests ride an ordered endpoint list: primary, fallbacks, then
-          discovered cluster nodes. When one dies, the next takes over, and the
-          status flips to failover so you always know which node answered.
-        </p>
+        <p class="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">Power user</p>
+        <h2 id="power-title" class="mt-4 text-3xl font-semibold tracking-[-0.03em] text-foreground sm:text-4xl">Built for the people who keep the lights on.</h2>
       </div>
-
-      <div
-        role="img"
-        aria-label="Ordered endpoint stack: primary, fallback, then discovered cluster node, with a failover status bar"
-        class="select-none rounded-lg border border-border bg-card p-5"
-      >
-        <p class="font-mono text-[10px] text-muted-foreground">
-          request → endpoints[0] → retry on failure
-        </p>
-        <div class="mt-4">
-          <div class="flex items-center justify-between gap-4 border-b border-border py-3">
-            <span class="min-w-0 truncate font-mono text-[13px] tabular-nums text-foreground">
-              192.168.1.10:8006
-            </span>
-            <span
-              class="shrink-0 rounded border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] uppercase text-primary"
-            >
-              Primary
-            </span>
-          </div>
-          <div class="flex items-center justify-between gap-4 border-b border-border py-3">
-            <span class="min-w-0 truncate font-mono text-[13px] tabular-nums text-foreground">
-              192.168.1.11:8006
-            </span>
-            <span
-              class="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted-foreground"
-            >
-              Fallback
-            </span>
-          </div>
-          <div class="flex items-center justify-between gap-4 border-b border-border py-3 last:border-0">
-            <span class="min-w-0 truncate font-mono text-[13px] tabular-nums text-foreground">
-              pve3.discovery
-            </span>
-            <span
-              class="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted-foreground"
-            >
-              Cluster
-            </span>
-          </div>
-        </div>
-        <div class="mt-4">
-          <span class="font-mono text-[10px] text-muted-foreground">
-            status: failover
-          </span>
-          <div class="mt-1.5 h-1 overflow-hidden rounded-full bg-muted">
-            <div class="h-full w-1/2 rounded-full bg-primary"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!--
-    02 · SECURITY — full-width editorial band.
-    Single column on every breakpoint; the fingerprint block is the visual
-    and spans full width up to max-w-2xl.
-  -->
-  <section
-    id="security"
-    aria-labelledby="features-security-title"
-    class="scroll-mt-24 py-16 sm:py-20"
-  >
-    <div class="flex items-baseline gap-3">
-      <span class="shrink-0 font-mono text-sm text-primary">02</span>
-      <h2
-        id="features-security-title"
-        class="text-2xl font-semibold tracking-tighter text-foreground sm:text-3xl"
-      >
-        Credentials never touch disk
-      </h2>
-    </div>
-    <p class="mt-3 max-w-[58ch] text-[15px] leading-relaxed text-muted-foreground">
-      API tokens live in the OS keyring. Self-signed certificates are pinned by
-      SHA-256 fingerprint on first connect and verified on every connect after.
-    </p>
-
-    <div class="mt-8 max-w-2xl rounded-lg border border-border bg-card p-5">
-      <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <span class="font-mono text-[10px] text-muted-foreground">
-          SHA-256 fingerprint
-        </span>
-        <span
-          class="rounded border border-success/25 bg-success/10 px-1.5 py-0.5 font-mono text-[10px] uppercase text-success"
-        >
-          Pinned
-        </span>
-      </div>
-      <div class="mt-4 overflow-x-auto">
-        <p class="whitespace-nowrap font-mono text-sm tracking-[0.18em] text-foreground">
-          A3:0F:71:C9:52:B8:4D:E0:11:2A:7F:9C:63:D4:18:0B
-        </p>
-      </div>
-      <p class="mt-3 font-mono text-[10px] text-muted-foreground">
-        Example fingerprint · captured on first connect, verified on every connect after.
+      <p class="max-w-[44ch] text-[15px] leading-relaxed text-muted-foreground">
+        Tasks stream over WebSocket with polling fallback. <button data-cmdk-trigger class="underline decoration-white/15 underline-offset-4 hover:text-foreground">⌘K</button> opens the palette. The tray keeps one-click actions one click away.
       </p>
     </div>
-  </section>
 
-  <!--
-    03 · VMS — asymmetric split (5/7).
-    Below lg the grid collapses to a single column (copy first, list after).
-  -->
-  <section
-    id="vms"
-    aria-labelledby="features-vms-title"
-    class="scroll-mt-24 py-16 sm:py-20"
-  >
-    <div class="grid gap-10 lg:grid-cols-12 lg:items-start">
-      <div class="lg:col-span-5">
-        <div class="flex items-baseline gap-3">
-          <span class="shrink-0 font-mono text-sm text-primary">03</span>
-          <h2
-            id="features-vms-title"
-            class="text-2xl font-semibold tracking-tighter text-foreground sm:text-3xl"
-          >
-            The full VM lifecycle in one place
-          </h2>
-        </div>
-        <p class="mt-3 max-w-[58ch] text-[15px] leading-relaxed text-muted-foreground">
-          Start, stop, shutdown, reboot, suspend, resume, migrate. Plus disks,
-          NICs, snapshots, backup jobs, and restore.
-        </p>
+    <div class="mt-10 grid gap-0 border-y border-white/[0.06] sm:grid-cols-2" data-stagger>
+      <div class="flex items-center justify-between gap-4 border-b border-white/[0.06] px-1 py-4 sm:border-r sm:px-4" data-stagger-child>
+        <kbd class="rounded border border-white/[0.08] bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground">Cmd / Ctrl + K</kbd>
+        <span class="text-sm text-muted-foreground">Command palette</span>
       </div>
-
-      <div class="lg:col-span-7">
-        <p class="mb-3 font-mono text-[10px] text-muted-foreground">
-          migrate 102 <span class="text-muted-foreground/70">→</span> pve3
-        </p>
-        <div
-          role="img"
-          aria-label="VM list: VM 100 web-01 running, VM 101 db-01 running, VM 102 worker-01 stopped"
-          class="select-none rounded-lg border border-border bg-card"
-        >
-          <div class="flex items-center justify-between border-b border-border px-4 py-2.5">
-            <span class="font-mono text-[10px] uppercase text-muted-foreground">
-              VM ID
-            </span>
-            <span class="font-mono text-[10px] uppercase text-muted-foreground">
-              Status
-            </span>
-          </div>
-          <div class="flex items-center justify-between gap-4 border-b border-border px-4 py-2.5">
-            <span class="min-w-0 font-mono text-[13px] tabular-nums text-foreground">
-              100<span class="text-muted-foreground"> · web-01</span>
-            </span>
-            <span
-              class="shrink-0 rounded border border-success/25 bg-success/10 px-1.5 py-0.5 font-mono text-[10px] uppercase text-success"
-            >
-              Running
-            </span>
-          </div>
-          <div class="flex items-center justify-between gap-4 border-b border-border px-4 py-2.5">
-            <span class="min-w-0 font-mono text-[13px] tabular-nums text-foreground">
-              101<span class="text-muted-foreground"> · db-01</span>
-            </span>
-            <span
-              class="shrink-0 rounded border border-success/25 bg-success/10 px-1.5 py-0.5 font-mono text-[10px] uppercase text-success"
-            >
-              Running
-            </span>
-          </div>
-          <div class="flex items-center justify-between gap-4 border-b border-border px-4 py-2.5 last:border-0">
-            <span class="min-w-0 font-mono text-[13px] tabular-nums text-foreground">
-              102<span class="text-muted-foreground"> · worker-01</span>
-            </span>
-            <span
-              class="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted-foreground"
-            >
-              Stopped
-            </span>
-          </div>
-        </div>
+      <div class="flex items-center justify-between gap-4 border-b border-white/[0.06] px-1 py-4 sm:px-4" data-stagger-child>
+        <span class="font-mono text-[11px] font-medium text-primary">WebSocket</span>
+        <span class="text-sm text-muted-foreground">Live task &amp; event stream</span>
+      </div>
+      <div class="flex items-center justify-between gap-4 border-b border-white/[0.06] px-1 py-4 sm:border-r sm:px-4 sm:border-b-0" data-stagger-child>
+        <span class="font-mono text-[11px] font-medium text-primary">Tray menu</span>
+        <span class="text-sm text-muted-foreground">Show / hide · connections · quit</span>
+      </div>
+      <div class="flex items-center justify-between gap-4 px-1 py-4 sm:px-4" data-stagger-child>
+        <span class="font-mono text-[11px] font-medium text-primary">10s polling</span>
+        <span class="text-sm text-muted-foreground">Connection status fallback</span>
       </div>
     </div>
-  </section>
-
-  <!--
-    04 · CONSOLE — full-width terminal.
-    Single column on every breakpoint; the terminal window spans full width
-    up to max-w-3xl.
-  -->
-  <section
-    id="console"
-    aria-labelledby="features-console-title"
-    class="scroll-mt-24 py-16 sm:py-20"
-  >
-    <div class="flex items-baseline gap-3">
-      <span class="shrink-0 font-mono text-sm text-primary">04</span>
-      <h2
-        id="features-console-title"
-        class="text-2xl font-semibold tracking-tighter text-foreground sm:text-3xl"
-      >
-        Consoles that behave like the real thing
-      </h2>
-    </div>
-    <p class="mt-3 max-w-[58ch] text-[15px] leading-relaxed text-muted-foreground">
-      noVNC for VMs, xterm.js for containers. Fullscreen, keyboard passthrough,
-      and Ctrl+Alt+Del where you expect it.
-    </p>
-
-    <div
-      role="img"
-      aria-label="Terminal session inside a container: pct enter 101, uptime, and its output"
-      class="mt-8 max-w-3xl select-none overflow-hidden rounded-lg border border-border bg-card shadow-card"
-    >
-      <div class="relative flex items-center border-b border-border bg-background px-4 py-2">
-        <div class="absolute left-4 flex items-center gap-1.5" aria-hidden="true">
-          <span class="h-2.5 w-2.5 rounded-full border border-border bg-muted-foreground/40"></span>
-          <span class="h-2.5 w-2.5 rounded-full border border-border bg-muted-foreground/40"></span>
-          <span class="h-2.5 w-2.5 rounded-full border border-border bg-muted-foreground/40"></span>
-        </div>
-        <p class="w-full text-center font-mono text-[10px] text-muted-foreground">
-          root@pve1: ~ (xterm)
-        </p>
-      </div>
-      <div class="overflow-x-auto bg-background px-4 py-4 font-mono text-[12px] leading-relaxed">
-        <p>
-          <span class="text-primary">root@pve1:~#</span>
-          <span class="text-foreground">pct enter 101</span>
-        </p>
-        <p>
-          <span class="text-primary">root@db-01:~#</span>
-          <span class="text-foreground">uptime</span>
-        </p>
-        <!-- &nbsp; indentation survives Astro's whitespace trimming -->
-        <p class="whitespace-pre text-muted-foreground">&nbsp;&nbsp;23:41:05 up 9 days,  4:21,  1 user,  load average: 0.42, 0.38, 0.35</p>
-        <p>
-          <span class="text-primary">root@db-01:~#</span>
-          <span class="animate-pulse text-foreground">█</span>
-        </p>
-      </div>
-    </div>
-    <div class="mt-3 flex justify-end">
-      <kbd
-        class="rounded border border-border bg-muted px-2 py-0.5 font-mono text-[10px] text-muted-foreground"
-      >
-        Ctrl+Alt+Del
-      </kbd>
-    </div>
-  </section>
-
-  <!--
-    05 · POWER USER — shortcut sheet.
-    Two columns on sm and up, single column below sm.
-  -->
-  <section
-    id="power-user"
-    aria-labelledby="features-power-user-title"
-    class="scroll-mt-24 py-16 sm:py-20"
-  >
-    <div class="flex items-baseline gap-3">
-      <span class="shrink-0 font-mono text-sm text-primary">05</span>
-      <h2
-        id="features-power-user-title"
-        class="text-2xl font-semibold tracking-tighter text-foreground sm:text-3xl"
-      >
-        Built for the daily grind
-      </h2>
-    </div>
-    <p class="mt-3 max-w-[58ch] text-[15px] leading-relaxed text-muted-foreground">
-      Tasks and events stream over WebSocket, with polling as the fallback.
-      Cmd/Ctrl+K opens the command palette. The tray menu keeps one-click
-      actions one click away.
-    </p>
-
-    <div class="mt-8 grid gap-x-12 gap-y-0 border-t border-border sm:grid-cols-2">
-      <div class="flex items-center justify-between gap-4 border-b border-border py-4">
-        <kbd
-          class="shrink-0 rounded border border-border bg-muted px-2 py-0.5 font-mono text-[10px] text-muted-foreground"
-        >
-          Cmd/Ctrl + K
-        </kbd>
-        <p class="text-right text-sm text-muted-foreground">Command palette</p>
-      </div>
-      <div class="flex items-center justify-between gap-4 border-b border-border py-4">
-        <span class="shrink-0 font-mono text-[11px] text-primary">WebSocket</span>
-        <p class="text-right text-sm text-muted-foreground">
-          Live task &amp; event stream
-        </p>
-      </div>
-      <div class="flex items-center justify-between gap-4 border-b border-border py-4">
-        <span class="shrink-0 font-mono text-[11px] text-primary">Tray menu</span>
-        <p class="text-right text-sm text-muted-foreground">
-          Show / hide · connections · quit
-        </p>
-      </div>
-      <div class="flex items-center justify-between gap-4 border-b border-border py-4">
-        <span class="shrink-0 font-mono text-[11px] text-primary">10s</span>
-        <p class="text-right text-sm text-muted-foreground">
-          Connection status polling
-        </p>
-      </div>
-    </div>
-  </section>
-</div>
+  </div>
+</section>
