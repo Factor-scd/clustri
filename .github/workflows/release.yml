@@ -66,6 +66,7 @@ jobs:
           args: ${{ matrix.args }}
 
       - name: Upload updater artifacts
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
