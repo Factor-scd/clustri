@@ -1,8 +1,11 @@
+---
+import DotMatrixText from './DotMatrixText.astro'
+---
 <section id="tour" aria-labelledby="tour-title" class="scroll-mt-24 py-20 sm:py-28">
   <div class="mx-auto max-w-7xl px-6 lg:px-8">
     <div class="flex flex-wrap items-end justify-between gap-6">
       <div data-reveal>
-        <p class="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">Tour</p>
+        <DotMatrixText text="TOUR" size="xs" dotClass="text-primary" />
         <h2 id="tour-title" class="mt-4 max-w-[14ch] text-3xl font-semibold tracking-[-0.03em] text-foreground sm:text-4xl">
           Feels like the Proxmox UI,<br /><span class="text-muted-foreground">without the browser.</span>
         </h2>
@@ -12,7 +15,7 @@
       </div>
 
       <!-- Tabs -->
-      <div class="flex gap-1 rounded-lg border border-white/[0.06] bg-card p-1" role="tablist" aria-label="Screenshot tour" data-reveal data-reveal-delay="100">
+      <div class="flex gap-1 rounded-lg border border-dotted border-white/10 bg-card p-1" role="tablist" aria-label="Screenshot tour" data-reveal data-reveal-delay="100">
         <button role="tab" aria-selected="true" data-tour-tab="vms" class="rounded-md bg-primary px-3.5 py-1.5 font-mono text-[11px] font-semibold text-primary-foreground">VMs</button>
         <button role="tab" aria-selected="false" data-tour-tab="console" class="rounded-md px-3.5 py-1.5 font-mono text-[11px] font-medium text-muted-foreground hover:text-foreground">Console</button>
         <button role="tab" aria-selected="false" data-tour-tab="backups" class="rounded-md px-3.5 py-1.5 font-mono text-[11px] font-medium text-muted-foreground hover:text-foreground">Backups</button>
@@ -20,12 +23,12 @@
     </div>
 
     <!-- Frame -->
-    <div class="mt-10 overflow-hidden rounded-xl border border-white/[0.07] bg-card shadow-card" data-reveal data-reveal-delay="160">
-      <div class="flex h-9 items-center justify-between border-b border-white/[0.06] bg-background px-4">
+    <div class="mt-10 overflow-hidden rounded-xl border border-dotted border-white/10 bg-card shadow-card" data-reveal data-reveal-delay="160">
+      <div class="flex h-9 items-center justify-between border-b border-dotted border-white/10 bg-background px-4">
         <div class="flex items-center gap-1.5" aria-hidden="true">
-          <span class="h-2.5 w-2.5 rounded-full border border-white/[0.06] bg-white/10"></span>
-          <span class="h-2.5 w-2.5 rounded-full border border-white/[0.06] bg-white/10"></span>
-          <span class="h-2.5 w-2.5 rounded-full border border-white/[0.06] bg-white/10"></span>
+          <span class="h-2.5 w-2.5 rounded-full border border-dotted border-white/10 bg-white/10"></span>
+          <span class="h-2.5 w-2.5 rounded-full border border-dotted border-white/10 bg-white/10"></span>
+          <span class="h-2.5 w-2.5 rounded-full border border-dotted border-white/10 bg-white/10"></span>
         </div>
         <p id="tour-frame-label" class="font-mono text-[10px] tabular-nums text-muted-foreground">Virtual Machines — 4 VMs across the cluster</p>
         <span class="hidden font-mono text-[10px] text-success sm:inline">● live</span>
@@ -36,16 +39,16 @@
     </div>
 
     <div class="mt-4 grid gap-3 sm:grid-cols-3">
-      <div class="rounded-lg border border-white/[0.06] bg-card p-4" data-reveal>
-        <p class="font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-foreground">VMs &amp; Containers</p>
-        <p class="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">Filter by node, type, status. Start / stop / migrate / console in one click. QEMU and LXC.</p>
+      <div class="rounded-lg border border-dotted border-white/10 bg-card p-4 dot-grid" data-reveal>
+        <DotMatrixText text="VMS + CONTAINERS" size="xs" dotClass="text-foreground" />
+        <p class="mt-2 text-[13px] leading-relaxed text-muted-foreground">Filter by node, type, status. Start / stop / migrate / console in one click. QEMU and LXC.</p>
       </div>
-      <div class="rounded-lg border border-white/[0.06] bg-card p-4" data-reveal data-reveal-delay="80">
-        <p class="font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-foreground">Console</p>
-        <p class="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">noVNC for VMs, xterm.js for CTs. Fullscreen, resize, Ctrl+Alt+Del passthrough.</p>
+      <div class="rounded-lg border border-dotted border-white/10 bg-card p-4 dot-grid" data-reveal data-reveal-delay="80">
+        <DotMatrixText text="CONSOLE" size="xs" dotClass="text-foreground" />
+        <p class="mt-2 text-[13px] leading-relaxed text-muted-foreground">noVNC for VMs, xterm.js for CTs. Fullscreen, resize, Ctrl+Alt+Del passthrough.</p>
       </div>
-      <div class="rounded-lg border border-white/[0.06] bg-card p-4" data-reveal data-reveal-delay="160">
-        <p class="font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-foreground">Backups</p>
+      <div class="rounded-lg border border-dotted border-white/10 bg-card p-4 dot-grid" data-reveal data-reveal-delay="160">
+        <DotMatrixText text="BACKUPS" size="xs" dotClass="text-foreground" />
         <p class="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">Jobs, groups, snapshots. Verify, prune (dry-run), GC, archive download via OS dialog.</p>
       </div>
     </div>

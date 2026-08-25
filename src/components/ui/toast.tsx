@@ -39,7 +39,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       setToasts((prev) => [...prev, { id, message, variant }])
       setTimeout(() => removeToast(id), 5000)
     },
-    [removeToast]
+    [removeToast],
   )
 
   return (
@@ -104,8 +104,8 @@ function ToastItem({
   return (
     <div
       className={cn(
-        'flex items-start gap-3 rounded-md border border-border border-l-2 bg-card p-3.5 text-sm text-foreground shadow-lg shadow-black/10 dark:shadow-black/40',
-        config.bar
+        'flex items-start gap-3 rounded-md border border-dotted border-border border-l-2 bg-card p-3.5 text-sm text-foreground shadow-lg shadow-black/10 dark:shadow-black/40 dot-grid',
+        config.bar,
       )}
       style={{
         animation: 'toast-slide-in 0.3s ease-out',

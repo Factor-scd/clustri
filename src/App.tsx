@@ -18,6 +18,7 @@ import { PbsDatastoreDetail } from '@/components/pbs/PbsDatastoreDetail'
 import { SettingsPage } from '@/components/settings/SettingsPage'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ToastProvider, useToast } from '@/components/ui/toast'
+import { DotMatrixText } from '@/components/ui/dot-matrix'
 import { Server, AlertTriangle } from 'lucide-react'
 import { useConnectionStore } from '@/stores/connectionStore'
 import { useUIStore } from '@/stores/uiStore'
@@ -236,15 +237,13 @@ function AppContent() {
 
     if (!activeConnectionId) {
       return (
-        <div className="flex h-full items-center justify-center p-6">
-          <div className="flex flex-col items-center text-center">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-border bg-card shadow-card">
+        <div className="flex h-full items-center justify-center p-6 dot-grid">
+          <div className="flex flex-col items-center text-center rounded-lg border border-dotted border-border bg-card p-8 shadow-card">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-sm border border-dotted border-border bg-muted/40">
               <Server className="h-5 w-5 text-primary" />
             </div>
-            <h2 className="text-lg font-semibold tracking-tight">
-              No connection selected
-            </h2>
-            <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+            <DotMatrixText text="NO CONNECTION" size="sm" className="text-foreground" />
+            <p className="mt-2 max-w-sm text-sm text-muted-foreground">
               Connect to a Proxmox server to get started
             </p>
           </div>
@@ -375,11 +374,11 @@ function AppContent() {
   }, [activeConnectionId, activeServerType, view.type])
 
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="flex h-screen flex-col bg-background dot-grid">
       {activeConnection?.status === 'failover' && activeConnection.currentEndpointUrl && (
-        <div className="flex items-center gap-2 border-b border-warning/25 bg-warning/10 px-4 py-1.5">
+        <div className="flex items-center gap-2 border-b border-dotted border-warning/30 bg-warning/10 px-4 py-1.5 dot-grid">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-warning" />
-          <p className="text-xs font-medium text-warning">Operating on a fallback node</p>
+          <DotMatrixText text="FALLBACK NODE" size="xs" className="text-warning" />
           <p className="truncate font-mono text-[11px] tabular-nums text-warning/80">
             {activeConnection.currentEndpointUrl}
           </p>
@@ -391,9 +390,9 @@ function AppContent() {
           activeView={view.type}
           onNavigate={(v) => handleNavigate(v as View)}
         />
-        <main className="flex min-h-0 flex-1 flex-col">
+        <main className="flex min-h-0 flex-1 flex-col bg-background/60">
           {activeConnectionId && (
-            <div className="shrink-0 border-b px-3 py-1.5">
+            <div className="shrink-0 border-b border-dotted border-border px-3 py-1.5 dot-grid">
               <TaskStatusBar
                 connectionId={activeConnectionId}
                 onClick={() => handleNavigate({ type: 'tasks' })}

@@ -1,9 +1,12 @@
+---
+import DotMatrixText from './DotMatrixText.astro'
+---
 <!-- Security -->
 <section id="security" aria-labelledby="sec-title" class="scroll-mt-24 py-20 sm:py-28">
   <div class="mx-auto max-w-7xl px-6 lg:px-8">
     <div class="grid gap-10 lg:grid-cols-12 lg:items-start">
       <div class="lg:col-span-6" data-reveal>
-        <p class="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">Security</p>
+        <DotMatrixText text="SECURITY" size="xs" dotClass="text-primary" />
         <h2 id="sec-title" class="mt-4 text-3xl font-semibold tracking-[-0.03em] text-foreground sm:text-4xl">
           Your keys stay<br /><span class="text-muted-foreground">in your pocket.</span>
         </h2>
@@ -18,14 +21,14 @@
       </div>
 
       <div class="lg:col-span-6" data-reveal data-reveal-delay="120">
-        <div class="rounded-xl border border-white/[0.07] bg-card p-5 shadow-card">
+        <div class="rounded-xl border border-dotted border-white/10 bg-card p-5 shadow-card">
           <div class="flex items-center gap-2">
             <span class="h-2 w-2 rounded-full bg-success shadow-[0_0_6px] shadow-success/60" aria-hidden="true"></span>
             <span class="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">SHA-256 fingerprint — pinned</span>
             <span class="ml-auto rounded border border-success/20 bg-success/10 px-1.5 py-0.5 font-mono text-[10px] uppercase text-success">Pinned</span>
           </div>
           <p class="mt-4 overflow-x-auto whitespace-nowrap font-mono text-[13px] tracking-[0.12em] text-foreground">A3:0F:71:C9:52:B8:4D:E0:11:2A:7F:9C:63:D4:18:0B</p>
-          <div class="mt-4 flex flex-wrap gap-2 border-t border-white/[0.06] pt-4 font-mono text-[10px]">
+          <div class="mt-4 flex flex-wrap gap-2 border-t border-dotted border-white/10 pt-4 font-mono text-[10px]">
             <span class="rounded bg-white/[0.04] px-2 py-1 text-muted-foreground">OS keyring</span>
             <span class="rounded bg-white/[0.04] px-2 py-1 text-muted-foreground">rustls · sha2 · x509-cert</span>
             <span class="rounded bg-white/[0.04] px-2 py-1 text-muted-foreground">no telemetry</span>
@@ -34,15 +37,15 @@
         </div>
 
         <div class="mt-4 grid grid-cols-3 gap-3">
-          <div class="rounded-lg border border-white/[0.06] bg-background p-3 text-center">
+          <div class="rounded-lg border border-dotted border-white/10 bg-background p-3 text-center">
             <p class="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Tokens</p>
             <p class="mt-1 font-mono text-[11px] font-medium text-foreground">Keyring only</p>
           </div>
-          <div class="rounded-lg border border-white/[0.06] bg-background p-3 text-center">
+          <div class="rounded-lg border border-dotted border-white/10 bg-background p-3 text-center">
             <p class="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Certs</p>
             <p class="mt-1 font-mono text-[11px] font-medium text-foreground">TOFU SHA-256</p>
           </div>
-          <div class="rounded-lg border border-white/[0.06] bg-background p-3 text-center">
+          <div class="rounded-lg border border-dotted border-white/10 bg-background p-3 text-center">
             <p class="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Transport</p>
             <p class="mt-1 font-mono text-[11px] font-medium text-foreground">rustls</p>
           </div>
@@ -53,11 +56,11 @@
 </section>
 
 <!-- Bold statement — full bleed -->
-<section class="relative overflow-hidden border-y border-white/[0.06] bg-[#08080a]">
+<section class="relative overflow-hidden border-y border-dotted border-white/10 bg-[#08080a]">
   <div class="pointer-events-none absolute inset-0 grid-bg opacity-[0.22]" aria-hidden="true"></div>
   <div class="relative mx-auto max-w-7xl px-6 py-20 sm:py-28 lg:px-8">
     <div class="max-w-4xl" data-reveal>
-      <p class="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">The idea</p>
+      <DotMatrixText text="THE IDEA" size="xs" dotClass="text-primary" />
       <p class="mt-6 text-3xl font-semibold leading-[0.95] tracking-[-0.04em] text-foreground sm:text-5xl lg:text-[3.4rem]">
         Proxmox is powerful.<br />
         <span class="text-muted-foreground">The web UI is not the point of failure.</span>
@@ -75,27 +78,27 @@
   <div class="mx-auto max-w-7xl px-6 lg:px-8">
     <div class="grid gap-10 lg:grid-cols-12">
       <div class="lg:col-span-5" data-reveal>
-        <p class="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">Console</p>
+        <DotMatrixText text="CONSOLE" size="xs" dotClass="text-primary" />
         <h2 id="console-title" class="mt-4 text-3xl font-semibold tracking-[-0.03em] text-foreground sm:text-4xl">Type like you're there.</h2>
         <p class="mt-4 max-w-[44ch] text-[15px] leading-relaxed text-muted-foreground">
           noVNC for VMs, xterm.js for containers. Fullscreen, keyboard passthrough, and Ctrl+Alt+Del where you expect it.
         </p>
         <div class="mt-6 inline-flex gap-2">
-          <span class="rounded border border-white/[0.06] bg-card px-2.5 py-1 font-mono text-[11px] text-muted-foreground">Fullscreen</span>
-          <span class="rounded border border-white/[0.06] bg-card px-2.5 py-1 font-mono text-[11px] text-muted-foreground">Ctrl+Alt+Del</span>
+          <span class="rounded border border-dotted border-white/10 bg-card px-2.5 py-1 font-mono text-[11px] text-muted-foreground">Fullscreen</span>
+          <span class="rounded border border-dotted border-white/10 bg-card px-2.5 py-1 font-mono text-[11px] text-muted-foreground">Ctrl+Alt+Del</span>
         </div>
       </div>
 
       <div class="lg:col-span-7" data-reveal data-reveal-delay="120">
-        <div class="overflow-hidden rounded-xl border border-white/[0.07] bg-card shadow-card">
-          <div class="flex items-center justify-between border-b border-white/[0.06] bg-background px-4 py-2.5">
+        <div class="overflow-hidden rounded-xl border border-dotted border-white/10 bg-card shadow-card">
+          <div class="flex items-center justify-between border-b border-dotted border-white/10 bg-background px-4 py-2.5">
             <div class="flex items-center gap-1.5" aria-hidden="true">
-              <span class="h-2.5 w-2.5 rounded-full border border-white/[0.06] bg-white/10"></span>
-              <span class="h-2.5 w-2.5 rounded-full border border-white/[0.06] bg-white/10"></span>
-              <span class="h-2.5 w-2.5 rounded-full border border-white/[0.06] bg-white/10"></span>
+              <span class="h-2.5 w-2.5 rounded-full border border-dotted border-white/10 bg-white/10"></span>
+              <span class="h-2.5 w-2.5 rounded-full border border-dotted border-white/10 bg-white/10"></span>
+              <span class="h-2.5 w-2.5 rounded-full border border-dotted border-white/10 bg-white/10"></span>
             </div>
             <p class="font-mono text-[10px] text-muted-foreground">root@pve1 · xterm</p>
-            <kbd class="rounded border border-white/[0.08] bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">Ctrl+Alt+Del</kbd>
+            <kbd class="rounded border border-dotted border-white/10 bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">Ctrl+Alt+Del</kbd>
           </div>
           <div class="bg-[#0a0a0a] px-4 py-4 font-mono text-[12px] leading-relaxed" data-terminal>
             <div data-line><span class="text-primary">root@pve1:~#</span> <span class="text-foreground">pct enter 101</span></div>
@@ -110,11 +113,11 @@
 </section>
 
 <!-- Power user -->
-<section id="power-user" aria-labelledby="power-title" class="scroll-mt-24 border-t border-white/[0.06] py-20 sm:py-28">
+<section id="power-user" aria-labelledby="power-title" class="scroll-mt-24 border-t border-dotted border-white/10 py-20 sm:py-28">
   <div class="mx-auto max-w-7xl px-6 lg:px-8">
     <div class="flex flex-wrap items-end justify-between gap-6" data-reveal>
       <div>
-        <p class="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">Power user</p>
+        <DotMatrixText text="POWER USER" size="xs" dotClass="text-primary" />
         <h2 id="power-title" class="mt-4 text-3xl font-semibold tracking-[-0.03em] text-foreground sm:text-4xl">Built for the people who keep the lights on.</h2>
       </div>
       <p class="max-w-[44ch] text-[15px] leading-relaxed text-muted-foreground">
@@ -122,16 +125,16 @@
       </p>
     </div>
 
-    <div class="mt-10 grid gap-0 border-y border-white/[0.06] sm:grid-cols-2" data-stagger>
-      <div class="flex items-center justify-between gap-4 border-b border-white/[0.06] px-1 py-4 sm:border-r sm:px-4" data-stagger-child>
-        <kbd class="rounded border border-white/[0.08] bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground">Cmd / Ctrl + K</kbd>
+    <div class="mt-10 grid gap-0 border-y border-dotted border-white/10 sm:grid-cols-2" data-stagger>
+      <div class="flex items-center justify-between gap-4 border-b border-dotted border-white/10 px-1 py-4 sm:border-r sm:px-4" data-stagger-child>
+        <kbd class="rounded border border-dotted border-white/10 bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground">Cmd / Ctrl + K</kbd>
         <span class="text-sm text-muted-foreground">Command palette</span>
       </div>
-      <div class="flex items-center justify-between gap-4 border-b border-white/[0.06] px-1 py-4 sm:px-4" data-stagger-child>
+      <div class="flex items-center justify-between gap-4 border-b border-dotted border-white/10 px-1 py-4 sm:px-4" data-stagger-child>
         <span class="font-mono text-[11px] font-medium text-primary">WebSocket</span>
         <span class="text-sm text-muted-foreground">Live task &amp; event stream</span>
       </div>
-      <div class="flex items-center justify-between gap-4 border-b border-white/[0.06] px-1 py-4 sm:border-r sm:px-4 sm:border-b-0" data-stagger-child>
+      <div class="flex items-center justify-between gap-4 border-b border-dotted border-white/10 px-1 py-4 sm:border-r sm:px-4 sm:border-b-0" data-stagger-child>
         <span class="font-mono text-[11px] font-medium text-primary">Tray menu</span>
         <span class="text-sm text-muted-foreground">Show / hide · connections · quit</span>
       </div>

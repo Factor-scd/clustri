@@ -1,6 +1,7 @@
 import { useConnectionStore } from '@/stores/connectionStore'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
+import { DotMatrixText } from '@/components/ui/dot-matrix'
 import { Plus, Server, LayoutDashboard, HardDrive, Box, ListTodo, Shield, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -36,16 +37,13 @@ export function Sidebar({ onAddConnection, activeView, onNavigate }: SidebarProp
   }
 
   return (
-    <div className="flex w-64 flex-col border-r border-border bg-card">
-      <div className="flex h-14 shrink-0 items-center gap-2.5 border-b border-border px-4">
-        <img src="/icon.png" alt="Clustri" className="h-7 w-7 rounded-md" />
+    <div className="flex w-64 flex-col border-r border-dotted border-border bg-card dot-grid">
+      <div className="flex h-14 shrink-0 items-center gap-2.5 border-b border-dotted border-border px-4 bg-card/80">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border border-dotted border-border bg-primary/10 text-primary">
+          <Server className="h-3.5 w-3.5" />
+        </div>
         <div className="min-w-0 leading-tight">
-          <h1 className="truncate text-sm font-semibold tracking-tight text-foreground">
-            Clustri
-          </h1>
-          <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-            Ops Console
-          </p>
+          <DotMatrixText text="CLUSTRI" size="xs" className="text-foreground" />
         </div>
       </div>
       <ScrollArea className="flex-1">
@@ -55,10 +53,10 @@ export function Sidebar({ onAddConnection, activeView, onNavigate }: SidebarProp
               <button
                 onClick={() => setActiveConnection(connection.id)}
                 className={cn(
-                  'flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm transition duration-150',
+                  'flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm transition duration-150 border border-transparent',
                   activeConnectionId === connection.id
-                    ? 'bg-accent text-accent-foreground'
-                    : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
+                    ? 'bg-accent text-accent-foreground border-dotted border-border'
+                    : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground hover:border-dotted hover:border-border/60',
                 )}
               >
                 <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', getStatusColor(connection.status))} />
@@ -79,59 +77,60 @@ export function Sidebar({ onAddConnection, activeView, onNavigate }: SidebarProp
                       <>
                         <SidebarItem
                           icon={LayoutDashboard}
-                          label="Overview"
+                          label="OVERVIEW"
                           active={activeView === 'pbs-overview'}
                           onClick={() => onNavigate?.({ type: 'pbs-overview' })}
                         />
                         <SidebarItem
                           icon={HardDrive}
-                          label="Datastores"
+                          label="DATASTORES"
                           active={activeView === 'pbs-datastores' || activeView === 'pbs-datastore-detail'}
                           onClick={() => onNavigate?.({ type: 'pbs-datastores' })}
                         />
-                        <SidebarItem icon={ListTodo} label="Tasks" active={activeView === 'tasks'} onClick={() => onNavigate?.({ type: 'tasks' })} />
+                        <SidebarItem icon={ListTodo} label="TASKS" active={activeView === 'tasks'} onClick={() => onNavigate?.({ type: 'tasks' })} />
                       </>
                     ) : (
                       <>
                         <SidebarItem
                           icon={LayoutDashboard}
-                          label="Dashboard"
+                          label="DASHBOARD"
                           active={activeView === 'dashboard'}
                           onClick={() => onNavigate?.({ type: 'dashboard' })}
                         />
                         <SidebarItem
                           icon={Server}
-                          label="Nodes"
+                          label="NODES"
                           active={activeView === 'nodes'}
                           onClick={() => onNavigate?.({ type: 'nodes' })}
                         />
                         <SidebarItem
                           icon={Box}
-                          label="VMs"
+                          label="VMS"
                           active={activeView === 'vms' || activeView === 'vm-detail'}
                           onClick={() => onNavigate?.({ type: 'vms' })}
                         />
                         <SidebarItem
                           icon={Box}
-                          label="Containers"
+                          label="CONTAINERS"
                           active={activeView === 'containers'}
                           onClick={() => onNavigate?.({ type: 'containers' })}
                         />
-                        <SidebarItem icon={HardDrive} label="Storage" active={activeView === 'storage' || activeView === 'storage-detail'} onClick={() => onNavigate?.({ type: 'storage' })} />
-                        <SidebarItem icon={ListTodo} label="Tasks" active={activeView === 'tasks'} onClick={() => onNavigate?.({ type: 'tasks' })} />
-                        <SidebarItem icon={Shield} label="Backups" active={activeView === 'backups'} onClick={() => onNavigate?.({ type: 'backups' })} />
+                        <SidebarItem icon={HardDrive} label="STORAGE" active={activeView === 'storage' || activeView === 'storage-detail'} onClick={() => onNavigate?.({ type: 'storage' })} />
+                        <SidebarItem icon={ListTodo} label="TASKS" active={activeView === 'tasks'} onClick={() => onNavigate?.({ type: 'tasks' })} />
+                        <SidebarItem icon={Shield} label="BACKUPS" active={activeView === 'backups'} onClick={() => onNavigate?.({ type: 'backups' })} />
                       </>
                     )}
                     {connection.serverType !== 'pbs' && connection.nodes && connection.nodes.length > 0 && (
                       <>
-                        <p className="px-3 pb-1 pt-3 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                          Cluster nodes
-                        </p>
+                        <div className="px-3 pb-1 pt-3">
+                          <DotMatrixText text="CLUSTER NODES" size="xs" className="text-muted-foreground opacity-60" />
+                        </div>
+                        <hr className="dot-rule mx-2" />
                         {connection.nodes.map((node) => (
                           <button
                             key={node.url}
                             onClick={() => onNavigate?.({ type: 'node-detail', nodeName: node.name })}
-                            className="flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-[13px] font-medium text-muted-foreground transition duration-150 hover:bg-accent/60 hover:text-foreground"
+                            className="flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-[13px] font-medium text-muted-foreground transition duration-150 hover:bg-accent/60 hover:text-foreground border border-transparent hover:border-dotted hover:border-border/50"
                           >
                             <span
                               className={cn(
@@ -141,7 +140,7 @@ export function Sidebar({ onAddConnection, activeView, onNavigate }: SidebarProp
                             />
                             <span className="min-w-0 flex-1 truncate font-mono">{node.name}</span>
                             {node.isPrimary && (
-                              <span className="shrink-0 rounded border border-primary/30 bg-primary/10 px-1 py-px text-[10px] uppercase text-primary">
+                              <span className="shrink-0 rounded-sm border border-dotted border-primary/40 bg-primary/10 px-1 py-px text-[10px] uppercase tracking-widest text-primary">
                                 primary
                               </span>
                             )}
@@ -161,16 +160,16 @@ export function Sidebar({ onAddConnection, activeView, onNavigate }: SidebarProp
           ))}
         </div>
       </ScrollArea>
-      <div className="space-y-1 border-t border-border p-2">
+      <div className="space-y-1 border-t border-dotted border-border p-2 bg-card/60">
         <SidebarItem
           icon={Settings}
-          label="Settings"
+          label="SETTINGS"
           active={activeView === 'settings'}
           onClick={() => onNavigate?.({ type: 'settings' })}
         />
         <Button
           variant="outline"
-          className="w-full justify-start gap-2"
+          className="w-full justify-start gap-2 border-dotted"
           onClick={onAddConnection}
         >
           <Plus className="h-4 w-4" />
@@ -199,19 +198,19 @@ function SidebarItem({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'relative flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-[13px] font-medium transition duration-150',
+        'relative flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-[13px] font-medium transition duration-150 border border-transparent',
         disabled
           ? 'pointer-events-none cursor-not-allowed opacity-50'
           : active
-            ? 'bg-primary/10 text-primary hover:bg-primary/15'
-            : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
+            ? 'bg-primary/10 text-primary border-dotted border-primary/20'
+            : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground hover:border-dotted hover:border-border/50',
       )}
     >
       {active && (
         <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-primary" />
       )}
       <Icon className="h-4 w-4 shrink-0" />
-      <span>{label}</span>
+      <DotMatrixText text={label} size="xs" className={active ? 'text-primary' : 'text-muted-foreground'} dotClassName={active ? 'text-primary' : ''} />
     </button>
   )
 }

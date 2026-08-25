@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { ListTodo, Loader2 } from 'lucide-react'
+import { DotMatrixText } from '@/components/ui/dot-matrix'
 import { useTasks } from '@/hooks/useProxmox'
 import type { ProxmoxTask } from '@/types/proxmox'
 
@@ -27,21 +28,19 @@ export function TaskStatusBar({ connectionId, onClick }: TaskStatusBarProps) {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors duration-150 hover:bg-accent/50 text-muted-foreground hover:text-accent-foreground"
+      className="group flex w-full items-center gap-2 rounded-md border border-transparent px-3 py-2 text-sm transition-colors duration-150 hover:border-dotted hover:border-border/60 hover:bg-accent/50 text-muted-foreground hover:text-accent-foreground"
     >
-      <ListTodo className="h-4 w-4" />
+      <ListTodo className="h-4 w-4 transition-colors group-hover:text-foreground" />
       <span className="flex-1 text-left">
         {runningCount > 0 ? (
           <span className="flex items-center gap-1.5">
-            <span className="font-medium text-info">{runningCount} task{runningCount !== 1 ? 's' : ''} running</span>
+            <DotMatrixText text={`${runningCount} TASK${runningCount !== 1 ? 'S' : ''} RUNNING`} size="xs" className="text-info group-hover:text-foreground transition-colors" />
           </span>
         ) : (
-          <span>No tasks running</span>
+          <DotMatrixText text="NO TASKS RUNNING" size="xs" className="text-muted-foreground group-hover:text-foreground transition-colors" />
         )}
       </span>
-      {runningCount > 0 && (
-        <Loader2 className="h-3 w-3 text-info animate-spin" />
-      )}
+      {runningCount > 0 && <Loader2 className="h-3 w-3 text-info group-hover:text-foreground transition-colors animate-spin" />}
     </button>
   )
 }
