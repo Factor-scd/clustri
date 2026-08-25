@@ -9,19 +9,46 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release-id: ${{ steps.create.outputs.id }}
+    steps:
+      - name: Create draft release
+        id: create
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.ref_name }}"
+          REPO="${{ github.repository }}"
+          gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1 && \
+            echo "id=$(gh release view "$TAG" --repo "$REPO" --json id --jq '.id')" >> "$GITHUB_OUTPUT" && \
+            echo "Release already exists." && exit 0
+
+          gh release create "$TAG" \
+            --repo "$REPO" \
+            --title "Clustri $TAG" \
+            --notes "See the assets below to download and install." \
+            --draft --verify-tag --target main
+          echo "id=$(gh release view "$TAG" --repo "$REPO" --json id --jq '.id')" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: create-release
     strategy:
       fail-fast: false
       matrix:
         include:
           - platform: ubuntu-22.04
-            args: ""
-          - platform: windows-latest
-            args: ""
-          - platform: macos-latest
-            args: "--target universal-apple-darwin"
+            runner: ubuntu-22.04
+            target: ""
+          - platform: windows
+            runner: windows-latest
+            target: ""
+          - platform: macos
+            runner: macos-latest
+            target: "--target universal-apple-darwin"
 
-    runs-on: ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
 
     steps:
       - uses: actions/checkout@v4
@@ -38,7 +65,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.platform == 'macos' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
@@ -51,41 +78,39 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
-      - name: Build and release
-        uses: tauri-apps/tauri-action@v1
+      - name: Build
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-        with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "Clustri ${{ github.ref_name }}"
-          releaseBody: "See the assets below to download and install."
-          releaseDraft: true
-          prerelease: false
-          updaterJsonPreferNsis: true
-          args: ${{ matrix.args }}
+        run: npx tauri build ${{ matrix.target }}
 
-      - name: Upload updater artifacts
+      - name: Upload artifacts
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          RELEASE_TAG="${{ github.ref_name }}"
+          TAG="${{ github.ref_name }}"
+          REPO="${{ github.repository }}"
 
-          # Upload all .sig files from the entire target directory
-          find src-tauri/target -name "*.sig" -type f | while read sig_file; do
-            echo "Uploading $(basename "$sig_file")..."
-            gh release upload "$RELEASE_TAG" "$sig_file" --clobber --repo ${{ github.repository }} 2>/dev/null || true
-          done
+          upload() {
+            local file="$1"
+            if [ -f "$file" ]; then
+              echo "Uploading $(basename "$file")..."
+              gh release upload "$TAG" "$file" --clobber --repo "$REPO" || true
+            fi
+          }
 
-          # Upload updater bundles (.app.tar.gz, .nsis.zip, .msi.zip)
-          find src-tauri/target \( -name "*.app.tar.gz" -o -name "*.nsis.zip" -o -name "*.msi.zip" \) -type f | while read bundle_file; do
-            echo "Uploading $(basename "$bundle_file")..."
-            gh release upload "$RELEASE_TAG" "$bundle_file" --clobber --repo ${{ github.repository }} 2>/dev/null || true
+          find src-tauri/target -path "*/bundle/*" \( \
+            -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage" -o \
+            -name "*.dmg" -o -name "*.app.tar.gz" -o -name "*.msi" -o \
+            -name "*.exe" -o -name "*.nsis.zip" -o -name "*.msi.zip" -o \
+            -name "*.sig" \
+          \) -type f | while read f; do
+            upload "$f"
           done
 
   update-latest-json:
-    needs: release
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Generate and upload latest.json
@@ -93,27 +118,31 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python3 << 'PYEOF'
-          import json, subprocess, os, sys, tempfile
+          import json, subprocess, os, tempfile
 
-          TAG = os.environ.get("GITHUB_REF_NAME", "")
-          REPO = os.environ.get("GITHUB_REPOSITORY", "")
-          VERSION = TAG.lstrip("v")
-          BASE_URL = f"https://github.com/{REPO}/releases/download/{TAG}"
+          tag = os.environ["GITHUB_REF_NAME"]
+          repo = os.environ["GITHUB_REPOSITORY"]
+          version = tag.lstrip("v")
+          base_url = f"https://github.com/{repo}/releases/download/{tag}"
 
           def run(cmd):
               return subprocess.check_output(cmd, shell=True, text=True).strip()
 
+          data = json.loads(run(f'gh release view "{tag}" --repo "{repo}" --json assets'))
+          assets = {a["name"]: a for a in data["assets"]}
+
           def find_asset(pattern):
-              data = json.loads(run(f'gh release view "{TAG}" --repo "{REPO}" --json assets'))
-              for a in data["assets"]:
-                  if pattern in a["name"]:
-                      return a["name"]
+              for name in assets:
+                  if pattern in name:
+                      return name
               return None
 
-          def download_asset(name):
+          def download_sig(name):
+              if not name:
+                  return ""
               with tempfile.TemporaryDirectory() as d:
                   subprocess.run(
-                      f'gh release download "{TAG}" --repo "{REPO}" -p "{name}" -D "{d}"',
+                      f'gh release download "{tag}" --repo "{repo}" -p "{name}" -D "{d}"',
                       shell=True, capture_output=True
                   )
                   path = os.path.join(d, name)
@@ -125,45 +154,42 @@ jobs:
           platforms = {}
 
           # Linux AppImage
-          appimage = find_asset(".AppImage")
-          appimage_sig = find_asset(".AppImage.sig")
-          if appimage and appimage_sig:
-              sig = download_asset(appimage_sig)
-              if sig:
-                  platforms["linux-x86_64"] = {"signature": sig, "url": f"{BASE_URL}/{appimage}"}
+          app = find_asset(".AppImage")
+          sig = find_asset(".AppImage.sig")
+          if app and sig:
+              s = download_sig(sig)
+              if s:
+                  platforms["linux-x86_64"] = {"signature": s, "url": f"{base_url}/{app}"}
 
           # Windows NSIS
-          nsis = find_asset("-setup.exe")
-          nsis_sig = find_asset("nsis.zip.sig")
-          if nsis and nsis_sig:
-              sig = download_asset(nsis_sig)
-              if sig:
-                  platforms["windows-x86_64"] = {"signature": sig, "url": f"{BASE_URL}/{nsis}"}
+          exe = find_asset("-setup.exe")
+          sig = find_asset("nsis.zip.sig")
+          if exe and sig:
+              s = download_sig(sig)
+              if s:
+                  platforms["windows-x86_64"] = {"signature": s, "url": f"{base_url}/{exe}"}
 
           # macOS universal
-          macos = find_asset("app.tar.gz")
-          macos_sig = find_asset("app.tar.gz.sig")
-          if macos and macos_sig:
-              sig = download_asset(macos_sig)
-              if sig:
-                  platforms["darwin-x86_64"] = {"signature": sig, "url": f"{BASE_URL}/{macos}"}
-                  platforms["darwin-aarch64"] = {"signature": sig, "url": f"{BASE_URL}/{macos}"}
+          app = find_asset("app.tar.gz")
+          sig = find_asset("app.tar.gz.sig")
+          if app and sig:
+              s = download_sig(sig)
+              if s:
+                  platforms["darwin-x86_64"] = {"signature": s, "url": f"{base_url}/{app}"}
+                  platforms["darwin-aarch64"] = {"signature": s, "url": f"{base_url}/{app}"}
 
           latest = {
-              "version": VERSION,
+              "version": version,
               "notes": "See the assets below to download and install.",
               "pub_date": run("date -u +%Y-%m-%dT%H:%M:%SZ"),
               "platforms": platforms,
           }
 
-          with open("latest.json", "w") as f:
+          with open("/tmp/latest.json", "w") as f:
               json.dump(latest, f, indent=2)
 
           print(json.dumps(latest, indent=2))
-
-          subprocess.run(
-              f'gh release upload "{TAG}" latest.json --clobber --repo "{REPO}"',
-              shell=True, check=True
-          )
-          print("latest.json uploaded successfully.")
           PYEOF
+
+          gh release upload "${{ github.ref_name }}" /tmp/latest.json --clobber --repo "${{ github.repository }}"
+          echo "latest.json uploaded."
