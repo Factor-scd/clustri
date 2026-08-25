@@ -64,3 +64,150 @@ jobs:
           prerelease: false
           updaterJsonPreferNsis: true
           args: ${{ matrix.args }}
+
+      - name: Upload updater artifacts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RELEASE_TAG="${{ github.ref_name }}"
+
+          # Upload all .sig files from the entire target directory
+          find src-tauri/target -name "*.sig" -type f | while read sig_file; do
+            echo "Uploading $(basename "$sig_file")..."
+            gh release upload "$RELEASE_TAG" "$sig_file" --clobber --repo ${{ github.repository }} 2>/dev/null || true
+          done
+
+          # Upload updater bundles (.app.tar.gz, .nsis.zip, .msi.zip)
+          find src-tauri/target \( -name "*.app.tar.gz" -o -name "*.nsis.zip" -o -name "*.msi.zip" \) -type f | while read bundle_file; do
+            echo "Uploading $(basename "$bundle_file")..."
+            gh release upload "$RELEASE_TAG" "$bundle_file" --clobber --repo ${{ github.repository }} 2>/dev/null || true
+          done
+
+  update-latest-json:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate and upload latest.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          RELEASE_TAG="${{ github.ref_name }}"
+          VERSION=$(echo "$RELEASE_TAG" | sed 's/^v//')
+          REPO="${{ github.repository }}"
+          BASE_URL="https://github.com/${REPO}/releases/download/${RELEASE_TAG}"
+
+          # Fetch all release assets
+          ASSETS_JSON=$(gh release view "$RELEASE_TAG" --repo "$REPO" --json assets)
+
+          # Helper: find asset name matching pattern
+          find_asset() {
+            echo "$ASSETS_JSON" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          for asset in data['assets']:
+              if '$1' in asset['name']:
+                  print(asset['name'])
+                  break
+          "
+          }
+
+          # Helper: read sig file content from release assets
+          get_sig_content() {
+            local sig_name="$1"
+            local tmp_dir=$(mktemp -d)
+            gh release download "$RELEASE_TAG" --repo "$REPO" -p "$sig_name" -D "$tmp_dir" 2>/dev/null
+            if [ -f "$tmp_dir/$sig_name" ]; then
+              cat "$tmp_dir/$sig_name"
+            fi
+            rm -rf "$tmp_dir"
+          }
+
+          # Find key assets
+          APPIMAGE=$(find_asset "AppImage$")
+          NSIS_SETUP=$(find_asset "nsis-setup.exe")
+          MACOS_APP_TAR=$(find_asset "universal.app.tar.gz")
+
+          # Read signatures
+          APPIMAGE_SIG_NAME=$(find_asset "AppImage.sig$")
+          NSIS_SIG_NAME=$(find_asset "nsis.zip.sig$")
+          MACOS_SIG_NAME=$(find_asset "app.tar.gz.sig$")
+
+          echo "Found assets:"
+          echo "  AppImage: $APPIMAGE"
+          echo "  NSIS: $NSIS_SETUP"
+          echo "  macOS: $MACOS_APP_TAR"
+          echo "  AppImage sig: $APPIMAGE_SIG_NAME"
+          echo "  NSIS sig: $NSIS_SIG_NAME"
+          echo "  macOS sig: $MACOS_SIG_NAME"
+
+          # Build latest.json
+          python3 << 'PYEOF'
+          import json, subprocess, os, sys
+
+          version = os.environ['VERSION']
+          base_url = os.environ['BASE_URL']
+
+          def get_sig(name):
+              if not name:
+                  return ""
+              tmp_dir = subprocess.check_output(['mktemp', '-d']).decode().strip()
+              try:
+                  subprocess.run([
+                      'gh', 'release', 'download', os.environ['RELEASE_TAG'],
+                      '--repo', os.environ['REPO'],
+                      '-p', name, '-D', tmp_dir
+                  ], capture_output=True, check=False)
+                  sig_path = os.path.join(tmp_dir, name)
+                  if os.path.exists(sig_path):
+                      with open(sig_path) as f:
+                          return f.read().strip()
+              finally:
+                  subprocess.run(['rm', '-rf', tmp_dir])
+              return ""
+
+          platforms = {}
+
+          appimage = os.environ.get('APPIMAGE', '')
+          appimage_sig = get_sig(os.environ.get('APPIMAGE_SIG_NAME', ''))
+          if appimage and appimage_sig:
+              platforms['linux-x86_64'] = {
+                  'signature': appimage_sig,
+                  'url': f'{base_url}/{appimage}'
+              }
+
+          nsis = os.environ.get('NSIS_SETUP', '')
+          nsis_sig = get_sig(os.environ.get('NSIS_SIG_NAME', ''))
+          if nsis and nsis_sig:
+              platforms['windows-x86_64'] = {
+                  'signature': nsis_sig,
+                  'url': f'{base_url}/{nsis}'
+              }
+
+          macos = os.environ.get('MACOS_APP_TAR', '')
+          macos_sig = get_sig(os.environ.get('MACOS_SIG_NAME', ''))
+          if macos and macos_sig:
+              platforms['darwin-x86_64'] = {
+                  'signature': macos_sig,
+                  'url': f'{base_url}/{macos}'
+              }
+              platforms['darwin-aarch64'] = {
+                  'signature': macos_sig,
+                  'url': f'{base_url}/{macos}'
+              }
+
+          latest = {
+              'version': version,
+              'notes': 'See the assets below to download and install.',
+              'pub_date': subprocess.check_output(['date', '-u', '+%Y-%m-%dT%H:%M:%SZ']).decode().strip(),
+              'platforms': platforms
+          }
+
+          with open('latest.json', 'w') as f:
+              json.dump(latest, f, indent=2)
+
+          print(json.dumps(latest, indent=2))
+          PYEOF
+
+          # Upload latest.json
+          gh release upload "$RELEASE_TAG" latest.json --clobber --repo "$REPO"
