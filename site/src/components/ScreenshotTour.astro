@@ -1,6 +1,5 @@
 ---
 import DotMatrixText from './DotMatrixText.astro'
-const base = import.meta.env.BASE_URL
 ---
 <section id="tour" aria-labelledby="tour-title" class="scroll-mt-24 py-20 sm:py-28">
   <div class="mx-auto max-w-7xl px-6 lg:px-8">
@@ -34,8 +33,8 @@ const base = import.meta.env.BASE_URL
         <p id="tour-frame-label" class="font-mono text-[10px] tabular-nums text-muted-foreground">Virtual Machines — 4 VMs across the cluster</p>
         <span class="hidden font-mono text-[10px] text-success sm:inline">● live</span>
       </div>
-      <div class="relative bg-[#0e0e12]" data-base-url={base}>
-        <img id="tour-img" src={`${import.meta.env.BASE_URL}screenshots/vms.png`} alt="Clustri VM list showing running and stopped VMs" width="1600" height="1000" class="h-auto w-full object-cover object-top transition-opacity duration-300" loading="lazy" decoding="async" />
+      <div class="relative bg-[#0e0e12]">
+        <img id="tour-img" src="/screenshots/vms.png" alt="Clustri VM list showing running and stopped VMs" width="1600" height="1000" class="h-auto w-full object-cover object-top transition-opacity duration-300" loading="lazy" decoding="async" />
       </div>
     </div>
 
@@ -60,11 +59,10 @@ const base = import.meta.env.BASE_URL
   const img = document.getElementById('tour-img') as HTMLImageElement | null
   const label = document.getElementById('tour-frame-label')
   const tabs = document.querySelectorAll<HTMLButtonElement>('[data-tour-tab]')
-  const baseUrl = img?.closest('[data-base-url]')?.getAttribute('data-base-url') || '/'
   const sources: Record<string, { src: string; label: string; alt: string }> = {
-    vms: { src: `${baseUrl}screenshots/vms.png`, label: 'Virtual Machines — 4 VMs across the cluster', alt: 'Clustri VM list showing running and stopped VMs' },
-    console: { src: `${baseUrl}screenshots/console.png`, label: 'VNC Console — web-01 (QEMU) on pve1', alt: 'Clustri console view with VNC viewer' },
-    backups: { src: `${baseUrl}screenshots/backups.png`, label: 'Backups — datastores, groups and snapshots', alt: 'Clustri backups view with datastores and prune controls' },
+    vms: { src: '/screenshots/vms.png', label: 'Virtual Machines — 4 VMs across the cluster', alt: 'Clustri VM list showing running and stopped VMs' },
+    console: { src: '/screenshots/console.png', label: 'VNC Console — web-01 (QEMU) on pve1', alt: 'Clustri console view with VNC viewer' },
+    backups: { src: '/screenshots/backups.png', label: 'Backups — datastores, groups and snapshots', alt: 'Clustri backups view with datastores and prune controls' },
   }
   tabs.forEach((btn) => {
     btn.addEventListener('click', () => {
