@@ -1249,6 +1249,7 @@ pub fn run() {
             update_tray_menu,
         ])
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             // Build the system tray menu
             let show_hide = MenuItemBuilder::new("Show / Hide")

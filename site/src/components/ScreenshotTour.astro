@@ -7,10 +7,10 @@ import DotMatrixText from './DotMatrixText.astro'
       <div data-reveal>
         <DotMatrixText text="TOUR" size="xs" dotClass="text-primary" />
         <h2 id="tour-title" class="mt-4 max-w-[14ch] text-3xl font-semibold tracking-[-0.03em] text-foreground sm:text-4xl">
-          Feels like the Proxmox UI,<br /><span class="text-muted-foreground">without the browser.</span>
+          Manage Proxmox resources,<br /><span class="text-muted-foreground">in a desktop window.</span>
         </h2>
         <p class="mt-4 max-w-[48ch] text-[15px] leading-relaxed text-muted-foreground">
-          Native window, keyboard-first, no electron bloat. Tabs switch instantly — the data underneath stays live via WebSocket or 10s polling.
+          Clustri runs as a native Tauri app. Switch between VMs, consoles, and backups while WebSocket events or 10-second polling refreshes the data.
         </p>
       </div>
 
@@ -30,7 +30,7 @@ import DotMatrixText from './DotMatrixText.astro'
           <span class="h-2.5 w-2.5 rounded-full border border-dotted border-white/10 bg-white/10"></span>
           <span class="h-2.5 w-2.5 rounded-full border border-dotted border-white/10 bg-white/10"></span>
         </div>
-        <p id="tour-frame-label" class="font-mono text-[10px] tabular-nums text-muted-foreground">Virtual Machines — 4 VMs across the cluster</p>
+        <p id="tour-frame-label" class="font-mono text-[10px] tabular-nums text-muted-foreground">Virtual Machines: 4 VMs across the cluster</p>
         <span class="hidden font-mono text-[10px] text-success sm:inline">● live</span>
       </div>
       <div class="relative bg-[#0e0e12]">
@@ -41,15 +41,15 @@ import DotMatrixText from './DotMatrixText.astro'
     <div class="mt-4 grid gap-3 sm:grid-cols-3">
       <div class="rounded-lg border border-dotted border-white/10 bg-card p-4 dot-grid" data-reveal>
         <DotMatrixText text="VMS + CONTAINERS" size="xs" dotClass="text-foreground" />
-        <p class="mt-2 text-[13px] leading-relaxed text-muted-foreground">Filter by node, type, status. Start / stop / migrate / console in one click. QEMU and LXC.</p>
+        <p class="mt-2 text-[13px] leading-relaxed text-muted-foreground">Filter by node, type, or status. Start, stop, migrate, or open a console for QEMU and LXC guests.</p>
       </div>
       <div class="rounded-lg border border-dotted border-white/10 bg-card p-4 dot-grid" data-reveal data-reveal-delay="80">
         <DotMatrixText text="CONSOLE" size="xs" dotClass="text-foreground" />
-        <p class="mt-2 text-[13px] leading-relaxed text-muted-foreground">noVNC for VMs, xterm.js for CTs. Fullscreen, resize, Ctrl+Alt+Del passthrough.</p>
+        <p class="mt-2 text-[13px] leading-relaxed text-muted-foreground">Use noVNC for VMs and xterm.js for CTs, with fullscreen, resize, and Ctrl+Alt+Del passthrough.</p>
       </div>
       <div class="rounded-lg border border-dotted border-white/10 bg-card p-4 dot-grid" data-reveal data-reveal-delay="160">
         <DotMatrixText text="BACKUPS" size="xs" dotClass="text-foreground" />
-        <p class="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">Jobs, groups, snapshots. Verify, prune (dry-run), GC, archive download via OS dialog.</p>
+        <p class="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">Review jobs, groups, and snapshots. Verify archives, preview prune, run GC, or download through the OS dialog.</p>
       </div>
     </div>
   </div>
@@ -60,9 +60,9 @@ import DotMatrixText from './DotMatrixText.astro'
   const label = document.getElementById('tour-frame-label')
   const tabs = document.querySelectorAll<HTMLButtonElement>('[data-tour-tab]')
   const sources: Record<string, { src: string; label: string; alt: string }> = {
-    vms: { src: '/screenshots/vms.png', label: 'Virtual Machines — 4 VMs across the cluster', alt: 'Clustri VM list showing running and stopped VMs' },
-    console: { src: '/screenshots/console.png', label: 'VNC Console — web-01 (QEMU) on pve1', alt: 'Clustri console view with VNC viewer' },
-    backups: { src: '/screenshots/backups.png', label: 'Backups — datastores, groups and snapshots', alt: 'Clustri backups view with datastores and prune controls' },
+    vms: { src: '/screenshots/vms.png', label: 'Virtual Machines: 4 VMs across the cluster', alt: 'Clustri VM list showing running and stopped VMs' },
+    console: { src: '/screenshots/console.png', label: 'VNC Console: web-01 (QEMU) on pve1', alt: 'Clustri console view with VNC viewer' },
+    backups: { src: '/screenshots/backups.png', label: 'Backups: datastores, groups, and snapshots', alt: 'Clustri backups view with datastores and prune controls' },
   }
   tabs.forEach((btn) => {
     btn.addEventListener('click', () => {

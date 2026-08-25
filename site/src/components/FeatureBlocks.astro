@@ -8,15 +8,15 @@ import DotMatrixText from './DotMatrixText.astro'
       <div class="lg:col-span-6" data-reveal>
         <DotMatrixText text="SECURITY" size="xs" dotClass="text-primary" />
         <h2 id="sec-title" class="mt-4 text-3xl font-semibold tracking-[-0.03em] text-foreground sm:text-4xl">
-          Your keys stay<br /><span class="text-muted-foreground">in your pocket.</span>
+           Keep credentials<br /><span class="text-muted-foreground">on your machine.</span>
         </h2>
         <p class="mt-4 max-w-[44ch] text-[15px] leading-relaxed text-muted-foreground">
-          API tokens live in the OS keyring — never on disk. Self-signed certs are pinned by SHA-256 on first connect and verified every time after.
+            Clustri stores API tokens in the OS keyring, not in a file. It pins self-signed certificates by SHA-256 on first connect and checks them on later connections.
         </p>
         <div class="mt-6 space-y-3 font-mono text-[11px] leading-relaxed">
-          <div class="flex gap-2"><span class="text-primary">—</span><span class="text-muted-foreground">Token mode: <span class="text-foreground">PVEAPIToken / PBSAPIToken</span> header</span></div>
-          <div class="flex gap-2"><span class="text-primary">—</span><span class="text-muted-foreground">Password mode: ticket auth + <span class="text-foreground">CSRFPreventionToken</span></span></div>
-          <div class="flex gap-2"><span class="text-primary">—</span><span class="text-muted-foreground">Fallbacks skip TOFU — intentional for home-lab failover; primary is always pinned.</span></div>
+           <div class="flex gap-2"><span class="text-primary">•</span><span class="text-muted-foreground">Token mode: <span class="text-foreground">PVEAPIToken / PBSAPIToken</span> header</span></div>
+           <div class="flex gap-2"><span class="text-primary">•</span><span class="text-muted-foreground">Password mode: ticket auth + <span class="text-foreground">CSRFPreventionToken</span></span></div>
+            <div class="flex gap-2"><span class="text-primary">•</span><span class="text-muted-foreground">Fallbacks skip TOFU during home-lab failover; the primary endpoint stays pinned.</span></div>
         </div>
       </div>
 
@@ -24,7 +24,7 @@ import DotMatrixText from './DotMatrixText.astro'
         <div class="rounded-xl border border-dotted border-white/10 bg-card p-5 shadow-card">
           <div class="flex items-center gap-2">
             <span class="h-2 w-2 rounded-full bg-success shadow-[0_0_6px] shadow-success/60" aria-hidden="true"></span>
-            <span class="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">SHA-256 fingerprint — pinned</span>
+             <span class="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">SHA-256 fingerprint: pinned</span>
             <span class="ml-auto rounded border border-success/20 bg-success/10 px-1.5 py-0.5 font-mono text-[10px] uppercase text-success">Pinned</span>
           </div>
           <p class="mt-4 overflow-x-auto whitespace-nowrap font-mono text-[13px] tracking-[0.12em] text-foreground">A3:0F:71:C9:52:B8:4D:E0:11:2A:7F:9C:63:D4:18:0B</p>
@@ -33,7 +33,7 @@ import DotMatrixText from './DotMatrixText.astro'
             <span class="rounded bg-white/[0.04] px-2 py-1 text-muted-foreground">rustls · sha2 · x509-cert</span>
             <span class="rounded bg-white/[0.04] px-2 py-1 text-muted-foreground">no telemetry</span>
           </div>
-          <p class="mt-3 font-mono text-[10px] text-muted-foreground">Captured on first connect. Verified on every connect after. “Accept anyway” per-connection when you rotate certs.</p>
+            <p class="mt-3 font-mono text-[10px] text-muted-foreground">Clustri captures the fingerprint on first connect and checks it later. Accept a rotated certificate for one connection.</p>
         </div>
 
         <div class="mt-4 grid grid-cols-3 gap-3">
@@ -55,18 +55,18 @@ import DotMatrixText from './DotMatrixText.astro'
   </div>
 </section>
 
-<!-- Bold statement — full bleed -->
+<!-- Bold statement: full bleed -->
 <section class="relative overflow-hidden border-y border-dotted border-white/10 bg-[#08080a]">
   <div class="pointer-events-none absolute inset-0 grid-bg opacity-[0.22]" aria-hidden="true"></div>
   <div class="relative mx-auto max-w-7xl px-6 py-20 sm:py-28 lg:px-8">
     <div class="max-w-4xl" data-reveal>
       <DotMatrixText text="THE IDEA" size="xs" dotClass="text-primary" />
       <p class="mt-6 text-3xl font-semibold leading-[0.95] tracking-[-0.04em] text-foreground sm:text-5xl lg:text-[3.4rem]">
-        Proxmox is powerful.<br />
-        <span class="text-muted-foreground">The web UI is not the point of failure.</span>
+          The cluster keeps running.<br />
+          <span class="text-muted-foreground">Your management session should stay with it.</span>
       </p>
       <p class="mt-6 max-w-[52ch] text-[15px] leading-relaxed text-muted-foreground sm:text-[16px]">
-        Clustri sits between you and the API. When a node drops, the app retries the next one. You keep working. The cluster keeps running.
+         Clustri sends requests through the Proxmox API. If a node stops answering, it tries the next endpoint and shows you which node answered.
       </p>
       <div class="mt-8 h-px w-12 bg-primary/60" aria-hidden="true"></div>
     </div>
@@ -79,9 +79,9 @@ import DotMatrixText from './DotMatrixText.astro'
     <div class="grid gap-10 lg:grid-cols-12">
       <div class="lg:col-span-5" data-reveal>
         <DotMatrixText text="CONSOLE" size="xs" dotClass="text-primary" />
-        <h2 id="console-title" class="mt-4 text-3xl font-semibold tracking-[-0.03em] text-foreground sm:text-4xl">Type like you're there.</h2>
+         <h2 id="console-title" class="mt-4 text-3xl font-semibold tracking-[-0.03em] text-foreground sm:text-4xl">Open a console on any guest.</h2>
         <p class="mt-4 max-w-[44ch] text-[15px] leading-relaxed text-muted-foreground">
-          noVNC for VMs, xterm.js for containers. Fullscreen, keyboard passthrough, and Ctrl+Alt+Del where you expect it.
+            Use noVNC for VMs and xterm.js for containers. Fullscreen mode and keyboard passthrough keep the session in the app.
         </p>
         <div class="mt-6 inline-flex gap-2">
           <span class="rounded border border-dotted border-white/10 bg-card px-2.5 py-1 font-mono text-[11px] text-muted-foreground">Fullscreen</span>
@@ -118,10 +118,10 @@ import DotMatrixText from './DotMatrixText.astro'
     <div class="flex flex-wrap items-end justify-between gap-6" data-reveal>
       <div>
         <DotMatrixText text="POWER USER" size="xs" dotClass="text-primary" />
-        <h2 id="power-title" class="mt-4 text-3xl font-semibold tracking-[-0.03em] text-foreground sm:text-4xl">Built for the people who keep the lights on.</h2>
+          <h2 id="power-title" class="mt-4 text-3xl font-semibold tracking-[-0.03em] text-foreground sm:text-4xl">Controls for the work you repeat.</h2>
       </div>
       <p class="max-w-[44ch] text-[15px] leading-relaxed text-muted-foreground">
-        Tasks stream over WebSocket with polling fallback. <button data-cmdk-trigger class="underline decoration-white/15 underline-offset-4 hover:text-foreground">⌘K</button> opens the palette. The tray keeps one-click actions one click away.
+         WebSocket events update task status. If events stop, polling takes over. Press <button data-cmdk-trigger class="underline decoration-white/15 underline-offset-4 hover:text-foreground">⌘K</button> to find a command. The tray keeps common actions close.
       </p>
     </div>
 
@@ -132,7 +132,7 @@ import DotMatrixText from './DotMatrixText.astro'
       </div>
       <div class="flex items-center justify-between gap-4 border-b border-dotted border-white/10 px-1 py-4 sm:px-4" data-stagger-child>
         <span class="font-mono text-[11px] font-medium text-primary">WebSocket</span>
-        <span class="text-sm text-muted-foreground">Live task &amp; event stream</span>
+         <span class="text-sm text-muted-foreground">Live task and event updates</span>
       </div>
       <div class="flex items-center justify-between gap-4 border-b border-dotted border-white/10 px-1 py-4 sm:border-r sm:px-4 sm:border-b-0" data-stagger-child>
         <span class="font-mono text-[11px] font-medium text-primary">Tray menu</span>
