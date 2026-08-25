@@ -1,18 +1,18 @@
 ---
 import DotMatrixText from './DotMatrixText.astro'
 ---
-<section aria-label="Facts" class="border-y border-dotted border-white/10 bg-[#08080a] dot-grid">
+<section aria-label="Project details" class="border-y border-dotted border-white/10 bg-[#08080a] dot-grid">
   <div class="mx-auto max-w-7xl px-6 lg:px-8">
     <div class="grid grid-cols-2 gap-0 py-8 sm:grid-cols-4" data-stagger>
       <div class="flex flex-col items-center gap-2 border-r border-dotted border-white/10 px-2 py-6" data-stagger-child>
         <span class="font-mono text-3xl font-semibold tracking-[-0.03em] tabular-nums text-foreground sm:text-4xl" data-countup="0">0</span>
         <DotMatrixText text="TELEMETRY" size="xs" dotClass="text-muted-foreground" />
-        <span class="font-mono text-[11px] text-muted-foreground">ships with the app</span>
+        <span class="font-mono text-[11px] text-muted-foreground">telemetry disabled</span>
       </div>
       <div class="flex flex-col items-center gap-2 border-r border-dotted border-white/10 px-2 py-6 sm:border-r" data-stagger-child>
         <span class="font-mono text-3xl font-semibold tracking-[-0.03em] tabular-nums text-foreground sm:text-4xl" data-countup="0">0</span>
         <DotMatrixText text="CLOUD" size="xs" dotClass="text-muted-foreground" />
-        <span class="font-mono text-[11px] text-muted-foreground">talks to your nodes</span>
+        <span class="font-mono text-[11px] text-muted-foreground">runs against your infrastructure</span>
       </div>
       <div class="flex flex-col items-center gap-2 border-r border-dotted border-white/10 px-2 py-6 max-sm:border-r-0" data-stagger-child>
         <span class="font-mono text-3xl font-semibold tracking-[-0.03em] tabular-nums text-primary sm:text-4xl" data-countup="64">0</span>

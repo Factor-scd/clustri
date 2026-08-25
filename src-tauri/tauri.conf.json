@@ -34,5 +34,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "enabled": true,
+      "endpoints": [
+        "https://github.com/Factor-scd/clustri/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

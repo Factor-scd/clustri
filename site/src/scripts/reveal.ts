@@ -159,11 +159,11 @@ function initLiveDashboard() {
   const taskList = root.querySelector<HTMLElement>('[data-live-tasks]')
 
   const pool = [
-    { chip: 'RUNNING', cls: 'border-warning/30 bg-warning/10 text-warning', text: 'start VM 104', node: 'pve3', time: 'now' },
-    { chip: 'OK', cls: 'border-success/25 bg-success/10 text-success', text: 'snapshot vm-100', node: 'pve1', time: 'now' },
-    { chip: 'RUNNING', cls: 'border-warning/30 bg-warning/10 text-warning', text: 'migrate VM 102 → pve3', node: 'pve1 → pve3', time: 'now' },
-    { chip: 'OK', cls: 'border-success/25 bg-success/10 text-success', text: 'backup ct-201 → pbs', node: 'pve2', time: 'now' },
-    { chip: 'DONE', cls: 'border-white/10 bg-white/[0.04] text-muted-foreground', text: 'prune datastore main', node: 'pbs', time: 'now' },
+    { chip: 'RUNNING', cls: 'border-warning/30 bg-warning/10 text-warning', text: 'Start VM 104', node: 'pve3', time: 'now' },
+    { chip: 'OK', cls: 'border-success/25 bg-success/10 text-success', text: 'Snapshot vm-100', node: 'pve1', time: 'now' },
+    { chip: 'RUNNING', cls: 'border-warning/30 bg-warning/10 text-warning', text: 'Move VM 102 to pve3', node: 'pve1 → pve3', time: 'now' },
+    { chip: 'OK', cls: 'border-success/25 bg-success/10 text-success', text: 'Back up ct-201 to PBS', node: 'pve2', time: 'now' },
+    { chip: 'DONE', cls: 'border-white/10 bg-white/[0.04] text-muted-foreground', text: 'Prune main datastore', node: 'pbs', time: 'now' },
   ]
   let poolIdx = 0
 
@@ -221,12 +221,12 @@ function initCommandPalette() {
   if (!overlay || !panel || !input || !list) return
 
   const commands = [
-    { label: 'Go to Features', desc: 'Failover, security, VMs', action: () => scrollToId('features') },
-    { label: 'Go to Console', desc: 'noVNC · xterm.js', action: () => scrollToId('console') },
-    { label: 'Go to Architecture', desc: 'Request path diagram', action: () => scrollToId('architecture') },
-    { label: 'Go to Download', desc: 'Releases · coming soon', action: () => scrollToId('download') },
-    { label: 'Kill pve1 (demo)', desc: 'Trigger the failover playground', action: () => { scrollToId('failover-playground'); setTimeout(() => document.getElementById('fp-kill-pve1')?.click(), 600) } },
-    { label: 'Copy install command', desc: 'npm run tauri dev', action: () => navigator.clipboard.writeText('npm run tauri dev') },
+    { label: 'See features', desc: 'Failover, credentials, guests', action: () => scrollToId('features') },
+    { label: 'Open console', desc: 'VM and container consoles', action: () => scrollToId('console') },
+    { label: 'See architecture', desc: 'Watch requests move', action: () => scrollToId('architecture') },
+    { label: 'See releases', desc: 'Packages are not published yet', action: () => scrollToId('download') },
+    { label: 'Stop pve1 (demo)', desc: 'Stop pve1 and watch failover', action: () => { scrollToId('failover-playground'); setTimeout(() => document.getElementById('fp-kill-pve1')?.click(), 600) } },
+    { label: 'Copy install command', desc: 'Copy npm run tauri dev', action: () => navigator.clipboard.writeText('npm run tauri dev') },
   ]
 
   let filtered = [...commands]

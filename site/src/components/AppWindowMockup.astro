@@ -4,7 +4,7 @@ const navItems = [
   { label: 'Dashboard', icon: 'grid', active: true },
   { label: 'Nodes', icon: 'server', active: false },
   { label: 'VMs', icon: 'box', active: false },
-  { label: 'Containers', icon: 'box', active: false },
+  { label: 'CTs', icon: 'box', active: false },
   { label: 'Storage', icon: 'hdd', active: false },
   { label: 'Tasks', icon: 'todo', active: false },
   { label: 'Backups', icon: 'shield', active: false },
@@ -110,7 +110,7 @@ const quickActions = [
 
     <div class="flex items-center gap-2 border-b border-warning/25 bg-warning/10 px-4 py-1.5">
       <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-warning" aria-hidden="true"></span>
-      <p class="shrink-0 font-mono text-[10px] text-warning">Operating on a fallback node</p>
+             <p class="shrink-0 font-mono text-[10px] text-warning">Using a fallback node</p>
       <p class="ml-auto min-w-0 truncate font-mono text-[10px] tabular-nums text-warning/80">https://192.168.1.12:8006</p>
     </div>
 
@@ -146,7 +146,7 @@ const quickActions = [
               </div>
               <p class="ml-7 font-mono text-[10px] text-muted-foreground">Offline</p>
             </div>
-            <div class="px-3 pb-1 pt-3"><DotMatrixText text="CLUSTER NODES" size="xs" dotClass="text-muted-foreground" /></div>
+             <div class="px-3 pb-1 pt-3"><DotMatrixText text="NODES IN CLUSTER" size="xs" dotClass="text-muted-foreground" /></div>
             <div class="space-y-0.5">
               {clusterNodes.map((n) => (
                 <div class="flex w-full items-center gap-2.5 rounded-md px-3 py-1.5">
@@ -219,7 +219,7 @@ const quickActions = [
             <section class="rounded-md border border-dotted border-white/10 bg-card sm:col-span-3">
               <header class="flex items-center gap-2 border-b border-dotted border-white/10 px-3 py-2">
                 <svg class="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true"><use href="#i-activity" /></svg>
-                <h3 class="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Task activity</h3>
+               <h3 class="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Recent tasks</h3>
                 <span class="ml-auto h-1.5 w-1.5 animate-pulse rounded-full bg-success" aria-hidden="true"></span>
               </header>
               <div class="divide-y divide-border" data-live-tasks>
