@@ -1,4 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { DotMatrixText } from '@/components/ui/dot-matrix'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Activity, Clock, Loader2 } from 'lucide-react'
@@ -16,20 +17,20 @@ function isRunningTask(status?: string): boolean {
 function getStatusBadgeClass(status?: string): string {
   switch (status) {
     case 'OK':
-      return 'border-success/25 bg-success/10 text-success'
+      return 'border-dotted border-success/30 bg-success/10 text-success'
     case 'unknown':
-      return 'border-warning/25 bg-warning/10 text-warning'
+      return 'border-dotted border-warning/30 bg-warning/10 text-warning'
     default:
       if (!status || status === 'Running') {
-        return 'border-info/25 bg-info/10 text-info'
+        return 'border-dotted border-info/30 bg-info/10 text-info'
       }
-      return 'border-destructive/25 bg-destructive/10 text-destructive'
+      return 'border-dotted border-destructive/30 bg-destructive/10 text-destructive'
   }
 }
 
 function getStatusLabel(status?: string): string {
-  if (!status || status === 'Running') return 'Running'
-  return status
+  if (!status || status === 'Running') return 'RUNNING'
+  return status.toUpperCase()
 }
 
 function formatDuration(starttime: number, endtime?: number): string {
@@ -52,7 +53,6 @@ function formatTime(timestamp: number): string {
 }
 
 function getTaskTypeLabel(type: string): string {
-  // Capitalize and format Proxmox task types
   return type
     .replace(/qm/gi, 'VM')
     .replace(/vz/gi, 'CT')
@@ -68,16 +68,16 @@ function getTaskTypeLabel(type: string): string {
 export function ActivityFeed({ tasks, isLoading }: ActivityFeedProps) {
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
+      <Card className="dot-grid">
+        <CardHeader className="border-b border-dotted border-border/60">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-muted/40">
+            <div className="flex h-7 w-7 items-center justify-center rounded-sm border border-dotted border-border bg-muted/40">
               <Activity className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
-            <CardTitle className="text-sm font-semibold">Recent Activity</CardTitle>
+            <DotMatrixText text="RECENT ACTIVITY" size="xs" className="text-foreground" />
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-4">
           <div className="space-y-2">
             {Array.from({ length: 5 }, (_, i) => (
               <Skeleton key={i} className="h-12 w-full" />
@@ -91,30 +91,30 @@ export function ActivityFeed({ tasks, isLoading }: ActivityFeedProps) {
   const recentTasks = tasks?.slice(0, 15) ?? []
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="dot-grid">
+      <CardHeader className="border-b border-dotted border-border/60">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-muted/40">
+          <div className="flex h-7 w-7 items-center justify-center rounded-sm border border-dotted border-border bg-muted/40">
             <Activity className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
-          <CardTitle className="text-sm font-semibold">Recent Activity</CardTitle>
+          <DotMatrixText text="RECENT ACTIVITY" size="xs" className="text-foreground" />
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-4">
         {recentTasks.length > 0 ? (
           <ScrollArea className="h-[300px]">
-            <div className="space-y-1.5">
+            <div className="space-y-0">
               {recentTasks.map((task) => (
                 <div
                   key={task.upid}
-                  className="flex items-center justify-between rounded-md border border-border/70 bg-background/30 px-3 py-2.5 transition-colors duration-150 hover:border-border hover:bg-accent/40"
+                  className="flex items-center justify-between px-3 py-2.5 transition-colors duration-150 hover:bg-accent/30 feed-rule"
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className="truncate text-[13px] font-medium">{getTaskTypeLabel(task.type)}</p>
                         <span
-                          className={`inline-flex shrink-0 items-center gap-1 rounded-sm border px-1.5 py-0.5 text-[11px] font-medium ${getStatusBadgeClass(task.status)}`}
+                          className={`inline-flex shrink-0 items-center gap-1 rounded-sm border border-dotted px-1.5 py-0.5 text-[10px] font-medium tracking-widest ${getStatusBadgeClass(task.status)}`}
                         >
                           {isRunningTask(task.status) && (
                             <Loader2 className="h-3 w-3 animate-spin" />

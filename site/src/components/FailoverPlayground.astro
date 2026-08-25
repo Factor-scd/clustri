@@ -1,11 +1,13 @@
-<section id="failover-playground" aria-labelledby="fp-title" class="relative overflow-hidden border-y border-white/[0.06] bg-card/40">
-  <div class="pointer-events-none absolute inset-0 grid-bg opacity-[0.18]" aria-hidden="true"></div>
+---
+import DotMatrixText from './DotMatrixText.astro'
+---
+<section id="failover-playground" aria-labelledby="fp-title" class="relative overflow-hidden border-y border-dotted border-white/10 bg-card/40">
+  <div class="pointer-events-none absolute inset-0 dot-grid opacity-[0.12]" aria-hidden="true"></div>
 
   <div class="relative mx-auto max-w-7xl px-6 py-20 lg:px-8 lg:py-28">
     <div class="grid gap-10 lg:grid-cols-12 lg:items-start">
-      <!-- Copy + controls -->
       <div class="lg:col-span-5">
-        <p class="font-mono text-[11px] uppercase tracking-[0.18em] text-primary" data-reveal>Failover — try it</p>
+        <div data-reveal><DotMatrixText text="FAILOVER / TRY IT" size="xs" dotClass="text-primary" /></div>
         <h2 id="fp-title" class="mt-4 text-3xl font-semibold tracking-[-0.03em] text-foreground sm:text-4xl" data-reveal data-reveal-delay="80">
           One node dies.<br /><span class="text-muted-foreground">You don't notice.</span>
         </h2>
@@ -14,9 +16,9 @@
         </p>
 
         <div class="mt-8 flex flex-wrap gap-2" data-reveal data-reveal-delay="180">
-          <button id="fp-kill-pve1" type="button" class="rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-2 font-mono text-[11px] font-medium text-foreground transition hover:border-white/15 hover:bg-white/[0.07]">Kill pve1</button>
-          <button id="fp-kill-pve2" type="button" class="rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-2 font-mono text-[11px] font-medium text-foreground transition hover:border-white/15 hover:bg-white/[0.07]">Kill pve2</button>
-          <button id="fp-kill-pve3" type="button" class="rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-2 font-mono text-[11px] font-medium text-foreground transition hover:border-white/15 hover:bg-white/[0.07]">Kill pve3</button>
+          <button id="fp-kill-pve1" type="button" class="rounded-md border border-dotted border-white/10 bg-white/[0.04] px-3 py-2 font-mono text-[11px] font-medium text-foreground transition hover:border-white/15 hover:bg-white/[0.07]">Kill pve1</button>
+          <button id="fp-kill-pve2" type="button" class="rounded-md border border-dotted border-white/10 bg-white/[0.04] px-3 py-2 font-mono text-[11px] font-medium text-foreground transition hover:border-white/15 hover:bg-white/[0.07]">Kill pve2</button>
+          <button id="fp-kill-pve3" type="button" class="rounded-md border border-dotted border-white/10 bg-white/[0.04] px-3 py-2 font-mono text-[11px] font-medium text-foreground transition hover:border-white/15 hover:bg-white/[0.07]">Kill pve3</button>
           <button id="fp-heal" type="button" class="rounded-md bg-primary px-3 py-2 font-mono text-[11px] font-semibold text-primary-foreground transition hover:bg-primary/90">Heal all</button>
         </div>
 
@@ -27,19 +29,19 @@
           <span class="ml-1 text-muted-foreground">— tap a node or use the buttons</span>
         </div>
 
-        <div class="mt-6 rounded-md border border-white/[0.06] bg-background px-3 py-2.5 font-mono text-[11px] leading-relaxed text-muted-foreground" data-reveal data-reveal-delay="260">
+        <div class="mt-6 rounded-md border border-dotted border-white/10 bg-background px-3 py-2.5 font-mono text-[11px] leading-relaxed text-muted-foreground" data-reveal data-reveal-delay="260">
           <span class="text-foreground">How it works:</span> deduped order <span class="text-foreground">primary → fallbacks → discovered</span>. On connect / timeout / DNS / transport failure, retry the next endpoint. Status reflects which endpoint actually answered.
         </div>
       </div>
 
       <!-- Diagram -->
       <div class="lg:col-span-7" data-reveal data-reveal-delay="120">
-        <div class="relative overflow-hidden rounded-xl border border-white/[0.07] bg-card shadow-card">
+        <div class="relative overflow-hidden rounded-xl border border-dotted border-white/10 bg-card shadow-card">
           <!-- top rule -->
           <div id="fp-top-rule" class="h-px w-full bg-primary/30 transition-colors" aria-hidden="true"></div>
 
           <!-- header -->
-          <div class="flex items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-3">
+          <div class="flex items-center justify-between gap-3 border-b border-dotted border-white/10 px-4 py-3">
             <p class="font-mono text-[10px] tracking-[0.06em] text-muted-foreground">request → endpoints[0] → retry on failure</p>
             <span id="fp-status-chip" class="rounded border border-success/25 bg-success/10 px-1.5 py-0.5 font-mono text-[10px] uppercase text-success">Connected</span>
           </div>
@@ -47,7 +49,7 @@
           <!-- body: rail + nodes -->
           <div class="relative flex gap-0">
             <!-- packet rail -->
-            <div class="relative w-[36px] shrink-0 border-r border-white/[0.04] bg-background/40">
+            <div class="relative w-[36px] shrink-0 border-r border-dotted border-white/10 bg-background/40">
               <div class="absolute left-1/2 top-3 bottom-3 w-px -translate-x-1/2 bg-white/[0.08]" aria-hidden="true"></div>
               <!-- dots injected by JS -->
               <div id="fp-rail" class="absolute inset-0 overflow-hidden" aria-hidden="true"></div>
@@ -56,7 +58,7 @@
 
             <!-- node list -->
             <div class="min-w-0 flex-1">
-              <button id="fp-node-0" type="button" class="flex w-full items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-3.5 text-left transition hover:bg-white/[0.02]">
+              <button id="fp-node-0" type="button" class="flex w-full items-center justify-between gap-3 border-b border-dotted border-white/10 px-4 py-3.5 text-left transition hover:bg-white/[0.02]">
                 <span class="min-w-0">
                   <span class="flex items-center gap-2">
                     <span id="fp-dot-0" class="h-1.5 w-1.5 shrink-0 rounded-full bg-success shadow-[0_0_6px] shadow-success/50"></span>
@@ -66,7 +68,7 @@
                 </span>
                 <span class="shrink-0 rounded border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] uppercase text-primary">Primary</span>
               </button>
-              <button id="fp-node-1" type="button" class="flex w-full items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-3.5 text-left transition hover:bg-white/[0.02]">
+              <button id="fp-node-1" type="button" class="flex w-full items-center justify-between gap-3 border-b border-dotted border-white/10 px-4 py-3.5 text-left transition hover:bg-white/[0.02]">
                 <span class="min-w-0">
                   <span class="flex items-center gap-2">
                     <span id="fp-dot-1" class="h-1.5 w-1.5 shrink-0 rounded-full bg-success"></span>
@@ -90,7 +92,7 @@
           </div>
 
           <!-- status bar -->
-          <div class="border-t border-white/[0.06] bg-background px-4 py-3">
+          <div class="border-t border-dotted border-white/10 bg-background px-4 py-3">
             <div class="flex items-center justify-between gap-3">
               <span id="fp-status-text" class="font-mono text-[11px] tabular-nums text-muted-foreground">status: connected — pve1 answered</span>
               <span id="fp-latency" class="font-mono text-[10px] tabular-nums text-muted-foreground">~18 ms</span>
@@ -214,16 +216,20 @@
   document.getElementById('fp-heal')?.addEventListener('click', healAll)
   nodes.forEach((n, i) => n?.addEventListener('click', () => kill(i)))
 
+  const DOT_COUNT = 3
+  const CYCLE_SPEED = 0.012
+
   function createDots() {
     if (!rail) return
     rail.innerHTML = ''
     dotEls = []
-    for (let k = 0; k < 2; k++) {
+    for (let k = 0; k < DOT_COUNT; k++) {
       const d = document.createElement('div')
-      d.className = 'absolute left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-primary shadow-[0_0_8px] shadow-primary/60'
-      d.style.top = '8px'
+      d.className = 'absolute h-2 w-2 rounded-full bg-primary shadow-[0_0_8px] shadow-primary/60'
+      d.style.left = '50%'
+      d.style.top = '0px'
       // @ts-ignore
-      d._offset = k * 0.5
+      d._phase = k / DOT_COUNT
       rail.appendChild(d)
       dotEls.push(d)
     }
@@ -232,33 +238,32 @@
   function restartDots() {
     if (prefersReduced) return
     cancelAnimationFrame(raf)
-    t = 0
     createDots()
     animate()
   }
 
-  function targetYs() {
+  function getTargetY() {
     const ai = activeIndex()
-    if (ai === -1) return [0.88]
-    // map active index to rail progress (0..1): pve1 ~0.26, pve2 ~0.55, pve3 ~0.84
+    if (ai === -1) return 0.88
     const map = [0.28, 0.56, 0.86]
-    return [map[ai]]
+    return map[ai]
   }
 
   function animate() {
     if (prefersReduced || !rail) return
-    t += 0.018
+    t += CYCLE_SPEED
     const h = rail.clientHeight || 160
-    const targets = targetYs()
+    const target = getTargetY()
+    const ai = activeIndex()
+
     dotEls.forEach((el) => {
-      const phase = (t + el._offset) % 1
-      // ease: move from 0 to target, then fade and reset
-      const ty = phase * (targets[0] * h)
-      const visible = phase < 0.92
+      // @ts-ignore
+      const phase = (t + el._phase) % 1
+      const ty = phase * target * h
+      const visible = phase < 0.88
       el.style.transform = `translate(-50%, ${ty}px)`
       el.style.opacity = visible ? '1' : '0'
-      // if failed, make dot red and slower
-      const ai = activeIndex()
+
       if (ai === -1) {
         el.style.background = 'var(--color-destructive)'
         // @ts-ignore

@@ -1,4 +1,5 @@
 ---
+import DotMatrixText from './DotMatrixText.astro'
 const navItems = [
   { label: 'Dashboard', icon: 'grid', active: true },
   { label: 'Nodes', icon: 'server', active: false },
@@ -60,7 +61,7 @@ const tasks = [
   { chip: { label: 'RUNNING', cls: 'border-warning/30 bg-warning/10 text-warning' }, text: 'start VM 100', node: 'pve1', time: '12s ago' },
   { chip: { label: 'OK', cls: 'border-success/25 bg-success/10 text-success' }, text: 'backup VM 101 → local-lvm', node: 'pve2', time: '3m ago' },
   { chip: { label: 'OK', cls: 'border-success/25 bg-success/10 text-success' }, text: 'migrate VM 102', node: 'pve1 → pve3', time: '18m ago' },
-  { chip: { label: 'DONE', cls: 'border-white/[0.06] bg-muted text-muted-foreground' }, text: 'update apt', node: 'pve3', time: '1h ago' },
+  { chip: { label: 'DONE', cls: 'border-dotted border-white/10 bg-muted text-muted-foreground' }, text: 'update apt', node: 'pve3', time: '1h ago' },
 ]
 const gauges = [
   { label: 'CPU', icon: 'cpu', percent: '30', width: '30', detail: '7.3 / 24 cores' },
@@ -97,14 +98,14 @@ const quickActions = [
     </defs>
   </svg>
 
-  <div class="overflow-hidden rounded-xl border border-white/[0.08] bg-card shadow-card">
-    <div class="relative flex h-9 items-center border-b border-white/[0.06] bg-background">
+  <div class="overflow-hidden rounded-xl border border-dotted border-white/10 bg-card shadow-card">
+    <div class="relative flex h-9 items-center border-b border-dotted border-white/10 bg-background">
       <div class="absolute left-4 flex items-center gap-1.5" aria-hidden="true">
-        <span class="h-2.5 w-2.5 rounded-full border border-white/[0.06] bg-muted-foreground/40"></span>
-        <span class="h-2.5 w-2.5 rounded-full border border-white/[0.06] bg-muted-foreground/40"></span>
-        <span class="h-2.5 w-2.5 rounded-full border border-white/[0.06] bg-muted-foreground/40"></span>
+        <span class="h-2.5 w-2.5 rounded-full border border-dotted border-white/10 bg-muted-foreground/40"></span>
+        <span class="h-2.5 w-2.5 rounded-full border border-dotted border-white/10 bg-muted-foreground/40"></span>
+        <span class="h-2.5 w-2.5 rounded-full border border-dotted border-white/10 bg-muted-foreground/40"></span>
       </div>
-      <p class="w-full text-center font-mono text-[10px] tabular-nums text-muted-foreground">Clustri — Ops Console</p>
+      <div class="w-full flex justify-center"><DotMatrixText text="CLUSTRI" size="xs" dotClass="text-muted-foreground" /></div>
     </div>
 
     <div class="flex items-center gap-2 border-b border-warning/25 bg-warning/10 px-4 py-1.5">
@@ -114,14 +115,13 @@ const quickActions = [
     </div>
 
     <div class="flex">
-      <aside class="hidden w-52 shrink-0 flex-col border-r border-white/[0.06] bg-card sm:flex">
-        <div class="flex h-14 shrink-0 items-center gap-2.5 border-b border-white/[0.06] px-4">
+      <aside class="hidden w-52 shrink-0 flex-col border-r border-dotted border-white/10 bg-card sm:flex">
+        <div class="flex h-14 shrink-0 items-center gap-2.5 border-b border-dotted border-white/10 px-4">
           <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primary">
             <svg class="h-4 w-4" aria-hidden="true"><use href="#i-hex" /></svg>
           </div>
           <div class="min-w-0 leading-tight">
-            <p class="truncate text-sm font-semibold tracking-tight text-foreground">Clustri</p>
-            <p class="font-mono text-[9px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Ops Console</p>
+            <DotMatrixText text="CLUSTRI" size="xs" dotClass="text-foreground" />
           </div>
         </div>
         <div class="min-h-0 flex-1 p-2">
@@ -146,7 +146,7 @@ const quickActions = [
               </div>
               <p class="ml-7 font-mono text-[10px] text-muted-foreground">Offline</p>
             </div>
-            <p class="px-3 pb-1 pt-3 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Cluster nodes</p>
+            <div class="px-3 pb-1 pt-3"><DotMatrixText text="CLUSTER NODES" size="xs" dotClass="text-muted-foreground" /></div>
             <div class="space-y-0.5">
               {clusterNodes.map((n) => (
                 <div class="flex w-full items-center gap-2.5 rounded-md px-3 py-1.5">
@@ -158,11 +158,11 @@ const quickActions = [
             </div>
           </div>
         </div>
-        <div class="space-y-1 border-t border-white/[0.06] p-2">
+        <div class="space-y-1 border-t border-dotted border-white/10 p-2">
           <button type="button" class="flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground">
             <svg class="h-4 w-4 shrink-0" aria-hidden="true"><use href="#i-gear" /></svg><span>Settings</span>
           </button>
-          <button type="button" class="flex w-full items-center gap-2 rounded-md border border-white/[0.06] bg-background px-3 py-1.5 text-[12px] font-medium text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground">
+          <button type="button" class="flex w-full items-center gap-2 rounded-md border border-dotted border-white/10 bg-background px-3 py-1.5 text-[12px] font-medium text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground">
             <svg class="h-3.5 w-3.5 shrink-0" aria-hidden="true"><use href="#i-plus" /></svg><span>Add Connection</span>
           </button>
         </div>
@@ -171,7 +171,7 @@ const quickActions = [
       <main class="min-w-0 flex-1 bg-background p-4">
         <div class="space-y-4">
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <h2 class="text-base font-semibold tracking-tight">Overview</h2>
+            <DotMatrixText text="OVERVIEW" size="sm" dotClass="text-foreground" />
             <div class="flex flex-wrap items-center gap-2">
               <span class="font-mono text-[10px] tabular-nums text-muted-foreground">home-lab · 192.168.1.10:8006</span>
               <span class="font-mono text-[10px] tabular-nums text-muted-foreground">3 nodes · 2 online</span>
@@ -181,7 +181,7 @@ const quickActions = [
 
           <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {nodeCards.map((node) => (
-              <article class="rounded-md border border-white/[0.06] bg-card p-3">
+              <article class="rounded-md border border-dotted border-white/10 bg-card p-3">
                 <div class="flex items-center justify-between gap-2">
                   <div class="flex min-w-0 items-center gap-2">
                     <span class={`h-1.5 w-1.5 shrink-0 rounded-full ${node.dot}`} aria-hidden="true"></span>
@@ -216,8 +216,8 @@ const quickActions = [
           </div>
 
           <div class="grid grid-cols-1 gap-3 sm:grid-cols-5">
-            <section class="rounded-md border border-white/[0.06] bg-card sm:col-span-3">
-              <header class="flex items-center gap-2 border-b border-white/[0.06] px-3 py-2">
+            <section class="rounded-md border border-dotted border-white/10 bg-card sm:col-span-3">
+              <header class="flex items-center gap-2 border-b border-dotted border-white/10 px-3 py-2">
                 <svg class="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true"><use href="#i-activity" /></svg>
                 <h3 class="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Task activity</h3>
                 <span class="ml-auto h-1.5 w-1.5 animate-pulse rounded-full bg-success" aria-hidden="true"></span>
@@ -237,7 +237,7 @@ const quickActions = [
 
             <div class="space-y-3 sm:col-span-2">
               {gauges.map((gauge) => (
-                <section class="rounded-md border border-white/[0.06] bg-card p-3">
+                <section class="rounded-md border border-dotted border-white/10 bg-card p-3">
                   <div class="flex items-center gap-1.5">
                     <svg class="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true"><use href={`#i-${gauge.icon}`} /></svg>
                     <span class="font-mono text-[9px] font-medium uppercase tracking-[0.14em] text-muted-foreground">{gauge.label}</span>
@@ -256,7 +256,7 @@ const quickActions = [
 
           <div class="flex flex-wrap items-center gap-2">
             {quickActions.map((action) => (
-              <button type="button" class="flex items-center gap-1.5 rounded border border-white/[0.06] px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground">
+              <button type="button" class="flex items-center gap-1.5 rounded border border-dotted border-white/10 px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground">
                 <svg class="h-3 w-3" aria-hidden="true"><use href={`#i-${action.icon}`} /></svg><span>{action.label}</span>
               </button>
             ))}

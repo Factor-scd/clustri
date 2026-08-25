@@ -1,26 +1,29 @@
-<section id="download" class="scroll-mt-24 border-t border-white/[0.06] py-20 sm:py-28">
+---
+import DotMatrixText from './DotMatrixText.astro'
+---
+<section id="download" class="scroll-mt-24 border-t border-dotted border-white/10 py-20 sm:py-28">
   <div class="mx-auto max-w-3xl px-6 text-center">
-    <p class="font-mono text-[11px] uppercase tracking-[0.18em] text-primary" data-reveal>Releases</p>
+    <div data-reveal><DotMatrixText text="RELEASES" size="xs" dotClass="text-primary" /></div>
     <h2 class="mt-4 text-3xl font-semibold tracking-[-0.03em] text-foreground sm:text-4xl" data-reveal data-reveal-delay="80">Coming soon.</h2>
     <p class="mx-auto mt-4 max-w-[46ch] text-[15px] leading-relaxed text-muted-foreground" data-reveal data-reveal-delay="140">
       Clustri is in active development. Packages for Linux, macOS, and Windows are on the way.
     </p>
 
-    <div class="relative mt-10 overflow-hidden rounded-xl border border-white/[0.07] bg-card p-6 sm:p-8 shadow-card" data-reveal data-reveal-delay="200">
-      <div class="pointer-events-none absolute inset-0 grid-bg opacity-[0.12]" aria-hidden="true"></div>
+    <div class="relative mt-10 overflow-hidden rounded-xl border border-dotted border-white/10 bg-card p-6 sm:p-8 shadow-card dot-grid" data-reveal data-reveal-delay="200">
+      <div class="pointer-events-none absolute inset-0 dot-grid opacity-[0.10]" aria-hidden="true"></div>
       <div class="pointer-events-none absolute inset-x-0 top-0 h-px bg-primary/30" aria-hidden="true"></div>
 
       <div class="relative">
         <div class="flex flex-wrap items-center justify-center gap-3">
           <a href="#" class="rounded-[10px] bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 active:scale-[0.98]">Get Clustri</a>
-          <a href="#" class="rounded-[10px] border border-white/[0.08] bg-white/[0.03] px-6 py-3 text-sm font-semibold text-muted-foreground transition hover:border-white/15 hover:text-foreground active:scale-[0.98]">Build from source</a>
+          <a href="#" class="rounded-[10px] border border-dotted border-white/10 bg-white/[0.03] px-6 py-3 text-sm font-semibold text-muted-foreground transition hover:border-white/15 hover:text-foreground active:scale-[0.98]">Build from source</a>
         </div>
         <div class="mt-6 flex flex-wrap items-center justify-center gap-2">
-          <span class="rounded-md border border-white/[0.06] bg-background px-2.5 py-1 font-mono text-[11px] text-muted-foreground">Linux</span>
-          <span class="rounded-md border border-white/[0.06] bg-background px-2.5 py-1 font-mono text-[11px] text-muted-foreground">macOS</span>
-          <span class="rounded-md border border-white/[0.06] bg-background px-2.5 py-1 font-mono text-[11px] text-muted-foreground">Windows</span>
+          <span class="rounded-md border border-dotted border-white/10 bg-background px-2.5 py-1 font-mono text-[11px] text-muted-foreground">Linux</span>
+          <span class="rounded-md border border-dotted border-white/10 bg-background px-2.5 py-1 font-mono text-[11px] text-muted-foreground">macOS</span>
+          <span class="rounded-md border border-dotted border-white/10 bg-background px-2.5 py-1 font-mono text-[11px] text-muted-foreground">Windows</span>
         </div>
-        <p class="mt-4 font-mono text-[10px] text-muted-foreground/60">cargo test · 64 tests · MIT · v0.1.0</p>
+        <div class="mt-4 flex justify-center"><DotMatrixText text="CARGO TEST / 64 TESTS / MIT / V0.1.0" size="xs" dotClass="text-muted-foreground" /></div>
       </div>
     </div>
   </div>

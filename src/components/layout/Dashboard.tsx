@@ -1,7 +1,8 @@
 import { useCallback, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNodes, useVMs, useTasks, queryKeys } from '@/hooks/useProxmox'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { DotMatrixText } from '@/components/ui/dot-matrix'
 import { Server, Cpu, HardDrive, MemoryStick, AlertCircle } from 'lucide-react'
 import { ResourceGauge } from '@/components/dashboard/ResourceGauge'
 import { NodeHealthGrid } from '@/components/dashboard/NodeHealthGrid'
@@ -31,9 +32,6 @@ export function Dashboard({ connectionId, onNavigate }: DashboardProps) {
 
   const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`
 
-  // Track actual refresh activity rather than piggybacking on tasksLoading,
-  // which is true whenever the tasks query is fetching (e.g. background
-  // polling) and would keep the Refresh button spinning continuously.
   const [refreshing, setRefreshing] = useState(false)
 
   const handleRefresh = useCallback(async () => {
@@ -60,19 +58,19 @@ export function Dashboard({ connectionId, onNavigate }: DashboardProps) {
   const hasError = nodesError || vmsError || tasksError
   if (hasError) {
     return (
-      <div className="flex h-full items-center justify-center p-6">
-        <div className="flex flex-col items-center text-center">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-destructive/25 bg-destructive/10">
+      <div className="flex h-full items-center justify-center p-6 dot-grid">
+        <div className="flex flex-col items-center text-center rounded-lg border border-dotted border-destructive/30 bg-card p-8 shadow-card">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-sm border border-dotted border-destructive/30 bg-destructive/10">
             <AlertCircle className="h-5 w-5 text-destructive" />
           </div>
-          <h3 className="text-lg font-semibold tracking-tight">Unable to load dashboard</h3>
-          <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+          <DotMatrixText text="LOAD FAILED" size="sm" className="text-destructive" />
+          <p className="mt-2 max-w-sm text-sm text-muted-foreground">
             {nodesError?.message || vmsError?.message || tasksError?.message || 'An error occurred while loading data'}
           </p>
           <p className="mt-1 max-w-sm text-sm text-muted-foreground">
             Check the connection to your Proxmox server and try again.
           </p>
-          <Button variant="outline" className="mt-4" onClick={handleRetry}>
+          <Button variant="outline" className="mt-4 border-dotted" onClick={handleRetry}>
             Retry
           </Button>
         </div>
@@ -81,80 +79,69 @@ export function Dashboard({ connectionId, onNavigate }: DashboardProps) {
   }
 
   return (
-    <div className="h-full overflow-auto p-6">
+    <div className="h-full overflow-auto p-6 dot-grid">
       <div className="space-y-6">
         <div>
-          <h2 className="text-[1.625rem] font-semibold leading-tight tracking-[-0.02em]">
-            Dashboard
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <DotMatrixText text="DASHBOARD" size="md" className="text-foreground" />
+          <p className="mt-2 text-sm text-muted-foreground">
             Cluster overview and resource usage
           </p>
+          <hr className="dot-rule mt-3" />
         </div>
 
-        {/* Summary Stats Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
+          <Card className="dot-grid">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Nodes</CardTitle>
-              <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-muted/40">
+              <DotMatrixText text="NODES" size="xs" className="text-muted-foreground" />
+              <div className="flex h-7 w-7 items-center justify-center rounded-sm border border-dotted border-border bg-muted/40">
                 <Server className="h-3.5 w-3.5 text-muted-foreground" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="font-mono text-2xl font-semibold leading-none tracking-tight tabular-nums">
-                {nodes?.filter((n) => n.status === 'online').length ?? 0}
-                <span className="text-muted-foreground"> / {nodes?.length ?? 0}</span>
-              </div>
-              <p className="mt-1.5 text-xs text-muted-foreground">Online</p>
+              <DotMatrixText text={`${nodes?.filter((n) => n.status === 'online').length ?? 0} / ${nodes?.length ?? 0}`} size="sm" className="text-foreground" />
+              <p className="mt-1.5 text-xs tracking-widest text-muted-foreground">ONLINE</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="dot-grid">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">CPU Usage</CardTitle>
-              <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-muted/40">
+              <DotMatrixText text="CPU USAGE" size="xs" className="text-muted-foreground" />
+              <div className="flex h-7 w-7 items-center justify-center rounded-sm border border-dotted border-border bg-muted/40">
                 <Cpu className="h-3.5 w-3.5 text-muted-foreground" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="font-mono text-2xl font-semibold leading-none tracking-tight tabular-nums">
-                {totalCPU > 0 ? formatPercent(usedCPU / totalCPU) : '0%'}
-              </div>
+              <DotMatrixText text={totalCPU > 0 ? formatPercent(usedCPU / totalCPU) : '0%'} size="sm" className="text-foreground" />
               <p className="mt-1.5 font-mono text-xs tabular-nums text-muted-foreground">
                 {usedCPU.toFixed(1)} / {totalCPU} cores
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="dot-grid">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Memory</CardTitle>
-              <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-muted/40">
+              <DotMatrixText text="MEMORY" size="xs" className="text-muted-foreground" />
+              <div className="flex h-7 w-7 items-center justify-center rounded-sm border border-dotted border-border bg-muted/40">
                 <MemoryStick className="h-3.5 w-3.5 text-muted-foreground" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="font-mono text-2xl font-semibold leading-none tracking-tight tabular-nums">
-                {totalMem > 0 ? formatPercent(usedMem / totalMem) : '0%'}
-              </div>
+              <DotMatrixText text={totalMem > 0 ? formatPercent(usedMem / totalMem) : '0%'} size="sm" className="text-foreground" />
               <p className="mt-1.5 font-mono text-xs tabular-nums text-muted-foreground">
                 {formatBytes(usedMem)} / {formatBytes(totalMem)}
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="dot-grid">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Storage</CardTitle>
-              <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-muted/40">
+              <DotMatrixText text="STORAGE" size="xs" className="text-muted-foreground" />
+              <div className="flex h-7 w-7 items-center justify-center rounded-sm border border-dotted border-border bg-muted/40">
                 <HardDrive className="h-3.5 w-3.5 text-muted-foreground" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="font-mono text-2xl font-semibold leading-none tracking-tight tabular-nums">
-                {totalDisk > 0 ? formatPercent(usedDisk / totalDisk) : '0%'}
-              </div>
+              <DotMatrixText text={totalDisk > 0 ? formatPercent(usedDisk / totalDisk) : '0%'} size="sm" className="text-foreground" />
               <p className="mt-1.5 font-mono text-xs tabular-nums text-muted-foreground">
                 {formatBytes(usedDisk)} / {formatBytes(totalDisk)}
               </p>
@@ -162,7 +149,6 @@ export function Dashboard({ connectionId, onNavigate }: DashboardProps) {
           </Card>
         </div>
 
-        {/* Resource Gauges */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <ResourceGauge
             label="CPU"
@@ -172,14 +158,14 @@ export function Dashboard({ connectionId, onNavigate }: DashboardProps) {
             formatValue={(v) => `${v.toFixed(1)} cores`}
           />
           <ResourceGauge
-            label="Memory"
+            label="MEMORY"
             used={usedMem}
             total={totalMem}
             icon="memory"
             formatValue={formatBytes}
           />
           <ResourceGauge
-            label="Storage"
+            label="STORAGE"
             used={usedDisk}
             total={totalDisk}
             icon="disk"
@@ -187,10 +173,8 @@ export function Dashboard({ connectionId, onNavigate }: DashboardProps) {
           />
         </div>
 
-        {/* Node Health Grid */}
         <NodeHealthGrid nodes={nodes} vms={vms} />
 
-        {/* Activity Feed + Quick Actions */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
             <ActivityFeed tasks={tasks} isLoading={tasksLoading} />

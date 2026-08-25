@@ -1,32 +1,34 @@
-<section aria-label="Facts" class="border-y border-white/[0.06] bg-[#08080a]">
+---
+import DotMatrixText from './DotMatrixText.astro'
+---
+<section aria-label="Facts" class="border-y border-dotted border-white/10 bg-[#08080a] dot-grid">
   <div class="mx-auto max-w-7xl px-6 lg:px-8">
     <div class="grid grid-cols-2 gap-0 py-8 sm:grid-cols-4" data-stagger>
-      <div class="flex flex-col items-center gap-1 border-r border-white/[0.06] px-2 py-6" data-stagger-child>
+      <div class="flex flex-col items-center gap-2 border-r border-dotted border-white/10 px-2 py-6" data-stagger-child>
         <span class="font-mono text-3xl font-semibold tracking-[-0.03em] tabular-nums text-foreground sm:text-4xl" data-countup="0">0</span>
-        <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Telemetry</span>
-        <span class="font-mono text-[10px] text-muted-foreground/60">ships with the app</span>
+        <DotMatrixText text="TELEMETRY" size="xs" dotClass="text-muted-foreground" />
+        <span class="font-mono text-[11px] text-muted-foreground">ships with the app</span>
       </div>
-      <div class="flex flex-col items-center gap-1 border-r border-white/[0.06] px-2 py-6 sm:border-r" data-stagger-child>
+      <div class="flex flex-col items-center gap-2 border-r border-dotted border-white/10 px-2 py-6 sm:border-r" data-stagger-child>
         <span class="font-mono text-3xl font-semibold tracking-[-0.03em] tabular-nums text-foreground sm:text-4xl" data-countup="0">0</span>
-        <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Cloud dependency</span>
-        <span class="font-mono text-[10px] text-muted-foreground/60">talks to your nodes</span>
+        <DotMatrixText text="CLOUD" size="xs" dotClass="text-muted-foreground" />
+        <span class="font-mono text-[11px] text-muted-foreground">talks to your nodes</span>
       </div>
-      <div class="flex flex-col items-center gap-1 border-r border-white/[0.06] px-2 py-6 max-sm:border-r-0" data-stagger-child>
+      <div class="flex flex-col items-center gap-2 border-r border-dotted border-white/10 px-2 py-6 max-sm:border-r-0" data-stagger-child>
         <span class="font-mono text-3xl font-semibold tracking-[-0.03em] tabular-nums text-primary sm:text-4xl" data-countup="64">0</span>
-        <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Rust tests</span>
-        <span class="font-mono text-[10px] text-muted-foreground/60">httpmock · rcgen · tempfile</span>
+        <DotMatrixText text="RUST TESTS" size="xs" dotClass="text-muted-foreground" />
+        <span class="font-mono text-[11px] text-muted-foreground">httpmock · rcgen · tempfile</span>
       </div>
-      <div class="flex flex-col items-center gap-1 px-2 py-6" data-stagger-child>
+      <div class="flex flex-col items-center gap-2 px-2 py-6" data-stagger-child>
         <span class="font-mono text-3xl font-semibold tracking-[-0.03em] tabular-nums text-foreground sm:text-4xl" data-countup="3">0</span>
-        <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Platforms</span>
-        <span class="font-mono text-[10px] text-muted-foreground/60">Linux · macOS · Windows</span>
+        <DotMatrixText text="PLATFORMS" size="xs" dotClass="text-muted-foreground" />
+        <span class="font-mono text-[11px] text-muted-foreground">Linux · macOS · Windows</span>
       </div>
     </div>
 
-    <!-- mono ticker -->
-    <div class="overflow-hidden border-t border-white/[0.06] py-3" aria-hidden="true">
-      <div class="flex gap-6 whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground/40">
-        <span>start</span><span class="text-white/10">·</span><span>stop</span><span class="text-white/10">·</span><span>shutdown</span><span class="text-white/10">·</span><span>reboot</span><span class="text-white/10">·</span><span>suspend</span><span class="text-white/10">·</span><span>resume</span><span class="text-white/10">·</span><span>migrate</span><span class="text-white/10">·</span><span>snapshot</span><span class="text-white/10">·</span><span>backup</span><span class="text-white/10">·</span><span>restore</span><span class="text-white/10">·</span><span>prune</span><span class="text-white/10">·</span><span>GC</span><span class="text-white/10">·</span><span>noVNC</span><span class="text-white/10">·</span><span>xterm.js</span>
+    <div class="overflow-hidden border-t border-dotted border-white/10 py-3" aria-hidden="true">
+      <div class="flex gap-6 whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground/50">
+        <DotMatrixText text="START / STOP / SHUTDOWN / REBOOT / SUSPEND / RESUME / MIGRATE / SNAPSHOT / BACKUP / RESTORE / PRUNE / GC / NOVNC / XTERM.JS" size="xs" dotClass="text-muted-foreground/50" />
       </div>
     </div>
   </div>

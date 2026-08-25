@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { DotMatrixText } from '@/components/ui/dot-matrix'
 import { Cpu, MemoryStick, HardDrive, Clock, Server, Box } from 'lucide-react'
 import type { ProxmoxNode, ProxmoxVM } from '@/types/proxmox'
 import { formatBytes, formatUptime } from '@/lib/format'
@@ -20,30 +21,23 @@ function getStatusTextColor(status: 'online' | 'offline'): string {
   return status === 'online' ? 'text-success' : 'text-destructive'
 }
 
-function getStatusLabel(status: 'online' | 'offline'): string {
-  return status === 'online' ? 'Online' : 'Offline'
-}
-
 function NodeCard({ node, vmCount }: { node: ProxmoxNode; vmCount: number }) {
   const cpuPercent = node.maxcpu > 0 ? node.cpu : 0
   const memPercent = node.maxmem > 0 ? node.mem / node.maxmem : 0
   const diskPercent = node.maxdisk > 0 ? node.disk / node.maxdisk : 0
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+    <Card className="dot-grid">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 border-b border-dotted border-border/60">
         <div className="flex items-center gap-2.5">
           <span className={cn('h-2 w-2 rounded-full', getStatusColor(node.status))} />
-          <CardTitle className="font-mono text-sm font-semibold tracking-tight">
+          <span className="font-mono text-sm font-semibold tracking-tight text-foreground">
             {node.node}
-          </CardTitle>
+          </span>
         </div>
-        <span className={cn('text-xs font-medium', getStatusTextColor(node.status))}>
-          {getStatusLabel(node.status)}
-        </span>
+        <DotMatrixText text={node.status === 'online' ? 'ONLINE' : 'OFFLINE'} size="xs" className={getStatusTextColor(node.status)} />
       </CardHeader>
-      <CardContent className="space-y-3">
-        {/* Stats row */}
+      <CardContent className="space-y-3 pt-3">
         <div className="grid grid-cols-3 gap-2 font-mono text-xs tabular-nums text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <Cpu className="h-3 w-3 shrink-0" />
@@ -58,9 +52,7 @@ function NodeCard({ node, vmCount }: { node: ProxmoxNode; vmCount: number }) {
             <span>{(diskPercent * 100).toFixed(0)}%</span>
           </div>
         </div>
-
-        {/* Bottom info */}
-        <div className="flex items-center justify-between border-t pt-2.5 font-mono text-xs tabular-nums text-muted-foreground">
+        <div className="flex items-center justify-between border-t border-dotted border-border/60 pt-2.5 font-mono text-xs tabular-nums text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <Clock className="h-3 w-3 shrink-0" />
             <span>{formatUptime(node.uptime)}</span>
@@ -80,7 +72,6 @@ function NodeCard({ node, vmCount }: { node: ProxmoxNode; vmCount: number }) {
 }
 
 export function NodeHealthGrid({ nodes, vms }: NodeHealthGridProps) {
-  // Count VMs per node
   const vmCounts = useMemo(() => {
     const counts: Record<string, number> = {}
     vms?.forEach((vm) => {
@@ -91,13 +82,13 @@ export function NodeHealthGrid({ nodes, vms }: NodeHealthGridProps) {
 
   if (!nodes || nodes.length === 0) {
     return (
-      <Card>
-        <CardHeader>
+      <Card className="dot-grid">
+        <CardHeader className="border-b border-dotted border-border/60">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-muted/40">
+            <div className="flex h-7 w-7 items-center justify-center rounded-sm border border-dotted border-border bg-muted/40">
               <Server className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
-            <CardTitle className="text-sm font-semibold">Node Health</CardTitle>
+            <DotMatrixText text="NODE HEALTH" size="xs" className="text-foreground" />
           </div>
         </CardHeader>
         <CardContent>
@@ -108,16 +99,16 @@ export function NodeHealthGrid({ nodes, vms }: NodeHealthGridProps) {
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="dot-grid">
+      <CardHeader className="border-b border-dotted border-border/60">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-muted/40">
+          <div className="flex h-7 w-7 items-center justify-center rounded-sm border border-dotted border-border bg-muted/40">
             <Server className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
-          <CardTitle className="text-sm font-semibold">Node Health</CardTitle>
+          <DotMatrixText text="NODE HEALTH" size="xs" className="text-foreground" />
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {nodes.map((node) => (
             <NodeCard key={node.node} node={node} vmCount={vmCounts[node.node] ?? 0} />
