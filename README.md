@@ -1,6 +1,6 @@
 # Clustri
 
-A cross-platform desktop client for managing Proxmox VE servers and clusters, and Proxmox Backup Server. The backend is Rust on Tauri 2; the UI is React 19 with TypeScript, Vite, and Tailwind CSS v4.
+Clustri is a fast, cross-platform desktop client for managing Proxmox VE servers, clusters, and Proxmox Backup Servers. Built with Rust and Tauri, it provides a streamlined interface for infrastructure management without the overhead of a web browser.
 
 ## Features
 
